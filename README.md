@@ -42,6 +42,8 @@ The trick that makes it an *engine*: the assistant never knows **what** a helper
 **how** a messenger delivers — only *"ask"* and *"hand off."* That's why a brand-new
 reminder, or a new app to receive on, slots in **without the engine changing at all.**
 
+<img src="assets/analogy.svg" alt="The tireless assistant: helpers → the engine asks every 2 min → channels → you">
+
 > If you understand that picture, you understand NoterPiper. Prayer and Habitica are just
 > the first two helpers; ntfy and webhook are just the first two messengers.
 
