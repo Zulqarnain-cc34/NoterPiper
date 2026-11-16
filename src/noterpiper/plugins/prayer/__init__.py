@@ -10,8 +10,8 @@ import urllib.error
 import urllib.parse
 from datetime import datetime, timedelta
 
-from .. import net
-from ..engine import Notification
+from ... import net
+from ...engine import Notification
 
 # When each prayer STARTS and when its window ENDS (ends when the next one starts;
 # Isha ends at Islamic midnight).

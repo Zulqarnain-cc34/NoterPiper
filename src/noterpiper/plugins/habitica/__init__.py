@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from .. import api
-from ..engine import Notification
+from ... import api
+from ...engine import Notification
 
 PRAYERS = ("Fajr", "Zohar", "Asr", "Maghrib", "Isha")
 STREAK_RISK = 7          # warn when a streak this long is unticked

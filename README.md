@@ -1,71 +1,78 @@
 <div align="center">
 
-# 🕌 NoterPiper
+# 🔔 NoterPiper
 
-**Your call to prayer — on your phone.**
+**A free, serverless notification engine — it pushes the right message to your phone at the right moment.**
 
-*Gentle prayer reminders and a quiet nightly check-in. Free, private, and it runs itself.*
-
-![serverless](https://img.shields.io/badge/serverless-✓-9ece6a?style=flat&labelColor=1a1b26)
-![free](https://img.shields.io/badge/cost-free-7aa2f7?style=flat&labelColor=1a1b26)
-![runs%20itself](https://img.shields.io/badge/runs-itself-f0b429?style=flat&labelColor=1a1b26)
+*Runs on free infrastructure, needs no server, and is built to be extended. Ships with two plugins: prayer reminders and a Habitica nightly nudge.*
 
 <br>
 
-<img src="assets/demo.png" alt="NoterPiper" width="300">
+<img src="assets/demo.png" alt="NoterPiper" width="280">
 
 </div>
 
 ---
 
-## What it does
+## What it is
 
-🔔 **Prayer reminders** — your phone rings for each of the five prayers, at the
-moment *you* choose within that prayer's own window.
+NoterPiper is a tiny **notification engine**. Every couple of minutes it asks each
+**plugin** — *"anything to notify right now?"* — and delivers what comes back to your
+phone. Nothing runs on your own devices, and it costs nothing.
 
-🌙 **A nightly check-in** *(optional)* — one calm end-of-day reminder of what's
-left, if you keep your habits in Habitica.
+It ships with two plugins:
 
-📱 **A little app** — set your city and your reminder times from your phone,
-whenever you like. Changes take effect within minutes.
+- 🕌 **[Prayer reminders](src/noterpiper/plugins/prayer/)** — your phone rings for each
+  of the five daily prayers, at a time you choose within each prayer's window.
+- 🌙 **[Habitica nightly nudge](src/noterpiper/plugins/habitica/)** *(optional)* — one
+  calm end-of-day summary of what's still unlogged and which streaks are at risk.
 
-No servers. No sign-ups. No cost.
-
----
-
-## What lands on your phone
-
-> ### 🕌 Maghrib
-> Time to pray · ends 5:03 PM
-
-One ring, when it matters — clear and to the point. Nothing else, ever.
+Adding your own — gym, water, a standup reminder, anything — is one small file.
 
 ---
 
 ## How it works
 
-You choose your city and your timings once. From then on, a small job quietly
-checks the clock every few minutes and rings your phone the moment a prayer is
-due — on time, every day, with nothing to keep running on your end.
+```
+   SOURCES (plugins)          THE ENGINE                 A CHANNEL          Your phone
+   decide WHAT to send   →    asks each plugin      →    delivers it   →    (the ring)
+   • prayer reminders         "anything due now?",       via ntfy
+   • Habitica nudge           dedupes, routes
+```
+
+A free timer wakes a tiny job on GitHub every couple of minutes; the **engine** asks
+each **plugin** what's due and sends it through a **channel** (ntfy). The engine knows
+nothing about prayers or habits — only the small plugin interface — which is what lets
+new plugins drop in without touching the core.
+
+See **[NOTIFICATION-ENGINE.md](NOTIFICATION-ENGINE.md)** for the full design and how to
+write a plugin.
 
 ---
 
 ## Get started
 
-About ten minutes, once — then it looks after itself.
+About ten minutes, once — then it runs itself.
 
-### **→ Follow the three steps in [SETUP](SETUP.md).**
-
-That's genuinely all there is to it.
+### **→ Follow [SETUP](SETUP.md).**
 
 ---
 
-## Why you can trust it
+## Why it's built well
 
-- **It lasts.** Nothing to host, pay for, or patch — built to run for years untouched.
-- **It's private.** It only ever *reads* your data, and nothing personal leaves your own copy.
-- **It's on time.** It checks continuously, so a change you make shows up in minutes.
+- **Serverless & free.** Nothing to host, pay for, or patch.
+- **Extensible by design.** The engine talks to plugins through one small, stable interface.
+- **Zero dependencies.** Pure Python standard library — nothing to rot in five years.
+- **Live.** Settings are re-read every run; a change applies within minutes.
+- **Self-correcting.** A late or skipped run is caught by the next; each reminder fires exactly once.
+- **Minimal.** One ring when it matters — restraint is a feature.
 
 ---
+
+## Learn more
+
+- **[NOTIFICATION-ENGINE.md](NOTIFICATION-ENGINE.md)** — engine design + writing a plugin
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** · **[DECISIONS.md](DECISIONS.md)** · **[SECURITY.md](SECURITY.md)**
+- Plugins: **[prayer](src/noterpiper/plugins/prayer/)** · **[habitica](src/noterpiper/plugins/habitica/)**
 
 <div align="center"><sub>Built to run quietly for years. 🤲</sub></div>
