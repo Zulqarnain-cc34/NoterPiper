@@ -485,25 +485,45 @@
     g('iftarVal').textContent = state.ramadanIftarLead;
     updateNudgeNow(); updateRamOpts();
   }
+  // Cache the private location on this device so the NEXT load paints it instantly,
+  // instead of flashing the config.json placeholder while the Variables API responds.
+  const LOC_KEY = 'noterpiper_loc';
+  function readLocCache() {
+    if (!token()) return null;                        // only meaningful when connected
+    try { return JSON.parse(localStorage.getItem(LOC_KEY) || 'null'); } catch { return null; }
+  }
+  function writeLocCache() {
+    if (!token()) return;
+    try { localStorage.setItem(LOC_KEY, JSON.stringify(
+      { city: state.city, country: state.country, method: state.method, timezone: state.timezone })); } catch {}
+  }
   async function loadLocationFromVars() {
     if (!token()) return;              // can't read private Variables without the token
     try {
-      const c = await ghGetVar('PRAYER_CITY');      if (c)  state.city = c;
-      const co = await ghGetVar('PRAYER_COUNTRY');  if (co) state.country = co;
-      const m = await ghGetVar('PRAYER_METHOD');    if (m)  state.method = m;
-      const tz = await ghGetVar('PRAYER_TIMEZONE'); if (tz) state.timezone = tz;
+      const [c, co, m, tz] = await Promise.all([      // 4 variables in parallel (not one-by-one)
+        ghGetVar('PRAYER_CITY'), ghGetVar('PRAYER_COUNTRY'),
+        ghGetVar('PRAYER_METHOD'), ghGetVar('PRAYER_TIMEZONE')]);
+      if (c) state.city = c; if (co) state.country = co;
+      if (m) state.method = m; if (tz) state.timezone = tz;
     } catch (e) { toast('Location: ' + ghHint(e), true); }
   }
   async function loadConfig() {
+    const cached = readLocCache();
     try {
       const d = await ghGet('/contents/config.json?ref=main');   // public read — no token needed
       loaded = JSON.parse(decodeB64(d.content));
       state = fromConfig(loaded);
-      await loadLocationFromVars();                              // real location lives in private Variables
+      if (cached) {                                   // instant: paint last-known real location, reveal now
+        Object.assign(state, cached);
+        renderPrayers(); applyState(); checkCity();
+        document.body.classList.remove('loading');
+      }
+      await loadLocationFromVars();                   // authoritative refresh from private Variables
+      writeLocCache();                                 // remember it for next time
       renderPrayers(); applyState(); checkCity();
       setStatus(token() ? 'loaded ✓' : 'loaded · connect to see your location + save');
     } catch (e) { setStatus('load failed'); toast('Load failed: ' + e.message, true); }
-    finally { document.body.classList.remove('loading'); }       // reveal real values (skeleton → content)
+    finally { document.body.classList.remove('loading'); }       // first-ever load reveals here (after Variables)
   }
   // ─── Autosave: any change schedules a debounced save (a burst → one save) ───
   let userTouched = false, saveTimer = null, saving = false, dirtyAgain = false;
