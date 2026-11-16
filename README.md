@@ -1,73 +1,50 @@
-<div align="center">
-
 # 🕌 Habitica Salah
 
-**Your prayers and daily recitations — gently tracked, with reminders that reach your phone.**
+Prayer-time reminders and a nightly check-in for your Habitica prayers and
+recitations — delivered to your phone. **Serverless, free, zero dependencies.**
 
-</div>
+## What it does
 
-This little tool connects to your Habitica account and does two kind things for you:
+- **Prayer reminders** — your phone rings at each of the 5 prayer times (e.g. 30 min
+  before a prayer ends), using live prayer times for your city.
+- **One nightly nudge** — a single end-of-day notification: what's still unlogged and
+  which streaks are at risk. Nothing else — notifications are kept deliberately minimal.
 
-- 🔔 **Prayer reminders** — your phone **rings at your prayer times** (e.g. 30 min before a prayer ends), at the real times for your city.
-- 🌙 **One nightly check-in** — before midnight it tells you what you haven't logged yet, and warns you if a long streak is about to break.
+It runs on GitHub's infrastructure on a schedule, so no server and no always-on
+computer are required.
 
-That's it — **no dashboards, no noise.** It runs **by itself, on the internet — you don't need to keep a computer on.**
+## How it works
 
----
+A morning job fetches today's prayer times and **pre-schedules** the reminders on
+[ntfy](https://ntfy.sh) at exact times; a nightly job sends the nudge. GitHub Actions
+is the scheduler, ntfy is delivery, Habitica/Aladhan are the data — and because ntfy
+handles exact-time delivery, GitHub's loose cron timing is irrelevant.
 
-## Will this keep working forever?
+Full design and diagram: **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
-Mostly yes — here's the honest version:
+## Setup
 
-- ✅ It runs on **GitHub's free servers**, not your computer. So it keeps going whether your laptop is on or off.
-- ✅ Reminders are delivered by **ntfy** (a free notification service) and prayer times come from a **free prayer-times service** — both are stable and free.
-- ⏳ One catch: GitHub **pauses automatic jobs if a project sits untouched for 60 days**. A built-in monthly "keepalive" taps the project so that **never happens** — so it truly keeps running hands-off.
-- 🙏 The only things that could ever stop it are if those free services shut down one day. If that happens, it's a quick swap, not a rebuild.
+Ten minutes, once — see **[SETUP.md](SETUP.md)**. In short: subscribe to an ntfy
+topic on your phone, add three GitHub secrets (`HABITICA_API_TOKEN`,
+`HABITICA_USER_ID`, `NTFY_TOPIC`) and a `PRAYER_CITY` variable, and enable Actions.
 
-**So: yes — set it up once, and it keeps reminding you, indefinitely.**
+## Configuration
 
----
+- **Reminder timings** — edit `reminders.json` (`before_end` / `after_start` minutes
+  per prayer). No code; editable from GitHub's web UI.
+- **City** — the `PRAYER_CITY` variable (`Lahore`, `Islamabad`, …).
 
-## What you need to do once
+## Run locally (optional)
 
-**On your phone**
-1. Install the **ntfy** app (iPhone or Android).
-2. Subscribe to your private topic (a secret name you pick), and allow it to show notifications.
-
-**On the website (GitHub)**
-3. Add your details as **Secrets**: your Habitica key, your Habitica ID, and your ntfy topic.
-4. Choose your city as a **Variable**: `PRAYER_CITY` = `Lahore` or `Islamabad`.
-5. Turn the automatic jobs on (the **Actions** tab) — done.
-
-*(Full step-by-step is in `SETUP.md`.)*
-
----
-
-## Run it yourself any time (optional)
-
-If you ever want to trigger things by hand from a computer:
+No packages required — the scripts are pure standard library.
 
 ```bash
-source .venv/bin/activate
-python scripts/schedule_prayers.py   # schedules today's prayer reminders
-python scripts/notify.py             # sends the nightly "not logged yet" check-in
-python scripts/selftest.py           # proves reminders fire on time
+python3 scripts/schedule_prayers.py   # schedule today's reminders
+python3 scripts/notify.py             # send the nightly nudge
+python3 scripts/selftest.py           # prove delivery is on time
 ```
 
----
+## Privacy & security
 
-## Your privacy
-- Your Habitica key stays private — it's kept as a hidden secret, never shown or shared.
-- Your prayer data stays in **your** private project. Nothing is public.
-
-## Make it yours
-- **Change reminder times** → edit **`reminders.json`** (minutes `before_end` or
-  `after_start`, per prayer). No code needed — editable right on GitHub's website.
-- **Change city** → set the `PRAYER_CITY` variable.
-
-Notifications are kept **deliberately small** — 5 prayer reminders + one gentle
-nightly check-in — so they stay meaningful instead of becoming noise.
-
-## Under the hood
-- **`ARCHITECTURE.md`** — how it's built to run for years.
-- **`reports/data_guide.md`** — plain-English guide to every habit tracked.
+Read-only Habitica access. The API token is a GitHub secret — never committed,
+printed, or exposed (`.env` and `data/` are git-ignored). The repo is private.

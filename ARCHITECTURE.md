@@ -1,64 +1,94 @@
-# Architecture — built to run for years, easy to extend
+# Architecture
 
-A plain map of how this works, why it won't break, and how to add new nudges.
+A minimal, serverless notification system: **prayer-time reminders + one nightly
+nudge**, delivered to your phone — with no server, no cost, and no dependencies.
 
-## The shape
+## Features
 
+- **Precise prayer reminders** — your phone rings at each prayer's time (configurable
+  per prayer: minutes before it ends, or after it starts), using live prayer times
+  for your city.
+- **One nightly nudge** — a single end-of-day check: what's still unlogged, and which
+  streaks are at risk. Deliberately the *only* supplementary notification.
+- **Editable without code** — timings live in `reminders.json`; city is one variable.
+- **Runs itself** — scheduled on GitHub's infrastructure; your devices stay off.
+
+## How it works
+
+```mermaid
+flowchart TB
+    subgraph gh["GitHub Actions · free scheduled compute"]
+        pr["prayers.yml<br/>every morning"]
+        no["notify.yml<br/>every night"]
+        ka["keepalive.yml<br/>monthly"]
+    end
+
+    subgraph app["App · pure Python standard library"]
+        sp["schedule_prayers.py"]
+        nf["notify.py"]
+        net["net.py<br/>one HTTP layer · retries + backoff"]
+    end
+
+    aladhan["Aladhan<br/>prayer times"]
+    habitica["Habitica<br/>tasks · read-only"]
+    ntfy["ntfy.sh<br/>push + scheduled delivery"]
+    phone["📱 phone"]
+
+    pr --> sp --> net
+    no --> nf --> net
+    net --> aladhan
+    net --> habitica
+    net --> ntfy
+    ntfy ==>|rings at the exact second| phone
+    ka -. keeps the schedules alive .-> gh
 ```
-GitHub Actions (free, scheduled)         ← runs everything; no server, no computer
-   │
-   ├─ prayers.yml   → schedule_prayers.py → ntfy (pre-scheduled, exact-time reminders)
-   ├─ notify.yml    → notify.py           → ntfy (one nightly nudge)
-   └─ keepalive.yml → tiny monthly commit  → keeps the schedules alive forever
 
-src/habitica_etl/        the shared library (3 tiny files, stdlib only)
-   net.py        ← ONE resilient network layer (retries + backoff) everything uses
-   api.py        ← read-only Habitica API client (built on net)
-   config.py     ← settings, timezone, which recitations the nudge watches
+**The data flow:**
+- *Mornings* — `schedule_prayers.py` fetches today's prayer times (Aladhan), computes
+  each reminder, and **pre-schedules** them on ntfy with an exact `At` timestamp.
+- *Nights* — `notify.py` reads your Habitica tasks (read-only) and sends one nudge.
+- `net.py` is the single network layer every call goes through.
 
-scripts/   schedule_prayers.py · notify.py · selftest.py
-reminders.json   ← you edit this to change reminder timings
-```
+## Why this is a good build
 
-## Why it won't break (the 5-year design)
+- **Serverless & free.** There is nothing to host, pay for, or patch. GitHub Actions
+  is the scheduler and compute, ntfy is delivery, Habitica/Aladhan are the data. Zero
+  infrastructure, zero cost.
+- **Precision is decoupled from compute.** GitHub's cron can drift by minutes — and it
+  doesn't matter. The morning job only needs to run *sometime*; it hands ntfy
+  pre-timed messages, and **ntfy delivers to the exact second.** Timing accuracy lives
+  in the delivery layer, not the scheduler.
+- **No dependencies.** The entire app is the Python standard library, so no package
+  can rot, break, or require upgrades. (`pytest` is used only to run the tests.)
+- **Resilient by construction.** All HTTP goes through one layer with retries +
+  exponential backoff (and no pointless retry on a genuine 4xx). Each send/nudge is
+  isolated with `try/except`, so a single failure never cascades. Failed runs email
+  you — it fails loudly, not silently.
+- **Self-sustaining.** A monthly keepalive commit stops GitHub from pausing scheduled
+  workflows after 60 idle days.
+- **Minimal surface area.** 3 scripts, 3 library files, 3 workflows. Small enough to
+  read in one sitting, which is itself a reliability feature.
 
-1. **Zero dependencies.** The entire app uses **only the Python standard
-   library** — nothing from pip to rot or break on an update. (Only the test
-   suite uses `pytest`.)
-2. **Every network call retries.** `net.py` wraps all HTTP with retries +
-   exponential backoff, doesn't retry genuine 4xx (bad token), and surfaces a
-   clear error otherwise. A blip in Habitica/Aladhan/ntfy self-heals.
-3. **Partial failure never cascades.** If one prayer send or one nudge throws,
-   the others still run (`try/except` per item) — you still get the rest.
-4. **No server to maintain.** Free, managed services only: GitHub Actions
-   (compute), ntfy (push), Aladhan (prayer times). The **keepalive** workflow
-   stops GitHub from pausing the schedules after 60 idle days.
-5. **It fails loudly, not silently.** GitHub emails you if a run fails, so you
-   always know if something needs a look.
-6. **Pinned, stable integrations.** Action versions are pinned (`@v4`); the APIs
-   used are long-stable public endpoints.
+## Components
 
-## Notification philosophy — keep it minimal
+| File | Role |
+|---|---|
+| `scripts/schedule_prayers.py` | Fetch prayer times → compute reminders → schedule on ntfy |
+| `scripts/notify.py` | Read Habitica tasks → run nudges → send one notification |
+| `src/habitica_etl/net.py` | Resilient HTTP (retries, backoff) — the only network layer |
+| `src/habitica_etl/api.py` | Read-only Habitica client |
+| `src/habitica_etl/config.py` | Settings, timezone, watched recitations |
+| `reminders.json` | Owner-editable reminder timings |
+| `.github/workflows/*` | `prayers` · `notify` · `keepalive` |
 
-**Notifications are precious. More is worse.** If the phone buzzes for everything,
-you tune it all out — including the prayer reminders that matter. So the default
-is deliberately small: **5 prayer reminders + one gentle nightly nudge.** Don't
-add more unless something is genuinely worth interrupting the day for.
+## Extending it
 
-## How to extend it (sparingly)
+**Reminder timings** — edit `reminders.json` (`before_end` / `after_start` minutes per
+prayer). Takes effect next run; editable from GitHub's web UI.
 
-**Change reminder timings** → edit `reminders.json` (`before_end` / `after_start`
-minutes per prayer). Takes effect next run.
+**City** — set the `PRAYER_CITY` variable.
 
-**Change city** → set the `PRAYER_CITY` variable (`Lahore`, `Islamabad`, …).
-
-**Add a nudge** — only if it clears the "worth a buzz?" bar. It's a small function
-in `scripts/notify.py` returning lines, added to the `NUDGES` list; a failing
-nudge never affects the others. That's the mechanism — but restraint is the rule.
-
-## Testing
-
-- **Offline unit tests** (`tests/`) lock the reminder-timing math — run
-  `python -m pytest`.
-- **Live self-test** (`scripts/selftest.py`) proves ntfy delivers at the exact
-  second and shows today's planned reminder times.
+**A new nudge** — only if it clears the "worth a buzz?" bar. Write a function in
+`notify.py` returning lines, add it to `NUDGES`; a failing nudge can't affect the
+others. The mechanism is there, but **restraint is the rule** — more notifications
+mean less signal.
