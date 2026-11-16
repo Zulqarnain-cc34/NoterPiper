@@ -97,9 +97,9 @@ Ten minutes, once — full steps in **[SETUP.md](SETUP.md)**:
 ```
 Reminders   Zohar 14:14 · Asr 16:33 · Maghrib 17:58 · Isha 19:28 · Fajr 06:01
 
-Nightly     🕌 Prayers not logged: Zohar, Asr, Maghrib, Isha
-            📿 Not done: 500 Lā ḥawla, Tasbeeh Fatima, Surah Mulk
-            🔥 Streak at risk: 500 Lā ḥawla (51), Surah Mulk (52)
+Nightly     🕌 Prayers not logged: Asr, Maghrib, Isha
+            📿 Not done: Morning dhikr, Daily Quran
+            🔥 Streak at risk: Daily Quran (42)
 ```
 </details>
 

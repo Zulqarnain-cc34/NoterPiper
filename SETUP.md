@@ -4,7 +4,7 @@ Takes about 10 minutes, once. After this it runs by itself.
 
 ## 1. Get your phone ready (for reminders)
 1. Install the **ntfy** app — [iPhone](https://apps.apple.com/us/app/ntfy/id1625396347) · [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy).
-2. Pick a **secret topic name** — any random text, e.g. `habitica-salah-9fk2qp7xzr`.
+2. Pick a **secret topic name** — any random text, e.g. `muezzin-<random-letters-digits>`.
    (Anyone who knows it can see your notifications, so keep it random and private.)
 3. In the app, tap **＋** → type your topic → **Subscribe**.
 4. Let the app show notifications: **phone Settings → Apps → ntfy → Notifications → On**
