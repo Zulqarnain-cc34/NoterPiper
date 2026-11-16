@@ -1,54 +1,77 @@
 <div align="center">
 
-# 🔔 NoterPiper
+<img src="assets/logo.svg" width="104" alt="NoterPiper logo">
 
-**A free, serverless notification engine — it pushes the right message to your phone at the right moment.**
+# NoterPiper
 
-*Runs on free infrastructure, needs no server, and is built to be extended. Ships with two plugins: prayer reminders and a Habitica nightly nudge.*
+**A free, serverless notification engine — the right message, on your phone, at the right moment.**
 
-<br>
-
-<img src="assets/demo.png" alt="NoterPiper" width="280">
+![Stars](https://img.shields.io/github/stars/Zulqarnain-cc34/NoterPiper?style=flat&color=f59e0b&labelColor=1e293b)
+![License](https://img.shields.io/badge/license-MIT-6366f1?labelColor=1e293b)
+![Python](https://img.shields.io/badge/python-3.12-3776ab?labelColor=1e293b)
+![Dependencies](https://img.shields.io/badge/dependencies-none-14b8a6?labelColor=1e293b)
+![Tests](https://img.shields.io/badge/tests-57%20passing-22c55e?labelColor=1e293b)
+![Serverless](https://img.shields.io/badge/serverless-✓-8b5cf6?labelColor=1e293b)
 
 </div>
 
 ---
 
-## What it is
+## What it is, in one breath
 
-NoterPiper is a tiny **notification engine**. Every couple of minutes it asks each
-**plugin** — *"anything to notify right now?"* — and delivers what comes back to your
-phone. Nothing runs on your own devices, and it costs nothing.
+NoterPiper quietly watches a few things for you and pings your phone when something's
+due — starting with your **five daily prayers** and an optional **nightly Habitica
+check-in**. It runs entirely on free services, needs no server, and is built so you can
+add your own reminders (gym, water, anything) **without rewriting it**.
 
-It ships with two plugins:
+## How it works — the whole idea in one picture
 
-- 🕌 **[Prayer reminders](src/noterpiper/plugins/prayer/)** — your phone rings for each
-  of the five daily prayers, at a time you choose within each prayer's window.
-- 🌙 **[Habitica nightly nudge](src/noterpiper/plugins/habitica/)** *(optional)* — one
-  calm end-of-day summary of what's still unlogged and which streaks are at risk.
+<img src="assets/architecture.svg" alt="How NoterPiper works: sources → engine → channels → you">
 
-Adding your own — gym, water, a standup reminder, anything — is one small file.
+**Think of it as a tireless assistant.** Every couple of minutes, it walks down a short
+checklist and asks each helper one question — *"anything I should tell them right now?"*
 
----
+- 🟡 **Sources** are the helpers — they decide **what** to tell you. The *prayer* source
+  says "yes, Maghrib is due"; a *gym* source might say "nothing yet."
+- 🟣 The **engine** is the assistant — it just **collects** the answers and makes sure
+  you're never told the same thing twice.
+- 🟢 **Channels** are the messengers — they decide **how** it reaches you: the ntfy app,
+  Discord, Slack, email…
 
-## How it works
+The trick that makes it an *engine*: the assistant never knows **what** a helper does or
+**how** a messenger delivers — only *"ask"* and *"hand off."* That's why a brand-new
+reminder, or a new app to receive on, slots in **without the engine changing at all.**
 
-```
-   SOURCES (plugins)          THE ENGINE                 A CHANNEL          Your phone
-   decide WHAT to send   →    asks each plugin      →    delivers it   →    (the ring)
-   • prayer reminders         "anything due now?",       via ntfy
-   • Habitica nudge           dedupes, routes
-```
+> If you understand that picture, you understand NoterPiper. Prayer and Habitica are just
+> the first two helpers; ntfy and webhook are just the first two messengers.
 
-A free timer wakes a tiny job on GitHub every couple of minutes; the **engine** asks
-each **plugin** what's due and sends it through a **channel** (ntfy). The engine knows
-nothing about prayers or habits — only the small plugin interface — which is what lets
-new plugins drop in without touching the core.
+## Read the docs in this order
 
-See **[PLUGINS.md](PLUGINS.md)** for the full design and how to
-write a plugin.
+| # | Doc | What you'll get |
+|---|---|---|
+| 1 | **README** (you're here) | The idea and the big picture |
+| 2 | **[SETUP](SETUP.md)** | Get it running on your phone — about 10 minutes |
+| 3 | **[PLUGINS](PLUGINS.md)** | The plugins & channels, and how to add your own |
+| 4 | **[ARCHITECTURE](ARCHITECTURE.md)** | The engine in depth |
+| 5 | **[DECISIONS](DECISIONS.md)** · **[SECURITY](SECURITY.md)** | The *why*, and what's safe |
 
----
+Each plugin also has its own short guide:
+**[prayer](src/noterpiper/plugins/prayer/README.md)** · **[habitica](src/noterpiper/plugins/habitica/README.md)**.
+
+## The ideas it's built on
+
+A few well-worn software principles are what keep it simple — in plain words:
+
+- **Decoupling (dependency inversion)** — the engine talks to *ideas* ("a source", "a
+  channel"), never to Prayer or ntfy directly. The parts don't lean on each other.
+- **Open to extend, closed to change** — add a plugin or channel without editing the engine.
+- **Single responsibility** — each part has one job: a source decides *what*, the engine
+  *routes*, a channel *delivers*.
+- **Strategy** — channels are interchangeable delivery strategies; swap or add freely.
+- **Plugin registry** — plugins are just a list the engine loops over.
+- **Value object** — a *Notification* is plain, unchangeable data handed between the parts.
+
+Together: **loose coupling, high cohesion** — self-contained pieces joined by thin glue.
 
 ## Get started
 
@@ -56,23 +79,13 @@ About ten minutes, once — then it runs itself.
 
 ### **→ Follow [SETUP](SETUP.md).**
 
----
+## What it ships with
 
-## Why it's built well
-
-- **Serverless & free.** Nothing to host, pay for, or patch.
-- **Extensible by design.** The engine talks to plugins through one small, stable interface.
-- **Zero dependencies.** Pure Python standard library — nothing to rot in five years.
-- **Live.** Settings are re-read every run; a change applies within minutes.
-- **Self-correcting.** A late or skipped run is caught by the next; each reminder fires exactly once.
-- **Minimal.** One ring when it matters — restraint is a feature.
-
----
-
-## Learn more
-
-- **[PLUGINS.md](PLUGINS.md)** — engine design + writing a plugin
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** · **[DECISIONS.md](DECISIONS.md)** · **[SECURITY.md](SECURITY.md)**
-- Plugins: **[prayer](src/noterpiper/plugins/prayer/)** · **[habitica](src/noterpiper/plugins/habitica/)**
+| Kind | Name | What it does |
+|---|---|---|
+| 🟡 Source | **prayer** | Rings for each of the five daily prayers |
+| 🟡 Source | **habitica** *(optional)* | One calm nightly "what's left" nudge |
+| 🟢 Channel | **ntfy** | Push to your phone |
+| 🟢 Channel | **webhook** | POST to Discord, Slack, Home Assistant, any URL |
 
 <div align="center"><sub>Built to run quietly for years. 🤲</sub></div>

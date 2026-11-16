@@ -35,7 +35,7 @@ moment it's due, so a change you make takes effect within minutes.
 - A free external timer ([cron-job.org](https://cron-job.org)) triggers the job every
   couple of minutes via GitHub's `workflow_dispatch` — GitHub's own `cron` can stall
   on a quiet repo, so it isn't relied on. Setup instructions are in [SETUP](SETUP.md), step 3.
-- Each reminder fires exactly once — a 20-minute due window plus ntfy's message cache
+- Each reminder fires exactly once — a short, configurable due window plus ntfy's message cache
   catch a late or skipped run without ever double-sending.
 
 ### Reminder timings are bounded to each prayer's window

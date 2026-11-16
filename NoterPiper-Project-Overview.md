@@ -111,7 +111,7 @@ Simple on the surface, carefully thought-through underneath:
 
 ## 8. The decisions behind it
 
-- **Send reminders live, not pre-scheduled.** The engine checks continuously, so a
+- **Send reminders live.** The engine checks continuously, so a
   setting you change during the day takes effect right away.
 - **Use an outside clock.** The obvious free scheduler was unreliable for frequent
   intervals, so the trigger was moved to a dependable free timer — no new code, no cost.
