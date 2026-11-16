@@ -140,6 +140,12 @@ def test_show_dailies_toggle_also_hides_at_risk(monkeypatch):
     assert "Fajr" in off                                 # prayers still shown
 
 
+def test_all_groups_off_sends_nothing(monkeypatch):
+    _ready(monkeypatch)                                  # has prayers + a due daily to show
+    off = {**CONFIG, "show_todos": False, "show_dailies": False, "show_prayers": False}
+    assert HabiticaSource().check(AT_NUDGE, off) == []   # every group hidden → no nudge at all
+
+
 def test_show_prayers_toggle(monkeypatch):
     tasks = {"habits": [{"text": "Fajr", "counterUp": 0, "counterDown": 0}], "rewards": [], "todos": [],
              "dailys": [{"text": "Walk", "isDue": True, "completed": False, "streak": 2}]}

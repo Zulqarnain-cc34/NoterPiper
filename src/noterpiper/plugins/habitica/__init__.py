@@ -106,6 +106,11 @@ class HabiticaSource:
     def check(self, now: datetime, config: dict) -> list[Notification]:
         if not api.configured():
             return []                                       # Habitica is optional
+        show_todos = config.get("show_todos", True)
+        show_dailies = config.get("show_dailies", True)
+        show_prayers = config.get("show_prayers", True)
+        if not (show_todos or show_dailies or show_prayers):
+            return []                                       # every group hidden → nothing to ever show
         forced = bool(config.get("force"))                  # on-demand 'send now' button
         if not forced:
             if not config.get("enabled", True):
@@ -118,11 +123,11 @@ class HabiticaSource:
         except Exception:
             return []                                       # Habitica down → skip tonight, don't crash
         c = collect(tasks, now, int(config.get("streak_risk", STREAK_RISK)))
-        if not config.get("show_todos", True):              # include-toggles set in the app
+        if not show_todos:                                  # include-toggles set in the app
             c["todos_overdue"], c["todos_due"] = [], []
-        if not config.get("show_dailies", True):            # dailies off → their at-risk goes too
+        if not show_dailies:                                # dailies off → their at-risk goes too
             c["at_risk"], c["dailies"] = [], []
-        if not config.get("show_prayers", True):
+        if not show_prayers:
             c["prayers"] = []
         body, priority, tag = summarize(c)
         dedup = None if forced else NUDGE_TITLE              # forced always delivers; scheduled dedups
