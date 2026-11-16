@@ -1,4 +1,4 @@
-// Muezzin config page — PURE logic only (no `document`), so Node can unit-test it
+// NoterPiper config page — PURE logic only (no `document`), so Node can unit-test it
 // and the browser can import it as a module. All DOM building lives in index.html.
 
 export const PRAYERS = ['Fajr', 'Zohar', 'Asr', 'Maghrib', 'Isha'];

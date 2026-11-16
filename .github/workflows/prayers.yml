@@ -25,13 +25,18 @@ jobs:
       PRAYER_COUNTRY: ${{ vars.PRAYER_COUNTRY }}
       PRAYER_METHOD: ${{ vars.PRAYER_METHOD }}
       PRAYER_TIMEZONE: ${{ vars.PRAYER_TIMEZONE }}
+      # Habitica (optional) — lets the engine run the nightly nudge plugin too.
+      HABITICA_API_TOKEN: ${{ secrets.HABITICA_API_TOKEN }}
+      HABITICA_USER_ID: ${{ secrets.HABITICA_USER_ID }}
+      # Optional 2nd channel — a webhook URL (Discord / Slack / Home Assistant / …).
+      WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # schedule_prayers.py uses only the Python standard library — no install.
-      - run: python scripts/schedule_prayers.py
+      # run_engine.py runs every plugin (prayer + nightly nudge); stdlib only — no install.
+      - run: python scripts/run_engine.py
 
       # If anything above failed (bad location, ntfy down, a crash), push an
       # urgent alert to your phone with a one-tap link to the logs. GitHub also
@@ -44,7 +49,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           curl -s --max-time 20 \
-            -H "Title: Muezzin failed: ${WF}" \
+            -H "Title: NoterPiper failed: ${WF}" \
             -H "Priority: urgent" \
             -H "Tags: rotating_light" \
             -d "The '${WF}' run failed. Tap for logs: ${RUN_URL}" \

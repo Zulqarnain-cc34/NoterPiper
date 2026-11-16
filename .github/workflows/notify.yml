@@ -9,11 +9,9 @@ name: Habitica Notifications
 # once-a-day "before midnight" nudge, not for exact prayer-time alerts.
 
 on:
-  schedule:
-    # Runs every 30 min across a UTC evening window; notify.py fires only at the
-    # nudge time in your settings. Shift this window to cover your local evening.
-    - cron: "0,30 13-18 * * *"
-  workflow_dispatch:         # manual "Run" button — the on-demand nudge, skips the time gate
+  workflow_dispatch:         # the on-demand "send nudge now" button
+  # The *scheduled* nightly nudge is handled by the engine (prayers.yml runs every
+  # plugin on its ~2-min trigger). This workflow is just the manual button.
 
 jobs:
   notify:
@@ -23,13 +21,15 @@ jobs:
       HABITICA_USER_ID: ${{ secrets.HABITICA_USER_ID }}
       NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
       PRAYER_TIMEZONE: ${{ vars.PRAYER_TIMEZONE }}   # the nudge's local-time clock
+      FORCE_SOURCE: habitica                         # force just the nudge, now, bypassing its time gate
+      WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}         # optional 2nd channel, if configured
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # notify.py uses only the Python standard library — no pip install needed.
-      - run: python scripts/notify.py
+      # run_engine.py forces just the Habitica nudge (stdlib only — no install).
+      - run: python scripts/run_engine.py
 
       # Push an urgent alert (and GitHub emails you too) if the nightly job breaks.
       - name: Alert me if this job failed
@@ -40,7 +40,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           curl -s --max-time 20 \
-            -H "Title: Muezzin failed: ${WF}" \
+            -H "Title: NoterPiper failed: ${WF}" \
             -H "Priority: urgent" \
             -H "Tags: rotating_light" \
             -d "The '${WF}' run failed. Tap for logs: ${RUN_URL}" \

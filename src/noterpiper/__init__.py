@@ -1,4 +1,4 @@
-"""muezzin — shared library for the reminder/nudge scripts.
+"""noterpiper — shared library for the reminder/nudge scripts.
 
   config   — settings (env/.env) + helpers
   settings — one config.json (location, offsets, nudge) → typed Settings

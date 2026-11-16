@@ -1,71 +1,93 @@
 <div align="center">
 
-# 🕌 Muezzin
+<img src="assets/logo.svg" width="104" alt="NoterPiper logo">
 
-**Your call to prayer — on your phone.**
+# NoterPiper
 
-*Gentle prayer reminders and a quiet nightly check-in. Free, private, and it runs itself.*
+**A free, serverless notification engine — the right message, on your phone, at the right moment.**
 
-![serverless](https://img.shields.io/badge/serverless-✓-9ece6a?style=flat&labelColor=1a1b26)
-![free](https://img.shields.io/badge/cost-free-7aa2f7?style=flat&labelColor=1a1b26)
-![runs%20itself](https://img.shields.io/badge/runs-itself-f0b429?style=flat&labelColor=1a1b26)
-
-<br>
-
-<img src="assets/demo.png" alt="Muezzin" width="300">
+![Stars](https://img.shields.io/github/stars/Zulqarnain-cc34/NoterPiper?style=flat&color=f59e0b&labelColor=1e293b)
+![License](https://img.shields.io/badge/license-MIT-6366f1?labelColor=1e293b)
+![Python](https://img.shields.io/badge/python-3.12-3776ab?labelColor=1e293b)
+![Dependencies](https://img.shields.io/badge/dependencies-none-14b8a6?labelColor=1e293b)
+![Tests](https://img.shields.io/badge/tests-57%20passing-22c55e?labelColor=1e293b)
+![Serverless](https://img.shields.io/badge/serverless-✓-8b5cf6?labelColor=1e293b)
 
 </div>
 
 ---
 
-## What it does
+## What it is, in one breath
 
-🔔 **Prayer reminders** — your phone rings for each of the five prayers, at the
-moment *you* choose within that prayer's own window.
+NoterPiper quietly watches a few things for you and pings your phone when something's
+due — starting with your **five daily prayers** and an optional **nightly Habitica
+check-in**. It runs entirely on free services, needs no server, and is built so you can
+add your own reminders (gym, water, anything) **without rewriting it**.
 
-🌙 **A nightly check-in** *(optional)* — one calm end-of-day reminder of what's
-left, if you keep your habits in Habitica.
+## How it works — the whole idea in one picture
 
-📱 **A little app** — set your city and your reminder times from your phone,
-whenever you like. Changes take effect within minutes.
+<img src="assets/architecture.svg" alt="How NoterPiper works: sources → engine → channels → you">
 
-No servers. No sign-ups. No cost.
+**Think of it as a tireless assistant.** Every couple of minutes, it walks down a short
+checklist and asks each helper one question — *"anything I should tell them right now?"*
 
----
+- 🟡 **Sources** are the helpers — they decide **what** to tell you. The *prayer* source
+  says "yes, Maghrib is due"; a *gym* source might say "nothing yet."
+- 🟣 The **engine** is the assistant — it just **collects** the answers and makes sure
+  you're never told the same thing twice.
+- 🟢 **Channels** are the messengers — they decide **how** it reaches you: the ntfy app,
+  Discord, Slack, email…
 
-## What lands on your phone
+The trick that makes it an *engine*: the assistant never knows **what** a helper does or
+**how** a messenger delivers — only *"ask"* and *"hand off."* That's why a brand-new
+reminder, or a new app to receive on, slots in **without the engine changing at all.**
 
-> ### 🕌 Maghrib
-> Time to pray · ends 5:03 PM
+<img src="assets/analogy.svg" alt="The tireless assistant: helpers → the engine asks every 2 min → channels → you">
 
-One ring, when it matters — clear and to the point. Nothing else, ever.
+> If you understand that picture, you understand NoterPiper. Prayer and Habitica are just
+> the first two helpers; ntfy and webhook are just the first two messengers.
 
----
+## Read the docs in this order
 
-## How it works
+| # | Doc | What you'll get |
+|---|---|---|
+| 1 | **README** (you're here) | The idea and the big picture |
+| 2 | **[SETUP](SETUP.md)** | Get it running on your phone — about 10 minutes |
+| 3 | **[PLUGINS](PLUGINS.md)** | The plugins & channels, and how to add your own |
+| 4 | **[ARCHITECTURE](ARCHITECTURE.md)** | The engine in depth |
+| 5 | **[DECISIONS](DECISIONS.md)** · **[SECURITY](SECURITY.md)** | The *why*, and what's safe |
 
-You choose your city and your timings once. From then on, a small job quietly
-checks the clock every few minutes and rings your phone the moment a prayer is
-due — on time, every day, with nothing to keep running on your end.
+Each plugin also has its own short guide:
+**[prayer](src/noterpiper/plugins/prayer/README.md)** · **[habitica](src/noterpiper/plugins/habitica/README.md)**.
 
----
+## The ideas it's built on
+
+A few well-worn software principles are what keep it simple — in plain words:
+
+- **Decoupling (dependency inversion)** — the engine talks to *ideas* ("a source", "a
+  channel"), never to Prayer or ntfy directly. The parts don't lean on each other.
+- **Open to extend, closed to change** — add a plugin or channel without editing the engine.
+- **Single responsibility** — each part has one job: a source decides *what*, the engine
+  *routes*, a channel *delivers*.
+- **Strategy** — channels are interchangeable delivery strategies; swap or add freely.
+- **Plugin registry** — plugins are just a list the engine loops over.
+- **Value object** — a *Notification* is plain, unchangeable data handed between the parts.
+
+Together: **loose coupling, high cohesion** — self-contained pieces joined by thin glue.
 
 ## Get started
 
-About ten minutes, once — then it looks after itself.
+About ten minutes, once — then it runs itself.
 
-### **→ Follow the three steps in [SETUP](SETUP.md).**
+### **→ Follow [SETUP](SETUP.md).**
 
-That's genuinely all there is to it.
+## What it ships with
 
----
-
-## Why you can trust it
-
-- **It lasts.** Nothing to host, pay for, or patch — built to run for years untouched.
-- **It's private.** It only ever *reads* your data, and nothing personal leaves your own copy.
-- **It's on time.** It checks continuously, so a change you make shows up in minutes.
-
----
+| Kind | Name | What it does |
+|---|---|---|
+| 🟡 Source | **prayer** | Rings for each of the five daily prayers |
+| 🟡 Source | **habitica** *(optional)* | One calm nightly "what's left" nudge |
+| 🟢 Channel | **ntfy** | Push to your phone |
+| 🟢 Channel | **webhook** | POST to Discord, Slack, Home Assistant, any URL |
 
 <div align="center"><sub>Built to run quietly for years. 🤲</sub></div>

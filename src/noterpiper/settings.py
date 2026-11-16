@@ -29,6 +29,8 @@ class Settings:
     nudge_time: str      # "HH:MM", local
     nudge_enabled: bool
     timezone: str        # IANA name, used to fire the nudge at the right local time
+    prayer_window: int = 5    # minutes a prayer reminder stays "due" after its time
+    nudge_window: int = 5     # minutes the nightly nudge stays "due" after its time
 
 
 DEFAULTS = Settings(
@@ -44,6 +46,13 @@ def _read(path: Path) -> dict:
         return data if isinstance(data, dict) else {}
     except Exception:          # missing / malformed → defaults, never a crash
         return {}
+
+
+def _as_int(v, default: int) -> int:
+    try:
+        return int(v)
+    except (TypeError, ValueError):          # missing / hand-edited junk → default
+        return default
 
 
 def _as_bool(v, default: bool = True) -> bool:
@@ -96,4 +105,6 @@ def load_settings(path: Path | None = None) -> Settings:
         nudge_time=nudge_time,
         nudge_enabled=_as_bool(nudge.get("enabled")),
         timezone=tz,
+        prayer_window=_as_int(raw.get("window"), DEFAULTS.prayer_window),
+        nudge_window=_as_int(nudge.get("window"), DEFAULTS.nudge_window),
     )

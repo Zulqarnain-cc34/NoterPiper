@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Muezzin · Settings</title>
+<title>NoterPiper · Settings</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0b1018">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Muezzin">
+<meta name="apple-mobile-web-app-title" content="NoterPiper">
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}</script>
 <style>
   :root{
@@ -126,7 +126,7 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="appbar"><span class="logo">🕌</span><h1>Muezzin</h1><span class="sub" id="status">settings</span></div>
+    <div class="appbar"><span class="logo">🕌</span><h1>NoterPiper</h1><span class="sub" id="status">settings</span></div>
 
     <details class="connect" id="connect"><summary>⚙&nbsp; Connect to GitHub</summary>
       <div class="crow"><input id="token" placeholder="fine-grained token" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true"><button id="saveToken">Save</button></div>
@@ -135,7 +135,7 @@
 
     <div class="label">Location</div>
     <div class="card">
-      <div class="row" id="cityRow"><span class="rname">City</span><span class="spacer"></span><input class="text" id="city" name="muezzin-city" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-form-type="other"><div class="suggest" id="suggest"></div></div>
+      <div class="row" id="cityRow"><span class="rname">City</span><span class="spacer"></span><input class="text" id="city" name="noterpiper-city" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-form-type="other"><div class="suggest" id="suggest"></div></div>
       <div class="row"><span class="rname">Country</span><span class="spacer"></span><select id="country"></select></div>
       <div class="row"><span class="rname">Method<span class="hint">calculation</span></span><span class="spacer"></span>
         <select id="method"></select></div>
@@ -322,12 +322,12 @@
   };
 
   // ─── GitHub integration (Contents API + token in localStorage) ───
-  const LKEY = 'muezzin_token';
+  const LKEY = 'noterpiper_token';
   const token = () => localStorage.getItem(LKEY) || '';
   function repoSlug() {
     const h = location.hostname, p = location.pathname.split('/').filter(Boolean);
     if (h.endsWith('github.io')) return `${h.split('.')[0]}/${p[0] || ''}`;
-    return 'Zulqarnain-cc34/muezzin';   // local dev / custom-domain fallback
+    return 'Zulqarnain-cc34/noterpiper';   // local dev / custom-domain fallback
   }
   const API = () => 'https://api.github.com/repos/' + repoSlug();
   const ghHeaders = () => {
@@ -404,7 +404,7 @@
       const cur = await ghGet('/contents/config.json?ref=main');         // fresh sha + latest content
       const base = JSON.parse(decodeB64(cur.content));
       const next = toConfig(state, base);
-      const body = { message: 'Update settings via Muezzin config page', content: encodeContent(next), sha: cur.sha, branch: 'main' };
+      const body = { message: 'Update settings via NoterPiper config page', content: encodeContent(next), sha: cur.sha, branch: 'main' };
       await ghPut('/contents/config.json', body);
       loaded = next;
       toast('Saved ✓ · applies within ~5 min'); setStatus('saved ✓');

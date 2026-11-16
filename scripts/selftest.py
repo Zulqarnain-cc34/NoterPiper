@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Live self-test — confirms the delivery path works.
+"""Live self-test — confirms the delivery path and shows today's prayer times.
 
-1. Shows today's planned prayer-reminder times for your city.
-2. Sends ONE real notification the same way reminders are sent (live), so you
-   can confirm it actually reaches your phone.
+1. Shows today's prayer start-times for your city (via the prayer plugin).
+2. Sends ONE real notification the same way reminders are sent, so you can confirm
+   it actually reaches your phone.
 """
 from __future__ import annotations
 
@@ -12,29 +12,32 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "scripts"))
-sys.path.insert(0, str(ROOT / "src"))
-import schedule_prayers as sp  # noqa: E402
-from muezzin import config, settings  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from noterpiper import config, settings  # noqa: E402
+from noterpiper.channels import NtfyChannel  # noqa: E402
+from noterpiper.engine import Notification  # noqa: E402
+from noterpiper.plugins.prayer import STARTS_AT, fetch_timings  # noqa: E402
 
 
 def main() -> int:
-    topic = config.env("NTFY_TOPIC")
     s = settings.load_settings()
+    topic = config.env("NTFY_TOPIC")
 
-    timings, tzname = sp.fetch_timings(s.city, s.country, s.method)
-    now = datetime.now(ZoneInfo(tzname))
-    print(f"{s.city}, {s.country} ({tzname}) — now {now:%a %H:%M}:")
-    for prayer, remind in sp.plan_reminders(timings, now, s.reminders):
-        print(f"  {prayer:8} → {remind:%a %H:%M}")
+    try:
+        timings = fetch_timings(s.city, s.country, s.method)
+        now = datetime.now(ZoneInfo(s.timezone))
+        print(f"{s.city} — {now:%a %H:%M}:")
+        for prayer, start_key in STARTS_AT.items():
+            print(f"  {prayer:8} starts {timings.get(start_key, '?')}")
+    except Exception as e:
+        print(f"[warn] couldn't fetch prayer times: {e}")
 
     if not topic:
         print("\n[no NTFY_TOPIC set — skipping the live delivery test]")
         return 0
 
-    # Send one notification exactly the way reminders are sent (live, no schedule).
-    sp.send_live(topic, "Self-test", "If this reached your phone, reminders will too.")
+    NtfyChannel(topic).send(
+        Notification("Self-test", "If this reached your phone, reminders will too."))
     print("\nSent a live test notification — watch your phone now.")
     return 0
 

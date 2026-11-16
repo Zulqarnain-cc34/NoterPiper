@@ -1,59 +1,47 @@
-# Setup
+# Setup — the engine
 
-About 10 minutes, once. Then it runs itself — forever.
+About 10 minutes, once. Then it runs itself.
+
+This sets up the **engine** — a way to reach your phone (a channel) and the trigger
+that runs it. Once that's live, you **turn on the reminders you want** (the plugins) —
+each has its own short setup. You never touch the engine again.
 
 ---
 
-## 1 · Phone
+## 1 · Delivery — the ntfy channel
+
+This is how notifications reach your phone (the default channel).
 
 1. Install **ntfy** — [iPhone](https://apps.apple.com/us/app/ntfy/id1625396347) · [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy).
-2. Think of a **secret topic name** — random text, e.g. `muezzin-7f3qk9zx`. Keep it private.
-3. In the app: tap **＋** → type your topic → **Subscribe**.
-4. Allow notifications for ntfy in your phone settings.
+2. Think of a **secret topic name** — random text, e.g. `noterpiper-7f3qk9zx`. Keep it private.
+3. In the app: tap **＋** → type your topic → **Subscribe**, and allow notifications.
+4. On GitHub → **Settings → Secrets and variables → Actions → New repository secret**:
+
+   | Secret | Value |
+   |---|---|
+   | `NTFY_TOPIC` | your topic from step 2 |
+
+> Want to also receive on Discord / Slack / email? Add another channel —
+> see **[channels](src/noterpiper/channels/README.md)**.
 
 ---
 
-## 2 · GitHub settings
+## 2 · The trigger — run the engine every ~2 minutes
 
-Go to **Settings → Secrets and variables → Actions**.
+GitHub won't start a frequent schedule reliably on its own, so a tiny free service
+presses the button for you.
 
-**Add one Secret** (the *Secrets* tab → *New repository secret*):
-
-| Secret | Value |
-|---|---|
-| `NTFY_TOPIC` | your topic from step 1 |
-
-**Set your location** — open [`config.json`](config.json) on GitHub, tap ✏️ *Edit*,
-and change `"city"`, `"country"`, and `"method"` to yours. Commit.
-
-> **method** is the calculation body for your region (it mainly sets the Fajr/Isha
-> angles). The common ones: `1` Karachi · `2` ISNA (N. America) · `3` Muslim World
-> League · `4` Umm al-Qura (Saudi) · `5` Egyptian Authority. Any valid id works — see
-> the current, complete list at
-> [aladhan.com/calculation-methods](https://aladhan.com/calculation-methods).
-
-> Timezone is detected from your city — it works anywhere.
-
----
-
-## 3 · Make it run automatically
-
-GitHub can send the reminders, but it won't start a frequent schedule
-reliably on its own. A tiny free service presses the button for you —
-every couple of minutes, on the dot.
-
-1. **Enable + test** — open the **Actions** tab → enable workflows if asked →
-   click **Prayer Reminders** → **Run workflow**. Your phone should ring.
-2. **Make a GitHub token** (your own, generated on GitHub) — *Settings → Developer
-   settings → Fine-grained tokens → Generate new token*. Repository access:
-   **only this repo**. Permissions: **Actions → Read and write**. Copy it —
-   this is the `<your token>` used in the Authorization header below.
+1. **Enable + test** — open the **Actions** tab → enable workflows if asked → run the
+   workflow once → confirm the run log finishes without errors.
+2. **Make a GitHub token** — *Settings → Developer settings → Fine-grained tokens →
+   Generate new token*. Repository access: **only this repo**. Permissions:
+   **Actions → Read and write**. Copy it (this is `<your token>` below).
 3. **Sign up at [cron-job.org](https://cron-job.org)** — free, no card.
-4. **Create a cronjob** with these settings:
+4. **Create a cronjob:**
 
    | Field | Value |
    |---|---|
-   | URL | `https://api.github.com/repos/<you>/muezzin/actions/workflows/prayers.yml/dispatches` |
+   | URL | `https://api.github.com/repos/<you>/noterpiper/actions/workflows/prayers.yml/dispatches` |
    | Schedule | every **2 minutes** |
    | Request method | `POST` |
    | Request body | `{"ref":"main"}` |
@@ -62,39 +50,39 @@ every couple of minutes, on the dot.
 
    | Key | Value |
    |---|---|
-   | `Authorization` | `Bearer <your token>` — the GitHub fine-grained token from step 2 |
+   | `Authorization` | `Bearer <your token>` |
    | `Accept` | `application/vnd.github+json` |
    | `X-GitHub-Api-Version` | `2022-11-28` |
    | `Content-Type` | `application/json` |
 
-5. Save. Within a couple of minutes the **Actions** tab shows **Prayer
-   Reminders** running on its own. ✅
+5. Save. Within a couple of minutes the **Actions** tab shows the engine running on
+   its own. ✅
 
-That's it. Reminders now land on time every day, and any setting you change
-applies within minutes.
-
-> One token does both jobs — if you also set up the phone page below, give
-> the token **Contents → Read and write** as well, and reuse it.
+The engine is now live. It just won't say anything until you turn on a plugin ↓
 
 ---
 
-## Optional
+## 3 · Turn on the reminders you want
 
-- **Phone config page** — edit all of this from your phone instead of GitHub's file editor:
-  1. **Make the repo public** — *Settings → General → Change visibility → Public*. (Your
-     secrets stay private; only `config.json` — your city and offsets — becomes visible.)
-  2. **Turn on Pages** — *Settings → Pages → Source: Deploy from a branch → `main` / `/docs`*.
-     Your page appears at `https://<you>.github.io/muezzin/`.
-  3. **Make a token** — *Settings → Developer settings → Fine-grained tokens → Generate*.
-     Repository access: **only this repo**. Permissions: **Contents → Read and write** and
-     **Actions → Read and write**. Copy it.
-  4. **Install** — open the Pages URL on your phone → **⚙ Connect to GitHub** → paste the
-     token → Save. Then your browser's menu → **Add to Home Screen**.
-- **Nightly Habitica nudge** — only if you track in Habitica. Add two more Secrets:
-  `HABITICA_API_TOKEN` and `HABITICA_USER_ID` (both from Habitica → Settings → Site Data),
-  then set the time in [`config.json`](config.json) (`nudge.time`, 24-hour local).
-- **Change reminder times** — edit [`config.json`](config.json): `reminders` holds
-  `before_end` / `after_start` minutes per prayer.
-- **Anywhere in the world?** Prayer reminders need no changes — they're computed from
-  your city's own timezone automatically. Only the nightly Habitica nudge runs on a
-  fixed UTC `cron` in `notify.yml`; adjust that window if you use the nudge.
+Each plugin has its own short, self-contained setup:
+
+- 🕌 **Prayer reminders** → **[plugins/prayer](src/noterpiper/plugins/prayer/README.md)**
+  (your city, method, and timings)
+- 🌙 **Habitica nightly nudge** *(optional)* → **[plugins/habitica](src/noterpiper/plugins/habitica/README.md)**
+  (two API-token secrets + the nudge time)
+
+Want a new kind of reminder (gym, water, …)? See **[PLUGINS](PLUGINS.md)** — it's one small file.
+
+---
+
+## Optional · Edit settings from your phone
+
+A small page lets you change your settings from your phone instead of GitHub's file editor:
+
+1. **Make the repo public** — *Settings → General → Change visibility → Public*. (Your
+   secrets stay private; only `config.json` — your settings — becomes visible.)
+2. **Turn on Pages** — *Settings → Pages → Source: Deploy from a branch → `main` / `/docs`*.
+   Your page appears at `https://<you>.github.io/noterpiper/`.
+3. **Reuse your token** (add **Contents → Read and write** to it as well).
+4. **Install** — open the Pages URL on your phone → **⚙ Connect to GitHub** → paste the
+   token → Save. Then your browser's menu → **Add to Home Screen**.

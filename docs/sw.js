@@ -1,7 +1,7 @@
 // Minimal service worker — makes this an installable PWA (clean home-screen
 // icon, no browser badge) and serves the shell offline. Network-first so an
 // online visit is always fresh; the live GitHub/Aladhan APIs are never cached.
-const CACHE = 'muezzin-v1';
+const CACHE = 'noterpiper-v1';
 
 self.addEventListener('install', () => self.skipWaiting());
 
