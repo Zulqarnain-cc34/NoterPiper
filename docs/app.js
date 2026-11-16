@@ -13,6 +13,10 @@ export const SCHEMA = {
   nudge: [
     { key: 'nudgeTime', label: 'Time', type: 'time' },
     { key: 'nudgeEnabled', label: 'Habitica nudge', type: 'toggle' },
+    { key: 'nudgeStreakRisk', label: 'At-risk streak', type: 'stepper' },
+    { key: 'nudgeShowTodos', label: 'Include to-dos', type: 'toggle' },
+    { key: 'nudgeShowDailies', label: 'Include dailies', type: 'toggle' },
+    { key: 'nudgeShowPrayers', label: 'Include prayers', type: 'toggle' },
   ],
 };
 
@@ -120,6 +124,10 @@ export function fromConfig(o = {}) {
     reminders: o.reminders ?? {},
     nudgeTime: nudge.time ?? '21:30',
     nudgeEnabled: nudge.enabled !== false,   // default on; only explicit false is off
+    nudgeStreakRisk: Number.isFinite(+nudge.streak_risk) && +nudge.streak_risk > 0 ? +nudge.streak_risk : 7,
+    nudgeShowTodos: nudge.show_todos !== false,       // the three include-toggles default on
+    nudgeShowDailies: nudge.show_dailies !== false,
+    nudgeShowPrayers: nudge.show_prayers !== false,
   };
 }
 
@@ -133,6 +141,10 @@ export function toConfig(s, base = {}) {
     method: String(s.method),
     timezone: s.timezone,
     reminders: s.reminders,
-    nudge: { ...(base.nudge || {}), time: s.nudgeTime, enabled: Boolean(s.nudgeEnabled) },
+    nudge: {
+      ...(base.nudge || {}), time: s.nudgeTime, enabled: Boolean(s.nudgeEnabled),
+      streak_risk: Number(s.nudgeStreakRisk), show_todos: Boolean(s.nudgeShowTodos),
+      show_dailies: Boolean(s.nudgeShowDailies), show_prayers: Boolean(s.nudgeShowPrayers),
+    },
   };
 }

@@ -58,10 +58,16 @@ If the secrets aren't set, the plugin simply does nothing — nothing breaks.
 
 ## Settings reference
 
+All of these are editable from the phone config page — no JSON needed.
+
 | Key | Meaning |
 |---|---|
 | `nudge.time` | When to send it (24-hour local time) |
 | `nudge.enabled` | Turn it on/off without removing it |
+| `nudge.streak_risk` *(optional)* | Streak length that flags a daily "at risk" — defaults to 7 |
+| `nudge.show_todos` *(optional)* | Include due/overdue to-dos — defaults to true |
+| `nudge.show_dailies` *(optional)* | Include due dailies (and their at-risk flag) — defaults to true |
+| `nudge.show_prayers` *(optional)* | Include unlogged prayer habits — defaults to true |
 | `nudge.window` *(optional)* | Minutes the nudge stays "due" — defaults to 5 |
 
 ## Security
