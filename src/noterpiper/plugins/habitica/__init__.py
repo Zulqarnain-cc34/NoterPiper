@@ -67,7 +67,7 @@ class HabiticaSource:
             if not config.get("enabled", True):
                 return []
             nudge_time = str(config.get("nudge_time") or config.get("time") or "21:30")
-            if not _due_now(now, nudge_time):
+            if not _due_now(now, nudge_time, int(config.get("window", WINDOW_MIN))):
                 return []
         try:
             tasks = api.fetch_tasks_by_type()

@@ -33,11 +33,11 @@ def build_config(s, force_source: str | None = None) -> dict:
     return {
         "prayer": {
             "city": s.city, "country": s.country, "method": s.method,
-            "reminders": s.reminders,
+            "reminders": s.reminders, "window": s.prayer_window,
         },
         "habitica": {
             "time": s.nudge_time, "enabled": s.nudge_enabled,
-            "force": force_source == "habitica",
+            "window": s.nudge_window, "force": force_source == "habitica",
         },
     }
 

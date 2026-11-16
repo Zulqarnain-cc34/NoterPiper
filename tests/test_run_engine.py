@@ -11,13 +11,20 @@ import run_engine  # noqa: E402
 
 S = SimpleNamespace(city="Lahore", country="Pakistan", method="1",
                     reminders={"Fajr": {"after_start": 5}}, nudge_time="21:30",
-                    nudge_enabled=True, timezone="Asia/Karachi")
+                    nudge_enabled=True, timezone="Asia/Karachi",
+                    prayer_window=20, nudge_window=30)
+
+
+def test_build_config_passes_each_plugins_window():
+    cfg = run_engine.build_config(S)
+    assert cfg["prayer"]["window"] == 20
+    assert cfg["habitica"]["window"] == 30
 
 
 def test_build_config_splits_settings_into_plugin_slices():
     cfg = run_engine.build_config(S)
     assert cfg["prayer"] == {"city": "Lahore", "country": "Pakistan", "method": "1",
-                             "reminders": {"Fajr": {"after_start": 5}}}
+                             "reminders": {"Fajr": {"after_start": 5}}, "window": 20}
     assert cfg["habitica"]["time"] == "21:30"
     assert cfg["habitica"]["enabled"] is True
     assert cfg["habitica"]["force"] is False

@@ -47,6 +47,13 @@ def test_before_end_rule_fires_before_the_window_closes(monkeypatch):
     assert [n.title for n in PrayerSource().check(now, CONFIG)] == ["Maghrib"]
 
 
+def test_window_from_config_is_honored(monkeypatch):
+    _patch(monkeypatch)
+    now = datetime(2026, 11, 16, 5, 10, tzinfo=TZ)   # Fajr reminder 05:05 → 5 min ago
+    assert [n.title for n in PrayerSource().check(now, {**CONFIG, "window": 20})] == ["Fajr"]
+    assert PrayerSource().check(now, {**CONFIG, "window": 3}) == []   # 5 min > 3-min window
+
+
 def test_a_broken_timing_skips_only_that_prayer(monkeypatch):
     broken = {k: v for k, v in TIMINGS.items() if k != "Dhuhr"}   # Zohar's start missing
     _patch(monkeypatch, broken)

@@ -89,3 +89,19 @@ def test_method_zero_is_preserved(tmp_path):
 def test_invalid_timezone_falls_back_to_default(tmp_path):
     f = _write(tmp_path, {"timezone": "Not/AZone"})
     assert settings.load_settings(f).timezone == "Asia/Riyadh"
+
+
+def test_windows_default_when_absent(tmp_path):
+    s = settings.load_settings(tmp_path / "nope.json")
+    assert s.prayer_window == 20 and s.nudge_window == 30
+
+
+def test_windows_are_read_from_config(tmp_path):
+    f = _write(tmp_path, {"window": 10, "nudge": {"window": 45}})
+    s = settings.load_settings(f)
+    assert s.prayer_window == 10 and s.nudge_window == 45
+
+
+def test_junk_window_falls_back_to_default(tmp_path):
+    f = _write(tmp_path, {"window": "soon"})
+    assert settings.load_settings(f).prayer_window == 20

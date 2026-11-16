@@ -67,13 +67,14 @@ class PrayerSource:
     def check(self, now: datetime, config: dict) -> list[Notification]:
         timings = fetch_timings(config.get("city"), config.get("country"), config.get("method"))
         rules = config.get("reminders", {})
+        window = int(config.get("window", WINDOW_MIN))
         out: list[Notification] = []
         for prayer in STARTS_AT:
             try:
                 remind = _reminder_dt(prayer, timings, now, rules)
             except (KeyError, ValueError, TypeError):
                 continue                                  # bad rule / missing timing → skip this one
-            if not _due(remind, now):
+            if not _due(remind, now, window):
                 continue
             try:
                 end = _to_dt(timings[ENDS_AT[prayer]], now)

@@ -52,6 +52,13 @@ def test_nudge_at_time_is_one_notification_with_a_stable_dedup_title(monkeypatch
     assert "Fajr" in n.body and "Mulk" in n.body  # the grouped detail survives
 
 
+def test_window_from_config_is_honored(monkeypatch):
+    _ready(monkeypatch)
+    now = datetime(2026, 11, 16, 21, 45, tzinfo=TZ)      # 15 min after 21:30
+    assert HabiticaSource().check(now, {"time": "21:30", "enabled": True, "window": 30}) != []
+    assert HabiticaSource().check(now, {"time": "21:30", "enabled": True, "window": 10}) == []
+
+
 def test_task_fetch_failure_sends_nothing(monkeypatch):
     monkeypatch.setattr("noterpiper.plugins.habitica.api.configured", lambda: True)
     def boom():
