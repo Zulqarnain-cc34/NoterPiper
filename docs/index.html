@@ -189,7 +189,7 @@
 
     <div class="label">Ramadan</div>
     <div class="card">
-      <div class="row"><span class="rname">Suhoor &amp; iftar<span class="hint">reminders — only during Ramadan</span></span>
+      <div class="row"><span class="rname">Suhoor &amp; iftar<span class="hint" id="ramHint">reminders — only during Ramadan</span></span>
         <div class="toggle" id="ramEnabled"><div class="knob"></div></div></div>
       <div id="ramOpts">
         <div class="row"><span class="rname">Suhoor lead<span class="hint">minutes before Fajr</span></span><span class="spacer"></span>
@@ -259,13 +259,23 @@
     try {
       const r = await fetch(aladhan(city, country, g('method').value));
       const j = await r.json();
-      if (r.ok && j && j.data) { tz = (j.data.meta && j.data.meta.timezone) || null; timings = j.data.timings || null; }
+      if (r.ok && j && j.data) {
+        tz = (j.data.meta && j.data.meta.timezone) || null; timings = j.data.timings || null;
+        hijriMonth = Number((((j.data.date || {}).hijri || {}).month || {}).number) || hijriMonth;
+      }
     } catch { tz = null; }
     if (my !== seq) return;                             // a newer check superseded this one
     resolved = tz; if (tz) state.timezone = tz;
     if (timings) { windows = prayerWindows(timings); clampAll(); }   // cap offsets to each prayer's window
-    pending = false; paint();
+    pending = false; paint(); updateRamHint();
     if (userTouched && resolved) scheduleSave();         // a user-driven location change resolved → autosave
+  }
+  // The Ramadan toggle stays armed year-round; this label shows whether it's firing now.
+  let hijriMonth = null;
+  function updateRamHint() {
+    const el = document.getElementById('ramHint'); if (!el) return;
+    el.textContent = hijriMonth === 9 ? "active now — it's Ramadan 🌙"
+      : hijriMonth ? 'armed · dormant until Ramadan' : 'reminders — only during Ramadan';
   }
 
   // Keep every offset inside its prayer's window (5 ≤ offset ≤ window − margin).
