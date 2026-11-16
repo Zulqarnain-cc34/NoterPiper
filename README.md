@@ -1,114 +1,66 @@
-# Habitica Dashboard — a small, no-server tool
+<div align="center">
 
-A compact tool that pulls your Habitica data via the API and shows a clean
-**dashboard** + **weekly report** for your recitations (and prayers, once those
-habits have data). **No server required** — it can host itself on GitHub Pages
-and refresh on a schedule.
+# 🕌 Habitica Salah
 
-> This used to be a data-science project; it's now just an API tool + dashboard.
-> The old analysis lives in `archive/`.
+**Your prayers and daily recitations — gently tracked, with reminders that reach your phone.**
 
-## Privacy
-- Your API token stays in **`.env`** (git-ignored) locally, or as an encrypted
-  **GitHub Secret** in automation. It is **never printed, logged, or committed**.
-- All API calls are **read-only** (GET). The tool never changes your account.
-- Snapshots are **sanitized** (token/email stripped) before saving.
+</div>
+
+This little tool connects to your Habitica account and does three kind things for you:
+
+- 🔔 **Prayer reminders** — your phone **rings 30 minutes before each of the 5 prayers ends**, at the real prayer times for your city.
+- 🌙 **A nightly check-in** — before midnight it tells you what you haven't logged yet, and warns you if a long streak is about to break.
+- 📊 **A simple dashboard** — a clean page showing how your prayers and recitations are going over time.
+
+It runs **by itself, on the internet — you don't need to keep a computer on.**
 
 ---
 
-## The two features
+## Will this keep working forever?
 
-| Feature | What it does | Command |
-|---|---|---|
-| **Live sync + dashboard** | pull data → rebuild DB → regenerate dashboard (one command) | `python scripts/sync_from_api.py` |
-| **Notifications** | push "not logged yet / streak at risk" to your phone via ntfy.sh | `python scripts/notify.py` |
+Mostly yes — here's the honest version:
 
-## Run it locally
+- ✅ It runs on **GitHub's free servers**, not your computer. So it keeps going whether your laptop is on or off.
+- ✅ Reminders are delivered by **ntfy** (a free notification service) and prayer times come from a **free prayer-times service** — both are stable and free.
+- ⏳ One catch: GitHub **pauses automatic jobs if a project sits untouched for 60 days**. A built-in monthly "keepalive" taps the project so that **never happens** — so it truly keeps running hands-off.
+- 🙏 The only things that could ever stop it are if those free services shut down one day. If that happens, it's a quick swap, not a rebuild.
+
+**So: yes — set it up once, and it keeps reminding you, indefinitely.**
+
+---
+
+## What you need to do once
+
+**On your phone**
+1. Install the **ntfy** app (iPhone or Android).
+2. Subscribe to your private topic (a secret name you pick), and allow it to show notifications.
+
+**On the website (GitHub)**
+3. Add your details as **Secrets**: your Habitica key, your Habitica ID, and your ntfy topic.
+4. Choose your city as a **Variable**: `PRAYER_CITY` = `Lahore` or `Islamabad`.
+5. Turn the automatic jobs on (the **Actions** tab) — done.
+
+*(Full step-by-step is in `SETUP.md`.)*
+
+---
+
+## Run it yourself any time (optional)
+
+If you ever want to trigger things by hand from a computer:
+
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-echo "API_TOKEN=your_token_here" > .env      # your Habitica API token
-python scripts/sync_from_api.py              # pull live → rebuild → dashboard (site/index.html)
-python scripts/notify.py                     # dry-run prints the message; set NTFY_TOPIC to push
+source .venv/bin/activate
+python scripts/schedule_prayers.py   # schedules today's prayer reminders
+python scripts/notify.py             # sends the "not logged yet" check-in
+python scripts/sync_from_api.py      # refreshes the dashboard
+python scripts/selftest.py           # proves reminders fire on time
 ```
-
-## Host it with no server (always-on URL)
-
-**GitHub Actions (free scheduled runner) + GitHub Pages (free static host).**
-The workflow `.github/workflows/dashboard.yml` pulls your data, builds a static
-HTML dashboard, and publishes it — on a daily schedule, no server.
-
-One-time setup:
-1. Push this repo to GitHub.
-2. **Settings → Secrets and variables → Actions** → add `HABITICA_API_TOKEN` and
-   `HABITICA_USER_ID`.
-3. **Settings → Pages → Source: GitHub Actions**.
-4. **Actions tab → run "Habitica Dashboard"** (or wait for the daily run).
-
-Your dashboard is then live at your Pages URL, refreshing itself daily.
-*Want it private?* Host the same `site/index.html` on **Cloudflare Pages** with
-**Cloudflare Access** (free password gate) instead of Pages.
-
-> Why not a pure browser page? Habitica's API blocks cross-origin browser calls
-> (CORS). GitHub Actions fetches server-side, so there's no CORS issue and the
-> token stays in the secret store.
-
-## Notifications (no server, free)
-
-`scripts/notify.py` + `.github/workflows/notify.yml` push a daily nudge to your
-phone via **ntfy.sh** — *"prayers not logged: …", "streak at risk: …"*.
-
-One-time setup:
-1. Install the **ntfy** app (iOS/Android) and **subscribe to a secret topic**
-   name, e.g. `habitica-<something-random>`.
-2. Locally: add `NTFY_TOPIC=habitica-<something-random>` to `.env`.
-   In Actions: add it as the secret `NTFY_TOPIC` (plus the two Habitica secrets).
-3. The Action runs ~9:30 PM Pakistan time daily (editable in `notify.yml`); or
-   press **Run** in the Actions tab.
-
-**Timing note:** GitHub's schedule can be 5–30 min late — fine for a once-a-day
-"before midnight" nudge.
-
-## Prayer reminders (precise, no server)
-
-`scripts/schedule_prayers.py` + `.github/workflows/prayers.yml` send a **ringing**
-reminder **30 min before each of the 5 prayers ends**, at the real prayer times
-for your city.
-
-**How it stays exact without a server:** a morning Action fetches today's times
-([Aladhan API](https://aladhan.com), Karachi method) and **pre-schedules** all 5
-on ntfy using its `At:` header — ntfy then delivers each at the exact second, at
-**max priority (rings/vibrates, bypasses silent)**.
-
-Setup (adds to the ntfy setup above):
-- Secret `NTFY_TOPIC` (same topic as before).
-- Variable `PRAYER_CITY` = `Lahore` or `Islamabad` (defaults to Lahore).
-- Variable `LEAD_MIN` = `30` (minutes before a prayer ends; optional).
-
-**Honest limits:**
-- ntfy **rings** but does **not speak** the message (no built-in text-to-speech).
-  For spoken voice you'd add a Tasker/Automate rule on Android that reads ntfy
-  notifications aloud.
-- Prayer windows use Aladhan's times; Isha's end uses Islamic midnight.
 
 ---
 
-## What's tracked (the 3 sections)
-See **`reports/data_guide.md`** (human) and **`reports/data_guide_technical.md`**
-(pipeline reference):
-1. **Prayers** — 5 habits, ➕ Jamaat / ➖ home / no-tap missed (new; no data yet).
-2. **Daily recitations** — 5 dailies.
-3. **Weekly recitations** — 2 Friday dailies.
+## Your privacy
+- Your Habitica key stays private — it's kept as a hidden secret, never shown or shared.
+- Your prayer data stays in **your** private project. Nothing is public.
 
-## Project layout
-```
-.env                         your token + NTFY_TOPIC (git-ignored)
-.github/workflows/
-  dashboard.yml              no-server dashboard (Actions → Pages)
-  notify.yml                 daily "not logged / streak at risk" nudge (→ ntfy)
-  prayers.yml                precise prayer-time reminders (→ ntfy scheduled)
-src/habitica_etl/            api · config · loaders · transform · database · validation · analytics
-scripts/   sync_from_api.py · notify.py · schedule_prayers.py · build_recitations_dashboard.py
-notebooks/recitations_dashboard.ipynb
-reports/   data_guide.md · data_guide_technical.md
-```
+## What's tracked
+Plain-English guide to every habit: **`reports/data_guide.md`**.

@@ -59,6 +59,20 @@ def to_dt(hhmm: str, day: datetime) -> datetime:
     return datetime(day.year, day.month, day.day, h, m, tzinfo=PKT)
 
 
+def plan_reminders(timings: dict, now: datetime, lead_min: int) -> list[tuple[str, datetime]]:
+    """Pure, testable: given prayer times + 'now', return (prayer, remind_time)
+    for each upcoming prayer — lead_min before its window ends."""
+    out = []
+    for prayer, end_key in ENDS_AT.items():
+        end = to_dt(timings[end_key], now)
+        if end <= now:                      # already ended today → next day's
+            end += timedelta(days=1)
+        remind = end - timedelta(minutes=lead_min)
+        if remind > now:
+            out.append((prayer, remind))
+    return out
+
+
 def schedule(topic: str, when: datetime, title: str, body: str) -> None:
     req = urllib.request.Request(
         f"https://ntfy.sh/{topic}",
@@ -81,16 +95,9 @@ def main() -> int:
 
     timings = fetch_timings(city)
     now = datetime.now(PKT)
+    planned = plan_reminders(timings, now, lead)
 
-    planned = []
-    for prayer, end_key in ENDS_AT.items():
-        end = to_dt(timings[end_key], now)
-        if end <= now:                 # already passed (e.g. midnight rolled) → next day
-            end += timedelta(days=1)
-        remind = end - timedelta(minutes=lead)
-        if remind <= now:
-            continue
-        planned.append((prayer, remind))
+    for prayer, remind in planned:
         if topic:
             # Title must be ASCII (HTTP header); the mosque emoji comes from Tags.
             schedule(topic, remind, f"{prayer} - time to pray", MESSAGES[prayer])
