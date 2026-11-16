@@ -412,7 +412,9 @@
     return h;
   };
   async function ghGet(path) {
-    const r = await fetch(API() + path, { headers: ghHeaders() });
+    // no-store: GitHub's authenticated responses carry Cache-Control: max-age=60, which
+    // would serve a STALE config.json sha right after a save → 409 on the next save.
+    const r = await fetch(API() + path, { headers: ghHeaders(), cache: 'no-store' });
     if (!r.ok) throw new Error('GitHub ' + r.status);
     return r.json();
   }
@@ -425,7 +427,7 @@
   // These read/write it via the Actions Variables API — token needs "Variables: R&W".
   async function ghGetVar(name) {
     if (!token()) return null;                       // Variables are private — need the token
-    const r = await fetch(API() + '/actions/variables/' + name, { headers: ghHeaders() });
+    const r = await fetch(API() + '/actions/variables/' + name, { headers: ghHeaders(), cache: 'no-store' });
     if (r.status === 404) return null;               // not set yet
     if (!r.ok) throw new Error('GitHub ' + r.status);
     return (await r.json()).value;
@@ -554,15 +556,23 @@
       await ghSetVar('PRAYER_COUNTRY', state.country);
       await ghSetVar('PRAYER_METHOD', state.method);
       if (state.timezone) await ghSetVar('PRAYER_TIMEZONE', state.timezone);
-      // 2. offsets + nudge → config.json (its location stays the public placeholder)
-      const cur = await ghGet('/contents/config.json?ref=main');         // fresh sha + latest content
-      const base = JSON.parse(decodeB64(cur.content));
-      const next = toConfig(state, base);
-      next.city = base.city; next.country = base.country;                // keep placeholder; real location is in Variables
-      next.method = base.method; next.timezone = base.timezone;
-      const body = { message: 'Update settings via NoterPiper config page', content: encodeContent(next), sha: cur.sha, branch: 'main' };
-      await ghPut('/contents/config.json', body);
-      loaded = next;
+      // 2. offsets + nudge → config.json (its location stays the public placeholder).
+      // Retry on 409: refetch the current sha and re-apply, so a stale sha self-heals.
+      for (let attempt = 0; ; attempt++) {
+        const cur = await ghGet('/contents/config.json?ref=main');       // always-fresh sha (no-store)
+        const base = JSON.parse(decodeB64(cur.content));
+        const next = toConfig(state, base);
+        next.city = base.city; next.country = base.country;              // keep placeholder; real location is in Variables
+        next.method = base.method; next.timezone = base.timezone;
+        try {
+          await ghPut('/contents/config.json', { message: 'Update settings via NoterPiper config page',
+            content: encodeContent(next), sha: cur.sha, branch: 'main' });
+          loaded = next; break;
+        } catch (e) {
+          if (attempt < 2 && /\b409\b/.test(e.message)) continue;        // sha moved under us → refetch & retry
+          throw e;
+        }
+      }
       setStatus('saved ✓'); if (!auto) toast('Saved ✓ · applies within ~5 min');
     } catch (e) { toast('Save failed — ' + ghHint(e), true); setStatus('error'); }
     saving = false; g('save').disabled = false; paint();
