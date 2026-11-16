@@ -134,3 +134,19 @@ def test_zero_or_negative_streak_risk_falls_back(tmp_path):
     for bad in (0, -5):                                          # out-of-range → default, never flag-everything
         f = _write(tmp_path, {"nudge": {"streak_risk": bad}})
         assert settings.load_settings(f).nudge_streak_risk == 7
+
+
+def test_ramadan_defaults_when_absent(tmp_path):
+    s = settings.load_settings(tmp_path / "nope.json")
+    assert s.ramadan_enabled is True
+    assert s.ramadan_suhoor_lead == 45
+    assert s.ramadan_iftar_lead == 0
+    assert s.ramadan_window == 10
+
+
+def test_ramadan_values_are_read_from_config(tmp_path):
+    f = _write(tmp_path, {"ramadan": {"enabled": False, "suhoor_lead": 30, "iftar_lead": 10}})
+    s = settings.load_settings(f)
+    assert s.ramadan_enabled is False
+    assert s.ramadan_suhoor_lead == 30
+    assert s.ramadan_iftar_lead == 10

@@ -170,7 +170,29 @@
       </div>
     </div>
 
-    <p class="note">Changes take effect within a few minutes — prayer reminders are checked live, and the nightly nudge reads your settings each run.</p>
+    <div class="label">Ramadan</div>
+    <div class="card">
+      <div class="row"><span class="rname">Suhoor &amp; iftar<span class="hint">reminders — only during Ramadan</span></span>
+        <div class="toggle" id="ramEnabled"><div class="knob"></div></div></div>
+      <div id="ramOpts">
+        <div class="row"><span class="rname">Suhoor lead<span class="hint">minutes before Fajr</span></span><span class="spacer"></span>
+          <div class="stepper" id="suhoorStepper">
+            <button data-step="-5" aria-label="less">−</button>
+            <div class="val"><span class="n" id="suhoorVal">45</span><small>min</small></div>
+            <button data-step="5" aria-label="more">+</button>
+          </div></div>
+        <div class="row"><span class="rname">Iftar lead<span class="hint">minutes before Maghrib (0 = at Maghrib)</span></span><span class="spacer"></span>
+          <div class="stepper" id="iftarStepper">
+            <button data-step="-5" aria-label="less">−</button>
+            <div class="val"><span class="n" id="iftarVal">0</span><small>min</small></div>
+            <button data-step="5" aria-label="more">+</button>
+          </div></div>
+        <div class="row" id="ramTestRow"><span class="rname">Test now<span class="hint">preview today's Fajr &amp; Maghrib — any day</span></span><span class="spacer"></span>
+          <button class="sendnow" id="ramTest">Test</button></div>
+      </div>
+    </div>
+
+    <p class="note">Changes save automatically and take effect within a few minutes — prayer reminders are checked live, and the nightly nudge and Ramadan reminders read your settings each run.</p>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -226,6 +248,7 @@
     resolved = tz; if (tz) state.timezone = tz;
     if (timings) { windows = prayerWindows(timings); clampAll(); }   // cap offsets to each prayer's window
     pending = false; paint();
+    if (userTouched && resolved) scheduleSave();         // a user-driven location change resolved → autosave
   }
 
   // Keep every offset inside its prayer's window (5 ≤ offset ≤ window − margin).
@@ -284,25 +307,33 @@
     const g = id => document.getElementById(id);
     g('city').value = state.city; g('country').value = state.country;
     g('method').value = state.method; g('nudgeTime').value = state.nudgeTime;
-    g('nudgeEnabled').classList.toggle('off', !state.nudgeEnabled);
-
-    g('nudgeEnabled').onclick = e => { state.nudgeEnabled = !state.nudgeEnabled; e.currentTarget.classList.toggle('off', !state.nudgeEnabled); updateNudgeNow(); };
-
-    const wireToggle = (id, key) => {
+    // Toggles and steppers: flip/step state, repaint, and autosave (onEdit).
+    const wireToggle = (id, key, after) => {
       g(id).classList.toggle('off', !state[key]);
-      g(id).onclick = e => { state[key] = !state[key]; e.currentTarget.classList.toggle('off', !state[key]); };
+      g(id).onclick = e => {
+        state[key] = !state[key]; e.currentTarget.classList.toggle('off', !state[key]);
+        if (after) after(); onEdit();
+      };
     };
+    const wireStepper = (id, valId, key, lo, hi) => {
+      g(valId).textContent = state[key];
+      g(id).onclick = e => {
+        const step = e.target.dataset.step; if (!step) return;
+        state[key] = Math.min(hi, Math.max(lo, state[key] + parseInt(step)));
+        g(valId).textContent = state[key]; onEdit();
+      };
+    };
+    wireToggle('nudgeEnabled', 'nudgeEnabled', updateNudgeNow);
     wireToggle('showTodos', 'nudgeShowTodos');
     wireToggle('showDailies', 'nudgeShowDailies');
     wireToggle('showPrayers', 'nudgeShowPrayers');
-    g('streakVal').textContent = state.nudgeStreakRisk;
-    g('streakStepper').onclick = e => {                 // bounded 1..60 days
-      const step = e.target.dataset.step; if (!step) return;
-      state.nudgeStreakRisk = Math.min(60, Math.max(1, state.nudgeStreakRisk + parseInt(step)));
-      g('streakVal').textContent = state.nudgeStreakRisk;
-    };
+    wireToggle('ramEnabled', 'ramadanEnabled', updateRamOpts);
+    wireStepper('streakStepper', 'streakVal', 'nudgeStreakRisk', 1, 60);
+    wireStepper('suhoorStepper', 'suhoorVal', 'ramadanSuhoorLead', 0, 120);
+    wireStepper('iftarStepper', 'iftarVal', 'ramadanIftarLead', 0, 120);
+    g('ramTest').onclick = doRamadanTest;
     g('city').oninput = () => {
-      resolved = null;
+      resolved = null; userTouched = true;
       const v = g('city').value.trim();
       const hit = CITIES.find(([c]) => c.toLowerCase() === v.toLowerCase());
       if (hit) g('country').value = hit[1];        // auto-fill country when a known city is picked
@@ -316,22 +347,22 @@
       const c = opt.dataset.city, hit = CITIES.find(([x]) => x === c);
       g('city').value = c; if (hit) g('country').value = hit[1];
       g('suggest').className = 'suggest';
-      resolved = null; paint(); clearTimeout(debounce); checkCity();
+      resolved = null; userTouched = true; paint(); clearTimeout(debounce); checkCity();
     });
-    g('country').onchange = checkCity;
-    g('method').onchange = checkCity;
-    g('nudgeTime').onchange = paint;
+    g('country').onchange = () => { userTouched = true; checkCity(); };
+    g('method').onchange = () => { userTouched = true; checkCity(); };
+    g('nudgeTime').onchange = () => { paint(); onEdit(); };
     document.getElementById('prayers').addEventListener('click', e => {
       const prow = e.target.closest('.prow'); if (!prow) return;
       const p = prow.dataset.prayer, valEl = prow.querySelector('.n');
       if (e.target.dataset.step) {
         const cap = maxOffset(windows[p]);               // bounded by this prayer's window
         const v = Math.min(cap, Math.max(5, parseInt(valEl.textContent) + parseInt(e.target.dataset.step)));
-        valEl.textContent = v; writeRule(p, prow);
+        valEl.textContent = v; writeRule(p, prow); onEdit();
       } else if (e.target.closest('.mode')) {
         const b = prow.querySelector('.mode b');
         b.textContent = b.textContent === 'before' ? 'after' : 'before';
-        writeRule(p, prow);
+        writeRule(p, prow); onEdit();
       }
     });
   }
@@ -432,7 +463,10 @@
     g('showDailies').classList.toggle('off', !state.nudgeShowDailies);
     g('showPrayers').classList.toggle('off', !state.nudgeShowPrayers);
     g('streakVal').textContent = state.nudgeStreakRisk;
-    updateNudgeNow();
+    g('ramEnabled').classList.toggle('off', !state.ramadanEnabled);
+    g('suhoorVal').textContent = state.ramadanSuhoorLead;
+    g('iftarVal').textContent = state.ramadanIftarLead;
+    updateNudgeNow(); updateRamOpts();
   }
   async function loadLocationFromVars() {
     if (!token()) return;              // can't read private Variables without the token
@@ -453,11 +487,27 @@
       setStatus(token() ? 'loaded ✓' : 'loaded · connect to see your location + save');
     } catch (e) { setStatus('load failed'); toast('Load failed: ' + e.message, true); }
   }
-  async function doSave() {
+  // ─── Autosave: any change schedules a debounced save (a burst → one save) ───
+  let userTouched = false, saveTimer = null, saving = false, dirtyAgain = false;
+  function onEdit() { userTouched = true; scheduleSave(); }     // call from every control handler
+  function scheduleSave() {
+    if (!userTouched) return;                                   // ignore programmatic/load-time changes
+    setStatus('unsaved…'); clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => saveNow(true), 1200);          // coalesce a burst of clicks into one save
+  }
+  const doSave = () => saveNow(false);                          // the manual "Save changes" button
+  async function saveNow(auto = false) {
     const g = id => document.getElementById(id);
-    if (!validTime(g('nudgeTime').value)) { toast('Enter a valid time (HH:MM)', true); return; }
-    if (resolveState(g('city').value.trim(), pending, resolved) !== 'valid') { toast('Check the city — it must resolve first', true); return; }
-    if (!token()) { document.getElementById('connect').open = true; toast('Add your GitHub token first', true); return; }
+    if (!validTime(g('nudgeTime').value)) { if (!auto) toast('Enter a valid time (HH:MM)', true); return; }
+    if (resolveState(g('city').value.trim(), pending, resolved) !== 'valid') {
+      setStatus('unsaved · check the city'); if (!auto) toast('Check the city — it must resolve first', true); return; }
+    if (!token()) {
+      setStatus('unsaved · connect to save');
+      if (!auto) { document.getElementById('connect').open = true; toast('Add your GitHub token first', true); }
+      return;
+    }
+    if (saving) { dirtyAgain = true; return; }                  // a save is in flight — re-run once it's done
+    saving = true;
     readForm();
     g('save').disabled = true; setStatus('saving…');
     try {
@@ -475,9 +525,10 @@
       const body = { message: 'Update settings via NoterPiper config page', content: encodeContent(next), sha: cur.sha, branch: 'main' };
       await ghPut('/contents/config.json', body);
       loaded = next;
-      toast('Saved ✓ · applies within ~5 min'); setStatus('saved ✓');
+      setStatus('saved ✓'); if (!auto) toast('Saved ✓ · applies within ~5 min');
     } catch (e) { toast('Save failed — ' + ghHint(e), true); setStatus('error'); }
-    g('save').disabled = false; paint();
+    saving = false; g('save').disabled = false; paint();
+    if (dirtyAgain) { dirtyAgain = false; scheduleSave(); }     // flush changes made during the save
   }
 
   // On-demand nudge: trigger the notify workflow now (it bypasses the time gate).
@@ -493,6 +544,20 @@
     b.disabled = false;
   }
   function updateNudgeNow() { document.getElementById('nudgeOpts').style.display = state.nudgeEnabled ? 'block' : 'none'; }
+  function updateRamOpts() { document.getElementById('ramOpts').style.display = state.ramadanEnabled ? 'block' : 'none'; }
+
+  // Ramadan test: force the ramadan source now (previews today's Fajr/Maghrib, any day).
+  async function doRamadanTest() {
+    if (!token()) { document.getElementById('connect').open = true; toast('Add your GitHub token first', true); return; }
+    const b = document.getElementById('ramTest'); b.disabled = true;
+    try {
+      const r = await fetch(API() + '/actions/workflows/ramadan.yml/dispatches',
+        { method: 'POST', headers: { ...ghHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ ref: 'main' }) });
+      if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
+      toast('Sent — arrives in ~30s');
+    } catch (e) { toast('Send failed — ' + ghHint(e), true); }
+    b.disabled = false;
+  }
 
   document.getElementById('saveToken').onclick = () => {
     const el = document.getElementById('token'), v = el.value.trim();
@@ -504,7 +569,7 @@
   document.getElementById('save').onclick = doSave;
   document.getElementById('nudgeNow').onclick = doNudge;
 
-  renderMethods(); renderPrayers(); bind(); updateNudgeNow(); checkCity(); loadConfig();
+  renderMethods(); renderPrayers(); bind(); updateNudgeNow(); updateRamOpts(); checkCity(); loadConfig();
 </script>
 </body>
 </html>

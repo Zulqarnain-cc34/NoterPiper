@@ -24,8 +24,9 @@ from noterpiper.channels import NtfyChannel, WebhookChannel  # noqa: E402
 from noterpiper.engine.engine import Engine  # noqa: E402
 from noterpiper.plugins.habitica import HabiticaSource  # noqa: E402
 from noterpiper.plugins.prayer import PrayerSource  # noqa: E402
+from noterpiper.plugins.ramadan import RamadanSource  # noqa: E402
 
-SOURCES = [PrayerSource(), HabiticaSource()]
+SOURCES = [PrayerSource(), HabiticaSource(), RamadanSource()]
 
 
 def build_config(s, force_source: str | None = None) -> dict:
@@ -40,6 +41,12 @@ def build_config(s, force_source: str | None = None) -> dict:
             "window": s.nudge_window, "force": force_source == "habitica",
             "streak_risk": s.nudge_streak_risk, "show_todos": s.nudge_show_todos,
             "show_dailies": s.nudge_show_dailies, "show_prayers": s.nudge_show_prayers,
+        },
+        "ramadan": {
+            "city": s.city, "country": s.country, "method": s.method,   # reuses the prayer location
+            "enabled": s.ramadan_enabled, "suhoor_lead": s.ramadan_suhoor_lead,
+            "iftar_lead": s.ramadan_iftar_lead, "window": s.ramadan_window,
+            "force": force_source == "ramadan",
         },
     }
 

@@ -1,0 +1,44 @@
+name: Ramadan Test
+
+# On-demand "test" button for the Ramadan plugin (config page → Ramadan → Test now).
+# Forces the ramadan source, which previews today's Fajr/Maghrib regardless of the
+# month — so you can confirm suhoor & iftar will work before Ramadan actually arrives.
+# The scheduled suhoor/iftar reminders themselves ride the normal engine (prayers.yml).
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ramadan:
+    runs-on: ubuntu-latest
+    env:
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      # Location override (used if these repo Variables are set), same as the prayer job.
+      PRAYER_CITY: ${{ vars.PRAYER_CITY }}
+      PRAYER_COUNTRY: ${{ vars.PRAYER_COUNTRY }}
+      PRAYER_METHOD: ${{ vars.PRAYER_METHOD }}
+      PRAYER_TIMEZONE: ${{ vars.PRAYER_TIMEZONE }}
+      FORCE_SOURCE: ramadan          # force just the suhoor/iftar preview, now
+      WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}   # optional 2nd channel, if configured
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # run_engine.py forces just the Ramadan source (stdlib only — no install).
+      - run: python scripts/run_engine.py
+
+      # Push an urgent alert (and GitHub emails you too) if the test job breaks.
+      - name: Alert me if this job failed
+        if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          WF: ${{ github.workflow }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -s --max-time 20 \
+            -H "Title: NoterPiper failed: ${WF}" \
+            -H "Priority: urgent" \
+            -H "Tags: rotating_light" \
+            -d "The '${WF}' run failed. Tap for logs: ${RUN_URL}" \
+            "https://ntfy.sh/${NTFY_TOPIC}" || true

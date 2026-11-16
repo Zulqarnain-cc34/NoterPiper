@@ -51,6 +51,29 @@ test('toConfig writes the habitica controls as real values', () => {
   assert.equal(c.nudge.show_prayers, false);
 });
 
+test('fromConfig reads the ramadan controls with safe defaults', () => {
+  const on = fromConfig({});
+  assert.equal(on.ramadanEnabled, true);
+  assert.equal(on.ramadanSuhoorLead, 45);
+  assert.equal(on.ramadanIftarLead, 0);
+  const set = fromConfig({ ramadan: { enabled: false, suhoor_lead: 30, iftar_lead: 10 } });
+  assert.equal(set.ramadanEnabled, false);
+  assert.equal(set.ramadanSuhoorLead, 30);
+  assert.equal(set.ramadanIftarLead, 10);
+});
+
+test('toConfig writes the ramadan controls as real values', () => {
+  const c = toConfig({
+    city: 'Makkah', country: 'Saudi Arabia', method: '4', timezone: 'Asia/Riyadh',
+    reminders: {}, nudgeTime: '21:30', nudgeEnabled: true,
+    ramadanEnabled: false, ramadanSuhoorLead: 30, ramadanIftarLead: 15,
+  });
+  assert.equal(c.ramadan.enabled, false);
+  assert.equal(typeof c.ramadan.enabled, 'boolean');
+  assert.equal(c.ramadan.suhoor_lead, 30);
+  assert.equal(c.ramadan.iftar_lead, 15);
+});
+
 test('validTime accepts HH:MM, rejects junk and out-of-range', () => {
   assert.equal(validTime('21:30'), true);
   assert.equal(validTime('9pm'), false);
