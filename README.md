@@ -8,23 +8,11 @@
 
 ![serverless](https://img.shields.io/badge/serverless-✓-9ece6a?style=flat&labelColor=1a1b26)
 ![dependencies](https://img.shields.io/badge/dependencies-0-7aa2f7?style=flat&labelColor=1a1b26)
-![python](https://img.shields.io/badge/python-stdlib-e0af68?style=flat&labelColor=1a1b26)
 ![push](https://img.shields.io/badge/push-ntfy.sh-bb9af7?style=flat&labelColor=1a1b26)
 ![runs%20on](https://img.shields.io/badge/runs_on-GitHub_Actions-f7768e?style=flat&labelColor=1a1b26)
 ![license](https://img.shields.io/badge/license-MIT-9ece6a?style=flat&labelColor=1a1b26)
 
 </div>
-
----
-
-## Contents
-
-- [What it does](#-what-it-does)
-- [How it works](#-how-it-works)
-- [Setup](#-setup)
-- [Configuration](#-configuration)
-- [Why it lasts](#-why-it-lasts)
-- [Privacy](#-privacy)
 
 ---
 
@@ -95,14 +83,16 @@ Ten minutes, once — full steps in **[SETUP.md](SETUP.md)**:
 Full setup in **[SETUP.md](SETUP.md)** · security notes in **[SECURITY.md](SECURITY.md)**.
 
 <details>
-<summary>Example — today's reminders & the nightly message</summary>
+<summary>Example — what the notifications look like</summary>
 
 ```
-Reminders   Zohar 14:14 · Asr 16:33 · Maghrib 17:58 · Isha 19:28 · Fajr 06:01
+Prayer reminder     Asr
+                    Time to pray · ends 3:14 PM
 
-Nightly     🕌 Prayers not logged: Asr, Maghrib, Isha
-            📿 Not done: Morning dhikr, Daily Quran
-            🔥 Streak at risk: Daily Quran (42)
+Nightly nudge       Before midnight
+                    Prayers left: Asr, Maghrib, Isha
+                    Not done: Morning dhikr
+                    Streak at risk: Daily Quran (42)
 ```
 </details>
 

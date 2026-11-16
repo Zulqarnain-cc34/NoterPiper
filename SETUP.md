@@ -43,6 +43,12 @@ reminders don't need it. Add two more **Secrets**:
   - **Habitica Notifications** — nightly nudge (if configured)
   - **Keepalive** — monthly, so GitHub never pauses the above
 
+> **Not in Pakistan?** The workflow `cron` times are in **UTC** and default to
+> early morning / night in Pakistan. So all of *today's* reminders get scheduled,
+> set the `cron` in `.github/workflows/prayers.yml` to **shortly after midnight in
+> your timezone** (and `notify.yml` to your evening). Cron uses UTC — e.g. for
+> New York (UTC−5) use `0 5 * * *` for ~00:00 local.
+
 ## 4. Running locally (optional)
 No packages needed — the scripts are pure standard library.
 ```bash

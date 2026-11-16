@@ -1,8 +1,8 @@
 name: Keepalive
 
 # GitHub pauses scheduled workflows after 60 days of no repo activity. This runs
-# monthly and makes a tiny commit so the dashboard / notifications / prayer jobs
-# keep running forever with zero effort from you.
+# monthly and makes a tiny commit so the notification / prayer jobs keep running
+# forever. The commit is attributed to you (your GitHub noreply), not a bot.
 
 on:
   schedule:
@@ -15,13 +15,16 @@ permissions:
 jobs:
   keepalive:
     runs-on: ubuntu-latest
+    env:
+      ACTOR: ${{ github.actor }}
+      ACTOR_ID: ${{ github.actor_id }}
     steps:
       - uses: actions/checkout@v4
       - name: Touch a heartbeat file and commit
         run: |
           date -u +"%Y-%m-%dT%H:%M:%SZ" > .keepalive
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "$ACTOR"
+          git config user.email "${ACTOR_ID}+${ACTOR}@users.noreply.github.com"
           git add .keepalive
           git commit -m "chore: keepalive" || echo "nothing to commit"
           git push
