@@ -70,6 +70,9 @@ All of these are editable from the phone config page — no JSON needed.
 | `nudge.show_prayers` *(optional)* | Include unlogged prayer habits — defaults to true |
 | `nudge.window` *(optional)* | Minutes the nudge stays "due" — defaults to 5 |
 
+Switch **all three** `show_*` off and the nudge sends nothing at all, rather than
+an empty summary — so an all-off config is the same as turning the nudge off.
+
 ## Security
 
 - **Read-only.** The Habitica client only ever issues `GET` requests — it can never

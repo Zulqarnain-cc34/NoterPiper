@@ -128,3 +128,9 @@ def test_nudge_controls_are_read_from_config(tmp_path):
 def test_junk_streak_risk_falls_back_to_default(tmp_path):
     f = _write(tmp_path, {"nudge": {"streak_risk": "lots"}})    # hand-edited junk
     assert settings.load_settings(f).nudge_streak_risk == 7
+
+
+def test_zero_or_negative_streak_risk_falls_back(tmp_path):
+    for bad in (0, -5):                                          # out-of-range → default, never flag-everything
+        f = _write(tmp_path, {"nudge": {"streak_risk": bad}})
+        assert settings.load_settings(f).nudge_streak_risk == 7

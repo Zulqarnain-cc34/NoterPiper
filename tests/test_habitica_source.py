@@ -146,6 +146,13 @@ def test_all_groups_off_sends_nothing(monkeypatch):
     assert HabiticaSource().check(AT_NUDGE, off) == []   # every group hidden → no nudge at all
 
 
+def test_force_sends_nothing_when_all_groups_off(monkeypatch):
+    _ready(monkeypatch)                                  # even 'send now' can't show a hidden-everything nudge
+    off = {"time": "21:30", "enabled": False, "force": True,
+           "show_todos": False, "show_dailies": False, "show_prayers": False}
+    assert HabiticaSource().check(BEFORE, off) == []     # the all-off guard precedes the force path
+
+
 def test_show_prayers_toggle(monkeypatch):
     tasks = {"habits": [{"text": "Fajr", "counterUp": 0, "counterDown": 0}], "rewards": [], "todos": [],
              "dailys": [{"text": "Walk", "isDue": True, "completed": False, "streak": 2}]}
