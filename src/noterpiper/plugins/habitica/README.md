@@ -6,7 +6,7 @@
 
 *If you track habits in Habitica, this sends one calm summary each night of everything
 still open — unlogged habits, due dailies, and due or overdue to-dos — with at-risk
-streaks flagged first. The prayer plugin works without it.*
+streaks flagged first.*
 
 </div>
 
@@ -70,8 +70,7 @@ If the secrets aren't set, the plugin simply does nothing — nothing breaks.
   modify or delete anything in your account.
 - **Credential, not shipped.** The API token lives only as a GitHub **Secret** (or a
   git-ignored `.env`); it is never committed, printed, or logged.
-- **No task content in logs.** Your task names go to your phone, never into the
-  (public) Actions logs.
+- **No task content in logs.** Your task names go to your phone, never into the logs.
 
 ## How it works
 
