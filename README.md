@@ -20,7 +20,7 @@
 
 | | Feature | Detail |
 |:--:|---|---|
-| 🔔 | **Prayer reminders** | Your phone **rings at each of the 5 prayer times** — e.g. 30 min before a prayer ends — using live prayer times for **any city** (timezone auto-detected). |
+| 🔔 | **Prayer reminders** | Your phone **rings at each of the 5 prayer times** — e.g. 30 min before a prayer ends — using live prayer times for **any city** (its timezone is detected automatically from the city). |
 | 🌙 | **One nightly nudge** *(optional)* | If you use Habitica: a single end-of-day check — what's still unlogged and which streaks are at risk. |
 
 ---
@@ -75,7 +75,7 @@ Ten minutes, once — full steps in **[SETUP.md](SETUP.md)**:
 | Change | Where |
 |---|---|
 | **Reminder timings** | `reminders.json` — `before_end` / `after_start` minutes per prayer (editable from GitHub's web UI) |
-| **Location** | variables `PRAYER_CITY`, `PRAYER_COUNTRY`, `PRAYER_METHOD` (timezone is auto-detected) |
+| **Location** | variables `PRAYER_CITY`, `PRAYER_COUNTRY`, `PRAYER_METHOD` (the timezone is looked up from the city — you never set it) |
 | **Habitica nudge** | optional — set `HABITICA_API_TOKEN` + `HABITICA_USER_ID` to enable it |
 
 Full setup in **[SETUP.md](SETUP.md)** · security notes in **[SECURITY.md](SECURITY.md)**.
