@@ -63,6 +63,19 @@ def test_disabled_sends_nothing(monkeypatch):
     assert RamadanSource().check(now, {**CONFIG, "enabled": False}) == []
 
 
+def test_titles_are_header_safe(monkeypatch):
+    # ntfy puts the title in an HTTP header (latin-1 only); an emoji there makes send()
+    # raise and the engine silently drops the notification — so titles must be ASCII.
+    _ready(monkeypatch)
+    at = [datetime(2026, 3, 20, 4, 30, tzinfo=TZ),      # suhoor
+          datetime(2026, 3, 20, 18, 47, tzinfo=TZ)]     # iftar
+    notes = [n for t in at for n in RamadanSource().check(t, CONFIG)]
+    notes += RamadanSource().check(datetime(2026, 3, 20, 12, 0, tzinfo=TZ), {**CONFIG, "force": True})
+    assert len(notes) == 3
+    for n in notes:
+        n.title.encode("latin-1")                       # must not raise (header-safe)
+
+
 def test_force_previews_todays_times_any_month(monkeypatch):
     _ready(monkeypatch, NORMAL_DAY)                      # not Ramadan, nudge disabled, midday
     now = datetime(2026, 2, 20, 12, 0, tzinfo=TZ)

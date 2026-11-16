@@ -16,12 +16,20 @@ from ..engine import Notification
 NTFY = "https://ntfy.sh"
 
 
+def _header_safe(text: str) -> str:
+    """HTTP headers are latin-1 only; a non-encodable char (e.g. an emoji) in the Title
+    would raise and silently drop the push. Drop those chars — emoji belong in Tags —
+    so delivery never fails on the title."""
+    safe = text.encode("latin-1", "ignore").decode("latin-1").strip()
+    return safe or "NoterPiper"
+
+
 class NtfyChannel:
     def __init__(self, topic: str):
         self.topic = topic
 
     def send(self, notification: Notification) -> None:
-        headers = {"Title": notification.title, "Priority": notification.priority}
+        headers = {"Title": _header_safe(notification.title), "Priority": notification.priority}
         if notification.tags:
             headers["Tags"] = ",".join(notification.tags)
         net.request(f"{NTFY}/{self.topic}",

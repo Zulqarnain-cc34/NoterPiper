@@ -41,6 +41,17 @@ def test_send_omits_tags_header_when_there_are_none(monkeypatch):
     assert "Tags" not in seen["headers"]
 
 
+def test_send_strips_non_latin1_title_so_delivery_never_fails(monkeypatch):
+    # HTTP headers are latin-1; an emoji in a Title would raise and silently drop the
+    # push. The channel must degrade (keep the text, drop the char) and still deliver.
+    seen = {}
+    monkeypatch.setattr("noterpiper.channels.ntfy.net.request",
+                        lambda url, **kw: seen.update(headers=kw.get("headers")) or b"")
+    NtfyChannel("t").send(Notification("🌙 Suhoor", "eat up", tags=("crescent_moon",)))
+    seen["headers"]["Title"].encode("latin-1")          # header-safe → no raise
+    assert seen["headers"]["Title"] == "Suhoor"         # emoji dropped, text kept (emoji is in Tags)
+
+
 def test_already_sent_true_when_title_is_in_todays_cache(monkeypatch):
     now = datetime(2026, 11, 16, 17, 30, tzinfo=TZ)
     cache = ("\n".join([

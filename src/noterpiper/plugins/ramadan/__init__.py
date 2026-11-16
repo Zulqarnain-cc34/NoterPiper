@@ -75,9 +75,9 @@ class RamadanSource:
 
         if forced:                                          # preview today's times, any month / time
             return [Notification(
-                "🌙 Ramadan preview",
+                "Ramadan preview",                          # ASCII title — ntfy puts it in an HTTP header;
                 f"Suhoor ends {_fmt(fajr)} (Fajr) · Iftar {_fmt(maghrib)} (Maghrib)",
-                priority="default", tags=("crescent_moon",), dedup_key=None)]
+                priority="default", tags=("crescent_moon",), dedup_key=None)]   # 🌙 comes from the tag
 
         if day["hijri_month"] != RAMADAN:                   # scheduled runs: Ramadan only
             return []
@@ -86,10 +86,10 @@ class RamadanSource:
         suhoor = fajr - timedelta(minutes=int(config.get("suhoor_lead", SUHOOR_LEAD)))
         iftar = maghrib - timedelta(minutes=int(config.get("iftar_lead", IFTAR_LEAD)))
         out: list[Notification] = []
-        if _due(suhoor, now, window):
-            out.append(Notification("🌙 Suhoor", f"Stop eating soon — Fajr at {_fmt(fajr)}",
+        if _due(suhoor, now, window):                       # ASCII titles (HTTP header); emoji via tags
+            out.append(Notification("Suhoor", f"Stop eating soon — Fajr at {_fmt(fajr)}",
                                     priority="high", tags=("crescent_moon",), dedup_key="suhoor"))
         if _due(iftar, now, window):
-            out.append(Notification("🌅 Iftar", f"Time to break your fast — Maghrib at {_fmt(maghrib)}",
+            out.append(Notification("Iftar", f"Time to break your fast — Maghrib at {_fmt(maghrib)}",
                                     priority="high", tags=("sunrise_over_mountains",), dedup_key="iftar"))
         return out
