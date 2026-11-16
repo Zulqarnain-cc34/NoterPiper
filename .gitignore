@@ -1,25 +1,14 @@
-# Never commit personal exports or the derived database (they contain personal data)
-data/raw/
-data/habitica-user-data.json
-data/habitica-tasks-history.csv
-data/processed/
-database/*.db
-*.db
+# Secrets — never commit
+.env
+*.key
+
+# Local data / snapshots (personal)
+data/
 
 # Python
 __pycache__/
 *.pyc
 .pytest_cache/
-.ipynb_checkpoints/
 .venv/
 venv/
 env/
-
-# Secrets (future webhook work)
-.env
-*.key
-
-# build artifacts
-site/
-data/habitica-live.json
-data/snapshots/

@@ -6,13 +6,12 @@
 
 </div>
 
-This little tool connects to your Habitica account and does three kind things for you:
+This little tool connects to your Habitica account and does two kind things for you:
 
-- 🔔 **Prayer reminders** — your phone **rings 30 minutes before each of the 5 prayers ends**, at the real prayer times for your city.
-- 🌙 **A nightly check-in** — before midnight it tells you what you haven't logged yet, and warns you if a long streak is about to break.
-- 📊 **A simple dashboard** — a clean page showing how your prayers and recitations are going over time.
+- 🔔 **Prayer reminders** — your phone **rings at your prayer times** (e.g. 30 min before a prayer ends), at the real times for your city.
+- 🌙 **One nightly check-in** — before midnight it tells you what you haven't logged yet, and warns you if a long streak is about to break.
 
-It runs **by itself, on the internet — you don't need to keep a computer on.**
+That's it — **no dashboards, no noise.** It runs **by itself, on the internet — you don't need to keep a computer on.**
 
 ---
 
@@ -51,8 +50,7 @@ If you ever want to trigger things by hand from a computer:
 ```bash
 source .venv/bin/activate
 python scripts/schedule_prayers.py   # schedules today's prayer reminders
-python scripts/notify.py             # sends the "not logged yet" check-in
-python scripts/sync_from_api.py      # refreshes the dashboard
+python scripts/notify.py             # sends the nightly "not logged yet" check-in
 python scripts/selftest.py           # proves reminders fire on time
 ```
 

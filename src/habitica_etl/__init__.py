@@ -1,13 +1,9 @@
-"""Habitica Personal Productivity Intelligence — ETL & analytics package.
+"""Habitica Salah — small shared library for the reminder/nudge scripts.
 
-Modules:
-  config      — paths, timezone, decode constants (all analytical choices)
-  loaders     — read & checksum the raw exports (no interpretation)
-  transform   — pure, testable transforms (timestamps, value-delta decode, text)
-  database    — SQLite schema + idempotent, transaction-safe ingestion
-  validation  — integrity checks + CSV<->JSON reconciliation
-  analytics   — parameterised SQL -> pandas helpers for the notebook
+  config  — settings, timezone, which tasks are "recitations"
+  net     — resilient HTTP (retries + backoff) used by everything
+  api     — read-only Habitica API client (built on net)
 """
-from . import analytics, config, database, loaders, transform, validation  # noqa: F401
+from . import api, config, net  # noqa: F401
 
-__all__ = ["config", "loaders", "transform", "database", "validation", "analytics"]
+__all__ = ["config", "net", "api"]

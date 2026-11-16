@@ -33,21 +33,13 @@ In your repo: **Settings → Secrets and variables → Actions**.
 - The jobs then run on their own:
   - **Prayer Reminders** — every morning
   - **Habitica Notifications** — nightly check-in
-  - **Habitica Dashboard** — refreshes the dashboard
   - **Keepalive** — monthly, so GitHub never pauses the above
 
-## 4. (Optional) The dashboard as a web page
-**Settings → Pages → Source: GitHub Actions.**
-⚠️ A **private** repo needs GitHub **Pro** for a private Pages site. Without Pro,
-the dashboard still builds — you can open `site/index.html` from the latest run,
-or host it free & private on **Cloudflare Pages**.
-
-## 5. Running locally (optional)
+## 4. Running locally (optional)
+No packages needed — the scripts are pure standard library.
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-printf "API_TOKEN=your_token\nNTFY_TOPIC=your_topic\nPRAYER_CITY=Lahore\n" > .env
-python scripts/selftest.py     # proves reminders fire on time
+printf "API_TOKEN=your_token\nUSER_ID=your_id\nNTFY_TOPIC=your_topic\nPRAYER_CITY=Lahore\n" > .env
+python3 scripts/selftest.py     # proves reminders fire on time
 ```
 
 ---
