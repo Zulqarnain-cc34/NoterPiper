@@ -35,6 +35,10 @@ class Settings:
     nudge_show_todos: bool = True      # include due/overdue to-dos in the nudge
     nudge_show_dailies: bool = True    # include due dailies (and their at-risk flag)
     nudge_show_prayers: bool = True    # include unlogged prayer habits
+    ramadan_enabled: bool = True       # suhoor & iftar reminders (fire only during Ramadan)
+    ramadan_suhoor_lead: int = 45      # minutes before Fajr to nudge for suhoor
+    ramadan_iftar_lead: int = 0        # minutes before Maghrib to nudge for iftar
+    ramadan_window: int = 10           # minutes a suhoor/iftar reminder stays "due"
 
 
 DEFAULTS = Settings(
@@ -93,6 +97,8 @@ def load_settings(path: Path | None = None) -> Settings:
     reminders = raw.get("reminders")
     raw_nudge = raw.get("nudge")
     nudge = raw_nudge if isinstance(raw_nudge, dict) else {}
+    raw_ramadan = raw.get("ramadan")
+    ramadan = raw_ramadan if isinstance(raw_ramadan, dict) else {}
 
     raw_method = raw.get("method")                       # 0 (Jafari) is valid → don't lose it
     method = config.env("PRAYER_METHOD") or (
@@ -120,4 +126,8 @@ def load_settings(path: Path | None = None) -> Settings:
         nudge_show_todos=_as_bool(nudge.get("show_todos")),
         nudge_show_dailies=_as_bool(nudge.get("show_dailies")),
         nudge_show_prayers=_as_bool(nudge.get("show_prayers")),
+        ramadan_enabled=_as_bool(ramadan.get("enabled")),
+        ramadan_suhoor_lead=_as_int(ramadan.get("suhoor_lead"), DEFAULTS.ramadan_suhoor_lead),
+        ramadan_iftar_lead=_as_int(ramadan.get("iftar_lead"), DEFAULTS.ramadan_iftar_lead),
+        ramadan_window=_pos_int(ramadan.get("window"), DEFAULTS.ramadan_window),
     )

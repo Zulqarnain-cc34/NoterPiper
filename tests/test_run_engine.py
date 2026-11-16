@@ -14,7 +14,9 @@ S = SimpleNamespace(city="Lahore", country="Pakistan", method="1",
                     nudge_enabled=True, timezone="Asia/Karachi",
                     prayer_window=20, nudge_window=30,
                     nudge_streak_risk=7, nudge_show_todos=True,
-                    nudge_show_dailies=True, nudge_show_prayers=True)
+                    nudge_show_dailies=True, nudge_show_prayers=True,
+                    ramadan_enabled=True, ramadan_suhoor_lead=45,
+                    ramadan_iftar_lead=0, ramadan_window=10)
 
 
 def test_build_config_passes_each_plugins_window():
@@ -47,8 +49,18 @@ def test_build_config_marks_the_forced_source():
     assert cfg2["habitica"]["force"] is False
 
 
+def test_build_config_passes_the_ramadan_slice():
+    s = SimpleNamespace(**{**vars(S), "ramadan_enabled": False, "ramadan_suhoor_lead": 30,
+                           "ramadan_iftar_lead": 10})
+    r = run_engine.build_config(s)["ramadan"]
+    assert r["city"] == "Lahore" and r["method"] == "1"          # reuses the prayer location
+    assert r["enabled"] is False and r["suhoor_lead"] == 30 and r["iftar_lead"] == 10
+    assert r["force"] is False
+    assert run_engine.build_config(s, force_source="ramadan")["ramadan"]["force"] is True
+
+
 def test_select_sources_runs_all_by_default():
-    assert {s.id for s in run_engine.select_sources()} == {"prayer", "habitica"}
+    assert {s.id for s in run_engine.select_sources()} == {"prayer", "habitica", "ramadan"}
 
 
 def test_select_sources_runs_only_the_forced_one():
