@@ -6,6 +6,12 @@
 > The model to aim for is how LangChain treats integrations: a clear interface, a
 > registry, and plugins that simply plug in.
 
+> **Status: implemented.** Phases 1–6 are done — the contracts, `NtfyChannel`, the
+> `Engine`, both plugins, and the `run_engine.py` entry point are live in the codebase.
+> The "today / gap" and "phase" sections below are kept as the **rationale**: the
+> "today" columns describe the pre-refactor code (now removed), and the phases are the
+> record of how it was built (Phase 7 — third-party discovery — is still deferred).
+
 ---
 
 ## 0. Scope — what we build now, and what we deliberately defer
