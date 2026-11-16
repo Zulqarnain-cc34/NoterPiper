@@ -10,21 +10,29 @@ Takes about 10 minutes, once. After this it runs by itself.
 4. Let the app show notifications: **phone Settings → Apps → ntfy → Notifications → On**
    (and turn off battery optimization so it works in the background).
 
-## 2. Put your details on GitHub
+## 2. Put your settings on GitHub
 In your repo: **Settings → Secrets and variables → Actions**.
 
-**Secrets** (hidden) — click *New repository secret* for each:
+**Secret** (hidden) — *New repository secret*:
 | Name | Value |
 |---|---|
-| `HABITICA_API_TOKEN` | your Habitica API token (Habitica → Settings → Site Data) |
-| `HABITICA_USER_ID` | your Habitica User ID (same page) |
-| `NTFY_TOPIC` | the topic you picked above |
+| `NTFY_TOPIC` | the topic you picked above — **required** |
 
-**Variables** (plain) — the *Variables* tab, *New repository variable*:
+**Variables** (plain) — the *Variables* tab, *New repository variable* — set your location:
+| Name | Value | Default |
+|---|---|---|
+| `PRAYER_CITY` | your city, e.g. `Lahore`, `Istanbul`, `London` | `Lahore` |
+| `PRAYER_COUNTRY` | your country, e.g. `Pakistan`, `Turkey`, `United Kingdom` | `Pakistan` |
+| `PRAYER_METHOD` | Aladhan calc-method id ([list](https://aladhan.com/calculation-methods)) | `1` (Karachi) |
+
+The timezone is detected automatically from your city — it works anywhere.
+
+**Optional — the nightly Habitica nudge.** Only if you log in Habitica; the prayer
+reminders don't need it. Add two more **Secrets**:
 | Name | Value |
 |---|---|
-| `PRAYER_CITY` | `Lahore` or `Islamabad` |
-| `LEAD_MIN` | `30` (optional — minutes before each prayer ends) |
+| `HABITICA_API_TOKEN` | Habitica → Settings → Site Data |
+| `HABITICA_USER_ID` | same page |
 
 ## 3. Turn it on
 - Open the **Actions** tab → if asked, enable workflows.
@@ -32,13 +40,13 @@ In your repo: **Settings → Secrets and variables → Actions**.
   Your phone should get today's reminders scheduled at the right times.
 - The jobs then run on their own:
   - **Prayer Reminders** — every morning
-  - **Habitica Notifications** — nightly check-in
+  - **Habitica Notifications** — nightly nudge (if configured)
   - **Keepalive** — monthly, so GitHub never pauses the above
 
 ## 4. Running locally (optional)
 No packages needed — the scripts are pure standard library.
 ```bash
-printf "API_TOKEN=your_token\nUSER_ID=your_id\nNTFY_TOPIC=your_topic\nPRAYER_CITY=Lahore\n" > .env
+cp .env.example .env     # then edit NTFY_TOPIC and your city
 python3 scripts/selftest.py     # proves reminders fire on time
 ```
 

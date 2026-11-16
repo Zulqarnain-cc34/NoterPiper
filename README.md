@@ -11,7 +11,7 @@
 ![python](https://img.shields.io/badge/python-stdlib-e0af68?style=flat&labelColor=1a1b26)
 ![push](https://img.shields.io/badge/push-ntfy.sh-bb9af7?style=flat&labelColor=1a1b26)
 ![runs%20on](https://img.shields.io/badge/runs_on-GitHub_Actions-f7768e?style=flat&labelColor=1a1b26)
-![cost](https://img.shields.io/badge/cost-$0-9ece6a?style=flat&labelColor=1a1b26)
+![license](https://img.shields.io/badge/license-MIT-9ece6a?style=flat&labelColor=1a1b26)
 
 </div>
 
@@ -32,8 +32,8 @@
 
 | | Feature | Detail |
 |:--:|---|---|
-| 🔔 | **Prayer reminders** | Your phone **rings at each of the 5 prayer times** — e.g. 30 min before a prayer ends — using live prayer times for your city. |
-| 🌙 | **One nightly nudge** | A single end-of-day check: what's still unlogged in Habitica, and which streaks are at risk. |
+| 🔔 | **Prayer reminders** | Your phone **rings at each of the 5 prayer times** — e.g. 30 min before a prayer ends — using live prayer times for **any city** (timezone auto-detected). Needs no Habitica. |
+| 🌙 | **One nightly nudge** *(optional)* | If you use Habitica: a single end-of-day check — what's still unlogged and which streaks are at risk. |
 
 > No dashboards, no spam. Notifications are kept **deliberately minimal** so they stay meaningful.
 
@@ -89,7 +89,10 @@ Ten minutes, once — full steps in **[SETUP.md](SETUP.md)**:
 | Change | Where |
 |---|---|
 | **Reminder timings** | `reminders.json` — `before_end` / `after_start` minutes per prayer (editable from GitHub's web UI) |
-| **City** | the `PRAYER_CITY` variable (`Lahore`, `Islamabad`, …) |
+| **Location** | variables `PRAYER_CITY`, `PRAYER_COUNTRY`, `PRAYER_METHOD` (timezone is auto-detected) |
+| **Habitica nudge** | optional — set `HABITICA_API_TOKEN` + `HABITICA_USER_ID` to enable it |
+
+Full setup in **[SETUP.md](SETUP.md)** · security notes in **[SECURITY.md](SECURITY.md)**.
 
 <details>
 <summary>Example — today's reminders & the nightly message</summary>

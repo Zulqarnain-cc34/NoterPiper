@@ -75,9 +75,9 @@ flowchart TB
 |---|---|
 | `scripts/schedule_prayers.py` | Fetch prayer times → compute reminders → schedule on ntfy |
 | `scripts/notify.py` | Read Habitica tasks → run nudges → send one notification |
-| `src/habitica_etl/net.py` | Resilient HTTP (retries, backoff) — the only network layer |
-| `src/habitica_etl/api.py` | Read-only Habitica client |
-| `src/habitica_etl/config.py` | Settings, timezone, watched recitations |
+| `src/muezzin/net.py` | Resilient HTTP (retries, backoff) — the only network layer |
+| `src/muezzin/api.py` | Read-only Habitica client (optional) |
+| `src/muezzin/config.py` | Settings from env / `.env` |
 | `reminders.json` | Owner-editable reminder timings |
 | `.github/workflows/*` | `prayers` · `notify` · `keepalive` |
 

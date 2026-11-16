@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Live self-test — proves notifications fire on time.
+"""Live self-test — proves reminders fire on time.
 
-1. Shows today's planned prayer-reminder times (offline logic).
-2. Sends ONE real scheduled test ~90s out and verifies ntfy confirms the exact
+1. Shows today's planned prayer-reminder times for your city.
+2. Sends ONE real scheduled test ~90s out and checks ntfy confirms the exact
    delivery second — the same mechanism the prayer reminders use.
-
-Usage:  python scripts/selftest.py     (needs NTFY_TOPIC in .env)
 """
 from __future__ import annotations
 
@@ -15,21 +13,25 @@ import time
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "src"))
 import schedule_prayers as sp  # noqa: E402
+from muezzin import config  # noqa: E402
 
 
 def main() -> int:
-    topic = sp.setting("NTFY_TOPIC")
-    city = sp.setting("PRAYER_CITY", "Lahore")
+    topic = config.env("NTFY_TOPIC")
+    city = config.env("PRAYER_CITY", "Lahore")
+    country = config.env("PRAYER_COUNTRY", "Pakistan")
+    method = config.env("PRAYER_METHOD", "1")
 
-    now = datetime.now(sp.PKT)
-    plan = sp.plan_reminders(sp.fetch_timings(city), now, sp.load_rules())
-    print(f"Planned reminders for {city} (now {now:%a %H:%M} PKT):")
-    for prayer, remind in plan:
+    timings, tzname = sp.fetch_timings(city, country, method)
+    now = datetime.now(ZoneInfo(tzname))
+    print(f"{city}, {country} ({tzname}) — now {now:%a %H:%M}:")
+    for prayer, remind in sp.plan_reminders(timings, now, sp.load_rules()):
         print(f"  {prayer:8} → {remind:%a %H:%M}")
 
     if not topic:
@@ -42,11 +44,8 @@ def main() -> int:
         data="⏱️ Self-test — if this pops in ~90s, prayer reminders fire on time.".encode(),
         headers={"Title": "Self-test", "Priority": "max", "Tags": "stopwatch", "At": str(target)},
     )
-    resp = json.loads(urllib.request.urlopen(req, timeout=15).read())
-    ok = resp.get("time") == target
-    when = datetime.fromtimestamp(target, sp.PKT)
-    print(f"\nLive timing test → ntfy confirmed delivery at {when:%H:%M:%S}: "
-          f"{'EXACT ✓' if ok else 'MISMATCH ✗'}")
+    ok = json.loads(urllib.request.urlopen(req, timeout=15).read()).get("time") == target
+    print(f"\nLive timing test → ntfy confirmed exact delivery: {'✓' if ok else '✗'}")
     print("Watch your phone in ~90 seconds.")
     return 0 if ok else 1
 
