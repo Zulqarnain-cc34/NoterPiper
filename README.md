@@ -67,7 +67,7 @@ Deeper design notes: **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 Ten minutes, once — full steps in **[SETUP.md](SETUP.md)**:
 
 1. Install **ntfy** on your phone and subscribe to a private topic.
-2. Add GitHub **Secrets** — `HABITICA_API_TOKEN`, `HABITICA_USER_ID`, `NTFY_TOPIC` — and a `PRAYER_CITY` **Variable**.
+2. On GitHub, add the `NTFY_TOPIC` secret and your `PRAYER_CITY` variable.
 3. Enable **Actions**. Done — it runs itself.
 
 ---
