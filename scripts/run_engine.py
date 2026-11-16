@@ -58,7 +58,8 @@ def main() -> int:
         return 0
     force = os.environ.get("FORCE_SOURCE")
     now = datetime.now(ZoneInfo(s.timezone))
-    sent = Engine(NtfyChannel(topic), select_sources(force)).run(now, build_config(s, force))
+    channels = [NtfyChannel(topic)]      # the enabled delivery channels (more to come)
+    sent = Engine(channels, select_sources(force)).run(now, build_config(s, force))
     print(f"{sent} sent this run")
     return 0
 

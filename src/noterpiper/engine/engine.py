@@ -13,15 +13,17 @@ from .plugin import Source
 
 
 class Engine:
-    def __init__(self, channel: Channel, sources: list[Source]):
-        self.channel = channel
+    def __init__(self, channels: list[Channel], sources: list[Source]):
+        self.channels = channels
         self.sources = sources
 
     def run(self, now: datetime, config: dict) -> int:
-        """Run every source once; deliver what's due. Returns how many were sent.
+        """Run every source once; deliver what's due to every channel. Returns the
+        number of deliveries made.
 
-        A source or a single delivery that raises is isolated — it never stops the
-        others (prayer reminders and the nudge stay independent)."""
+        Failures are isolated at every level — a failing source never stops the
+        others, and a channel that fails to deliver never stops the rest. Dedup is
+        per-channel, so each channel sends a given notification at most once per day."""
         sent = 0
         for src in self.sources:
             try:
@@ -30,11 +32,12 @@ class Engine:
                 print(f"[warn] source {src.id!r} failed: {e}")
                 continue
             for n in due:
-                try:
-                    if n.dedup_key and self.channel.already_sent(n.dedup_key, now):
-                        continue
-                    self.channel.send(n)
-                    sent += 1
-                except Exception as e:
-                    print(f"[warn] delivering {n.title!r} from {src.id!r} failed: {e}")
+                for ch in self.channels:
+                    try:
+                        if n.dedup_key and ch.already_sent(n.dedup_key, now):
+                            continue
+                        ch.send(n)
+                        sent += 1
+                    except Exception as e:
+                        print(f"[warn] delivering {n.title!r} from {src.id!r} failed: {e}")
         return sent
