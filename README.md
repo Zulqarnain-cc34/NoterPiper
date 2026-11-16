@@ -1,40 +1,123 @@
-# 🕌 Habitica Salah
+<div align="center">
 
-Prayer-time reminders and a nightly check-in for your Habitica prayers and
-recitations — delivered to your phone. **Serverless, free, zero dependencies.**
+# 🕌 Muezzin
 
-## What it does
+**Your call to prayer — on your phone.**
 
-- **Prayer reminders** — your phone rings at each of the 5 prayer times (e.g. 30 min
-  before a prayer ends), using live prayer times for your city.
-- **One nightly nudge** — a single end-of-day notification: what's still unlogged and
-  which streaks are at risk. Nothing else — notifications are kept deliberately minimal.
+*Precise prayer-time reminders and a nightly Habitica nudge. Serverless, free, and zero dependencies.*
 
-It runs on GitHub's infrastructure on a schedule, so no server and no always-on
-computer are required.
+![serverless](https://img.shields.io/badge/serverless-✓-9ece6a?style=flat&labelColor=1a1b26)
+![dependencies](https://img.shields.io/badge/dependencies-0-7aa2f7?style=flat&labelColor=1a1b26)
+![python](https://img.shields.io/badge/python-stdlib-e0af68?style=flat&labelColor=1a1b26)
+![push](https://img.shields.io/badge/push-ntfy.sh-bb9af7?style=flat&labelColor=1a1b26)
+![runs%20on](https://img.shields.io/badge/runs_on-GitHub_Actions-f7768e?style=flat&labelColor=1a1b26)
+![cost](https://img.shields.io/badge/cost-$0-9ece6a?style=flat&labelColor=1a1b26)
 
-## How it works
+</div>
 
-A morning job fetches today's prayer times and **pre-schedules** the reminders on
-[ntfy](https://ntfy.sh) at exact times; a nightly job sends the nudge. GitHub Actions
-is the scheduler, ntfy is delivery, Habitica/Aladhan are the data — and because ntfy
-handles exact-time delivery, GitHub's loose cron timing is irrelevant.
+---
 
-Full design and diagram: **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+## Contents
 
-## Setup
+- [What it does](#-what-it-does)
+- [How it works](#-how-it-works)
+- [Setup](#-setup)
+- [Configuration](#-configuration)
+- [Why it lasts](#-why-it-lasts)
+- [Privacy](#-privacy)
 
-Ten minutes, once — see **[SETUP.md](SETUP.md)**. In short: subscribe to an ntfy
-topic on your phone, add three GitHub secrets (`HABITICA_API_TOKEN`,
-`HABITICA_USER_ID`, `NTFY_TOPIC`) and a `PRAYER_CITY` variable, and enable Actions.
+---
 
-## Configuration
+## ✨ What it does
 
-- **Reminder timings** — edit `reminders.json` (`before_end` / `after_start` minutes
-  per prayer). No code; editable from GitHub's web UI.
-- **City** — the `PRAYER_CITY` variable (`Lahore`, `Islamabad`, …).
+| | Feature | Detail |
+|:--:|---|---|
+| 🔔 | **Prayer reminders** | Your phone **rings at each of the 5 prayer times** — e.g. 30 min before a prayer ends — using live prayer times for your city. |
+| 🌙 | **One nightly nudge** | A single end-of-day check: what's still unlogged in Habitica, and which streaks are at risk. |
 
-## Privacy & security
+> No dashboards, no spam. Notifications are kept **deliberately minimal** so they stay meaningful.
 
-Read-only Habitica access. The API token is a GitHub secret — never committed,
-printed, or exposed (`.env` and `data/` are git-ignored). The repo is private.
+---
+
+## 🧠 How it works
+
+A **morning job** fetches today's prayer times and **pre-schedules** the reminders on
+[ntfy](https://ntfy.sh) at exact times. A **nightly job** reads your Habitica tasks and
+sends the nudge. Because ntfy handles exact-time delivery, GitHub's loose cron timing
+never matters.
+
+```mermaid
+flowchart LR
+    subgraph gh["GitHub Actions · free cron"]
+        pr["prayers · morning"]
+        no["notify · night"]
+        ka["keepalive · monthly"]
+    end
+    subgraph app["App · Python stdlib only"]
+        sp["schedule_prayers"]
+        nf["notify"]
+        net["net · retries + backoff"]
+    end
+    aladhan["Aladhan<br/>prayer times"]
+    habitica["Habitica<br/>tasks · read-only"]
+    ntfy["ntfy.sh<br/>scheduled push"]
+    phone["📱 phone"]
+
+    pr --> sp --> net
+    no --> nf --> net
+    net --> aladhan & habitica & ntfy
+    ntfy ==>|rings at the exact second| phone
+    ka -. keeps schedules alive .-> gh
+```
+
+Deeper design notes: **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+
+---
+
+## 🚀 Setup
+
+Ten minutes, once — full steps in **[SETUP.md](SETUP.md)**:
+
+1. Install **ntfy** on your phone and subscribe to a private topic.
+2. Add GitHub **Secrets** — `HABITICA_API_TOKEN`, `HABITICA_USER_ID`, `NTFY_TOPIC` — and a `PRAYER_CITY` **Variable**.
+3. Enable **Actions**. Done — it runs itself.
+
+---
+
+## ⚙️ Configuration
+
+| Change | Where |
+|---|---|
+| **Reminder timings** | `reminders.json` — `before_end` / `after_start` minutes per prayer (editable from GitHub's web UI) |
+| **City** | the `PRAYER_CITY` variable (`Lahore`, `Islamabad`, …) |
+
+<details>
+<summary>Example — today's reminders & the nightly message</summary>
+
+```
+Reminders   Zohar 14:14 · Asr 16:33 · Maghrib 17:58 · Isha 19:28 · Fajr 06:01
+
+Nightly     🕌 Prayers not logged: Zohar, Asr, Maghrib, Isha
+            📿 Not done: 500 Lā ḥawla, Tasbeeh Fatima, Surah Mulk
+            🔥 Streak at risk: 500 Lā ḥawla (51), Surah Mulk (52)
+```
+</details>
+
+---
+
+## 🛡️ Why it lasts
+
+- **Serverless & free** — nothing to host, pay for, or patch.
+- **Precision decoupled from compute** — the scheduler can drift; ntfy still delivers to the exact second.
+- **Zero dependencies** — pure standard library; no package can rot or break it.
+- **Resilient** — one retrying HTTP layer, isolated failures, loud (emailed) on error.
+- **Self-sustaining** — a monthly keepalive stops GitHub pausing the schedules.
+
+---
+
+## 🔒 Privacy
+
+Read-only Habitica access. The API token lives as a GitHub secret — never committed,
+printed, or exposed (`.env` and `data/` are git-ignored). Private repo.
+
+<div align="center"><sub>Built to run for years, hands-off. 🤲</sub></div>
