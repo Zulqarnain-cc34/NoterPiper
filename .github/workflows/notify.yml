@@ -22,6 +22,7 @@ jobs:
       NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
       PRAYER_TIMEZONE: ${{ vars.PRAYER_TIMEZONE }}   # the nudge's local-time clock
       FORCE_SOURCE: habitica                         # force just the nudge, now, bypassing its time gate
+      WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}         # optional 2nd channel, if configured
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

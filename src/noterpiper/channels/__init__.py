@@ -1,8 +1,12 @@
 """noterpiper.channels — concrete delivery channels for the engine.
 
-Today there is one: ntfy. Each channel satisfies `noterpiper.engine.Channel`, so the
-engine can deliver through any of them without change.
+Each satisfies `noterpiper.engine.Channel`, so the engine can deliver through any
+combination of them without change.
+
+  NtfyChannel     — push to an ntfy topic (dedups via ntfy's message cache)
+  WebhookChannel  — POST to any URL (Discord, Slack, Home Assistant, your endpoint…)
 """
 from .ntfy import NtfyChannel
+from .webhook import WebhookChannel
 
-__all__ = ["NtfyChannel"]
+__all__ = ["NtfyChannel", "WebhookChannel"]

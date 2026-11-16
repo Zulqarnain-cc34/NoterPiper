@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from noterpiper import config, settings  # noqa: E402
-from noterpiper.channels import NtfyChannel  # noqa: E402
+from noterpiper.channels import NtfyChannel, WebhookChannel  # noqa: E402
 from noterpiper.engine.engine import Engine  # noqa: E402
 from noterpiper.plugins.habitica import HabiticaSource  # noqa: E402
 from noterpiper.plugins.prayer import PrayerSource  # noqa: E402
@@ -58,7 +58,10 @@ def main() -> int:
         return 0
     force = os.environ.get("FORCE_SOURCE")
     now = datetime.now(ZoneInfo(s.timezone))
-    channels = [NtfyChannel(topic)]      # the enabled delivery channels (more to come)
+    channels = [NtfyChannel(topic)]      # the enabled delivery channels
+    webhook_url = config.env("WEBHOOK_URL")
+    if webhook_url:
+        channels.append(WebhookChannel(webhook_url))
     sent = Engine(channels, select_sources(force)).run(now, build_config(s, force))
     print(f"{sent} sent this run")
     return 0
