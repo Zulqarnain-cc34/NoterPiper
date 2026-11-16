@@ -34,16 +34,6 @@ topic on your phone, add three GitHub secrets (`HABITICA_API_TOKEN`,
   per prayer). No code; editable from GitHub's web UI.
 - **City** — the `PRAYER_CITY` variable (`Lahore`, `Islamabad`, …).
 
-## Run locally (optional)
-
-No packages required — the scripts are pure standard library.
-
-```bash
-python3 scripts/schedule_prayers.py   # schedule today's reminders
-python3 scripts/notify.py             # send the nightly nudge
-python3 scripts/selftest.py           # prove delivery is on time
-```
-
 ## Privacy & security
 
 Read-only Habitica access. The API token is a GitHub secret — never committed,
