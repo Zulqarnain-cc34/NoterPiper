@@ -1,0 +1,29 @@
+name: Habitica Notifications
+
+# No-server notifications: GitHub Actions runs once a day, checks what's not
+# logged + streaks at risk, and pushes to your phone via ntfy.sh.
+# Secrets needed: HABITICA_API_TOKEN, HABITICA_USER_ID, NTFY_TOPIC.
+# Subscribe to the same NTFY_TOPIC in the free ntfy app to receive the push.
+#
+# Timing note: GitHub's scheduled runs can be 5–30 min late — fine for a
+# once-a-day "before midnight" nudge, not for exact prayer-time alerts.
+
+on:
+  schedule:
+    - cron: "30 16 * * *"   # ~9:30 PM Pakistan time (16:30 UTC)
+  workflow_dispatch:         # manual "Run" button
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    env:
+      HABITICA_API_TOKEN: ${{ secrets.HABITICA_API_TOKEN }}
+      HABITICA_USER_ID: ${{ secrets.HABITICA_USER_ID }}
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # notify.py uses only the Python standard library — no pip install needed.
+      - run: python scripts/notify.py
