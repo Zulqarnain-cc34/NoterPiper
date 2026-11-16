@@ -93,7 +93,7 @@ def test_invalid_timezone_falls_back_to_default(tmp_path):
 
 def test_windows_default_when_absent(tmp_path):
     s = settings.load_settings(tmp_path / "nope.json")
-    assert s.prayer_window == 20 and s.nudge_window == 30
+    assert s.prayer_window == 5 and s.nudge_window == 5
 
 
 def test_windows_are_read_from_config(tmp_path):
@@ -104,4 +104,4 @@ def test_windows_are_read_from_config(tmp_path):
 
 def test_junk_window_falls_back_to_default(tmp_path):
     f = _write(tmp_path, {"window": "soon"})
-    assert settings.load_settings(f).prayer_window == 20
+    assert settings.load_settings(f).prayer_window == 5

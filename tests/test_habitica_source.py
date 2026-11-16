@@ -9,7 +9,7 @@ from noterpiper.engine import Source
 from noterpiper.plugins.habitica import HabiticaSource
 
 TZ = timezone(timedelta(hours=5))
-AT_NUDGE = datetime(2026, 11, 16, 21, 35, tzinfo=TZ)      # within [21:30, 22:00)
+AT_NUDGE = datetime(2026, 11, 16, 21, 34, tzinfo=TZ)      # within the default window of 21:30
 BEFORE = datetime(2026, 11, 16, 20, 0, tzinfo=TZ)
 CONFIG = {"time": "21:30", "enabled": True}
 TASKS = {"habits": [{"text": "Fajr", "counterUp": 0, "counterDown": 0}],

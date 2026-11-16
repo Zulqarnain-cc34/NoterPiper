@@ -29,8 +29,8 @@ class Settings:
     nudge_time: str      # "HH:MM", local
     nudge_enabled: bool
     timezone: str        # IANA name, used to fire the nudge at the right local time
-    prayer_window: int = 20   # minutes a prayer reminder stays "due" after its time
-    nudge_window: int = 30    # minutes the nightly nudge stays "due" after its time
+    prayer_window: int = 5    # minutes a prayer reminder stays "due" after its time
+    nudge_window: int = 5     # minutes the nightly nudge stays "due" after its time
 
 
 DEFAULTS = Settings(

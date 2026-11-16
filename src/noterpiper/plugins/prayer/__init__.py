@@ -18,7 +18,7 @@ from ...engine import Notification
 STARTS_AT = {"Fajr": "Fajr", "Zohar": "Dhuhr", "Asr": "Asr", "Maghrib": "Maghrib", "Isha": "Isha"}
 ENDS_AT = {"Fajr": "Sunrise", "Zohar": "Asr", "Asr": "Maghrib", "Maghrib": "Isha", "Isha": "Midnight"}
 DEFAULT_RULE = {"before_end": 30}
-WINDOW_MIN = 20   # fire if a run lands within this many minutes after the reminder time
+WINDOW_MIN = 5    # fire if a run lands within this many minutes after the reminder time
 
 
 def _fmt(t: datetime) -> str:

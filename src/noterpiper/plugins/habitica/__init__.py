@@ -14,7 +14,7 @@ from ...engine import Notification
 
 PRAYERS = ("Fajr", "Zohar", "Asr", "Maghrib", "Isha")
 STREAK_RISK = 7          # warn when a streak this long is unticked
-WINDOW_MIN = 30          # fire within this many minutes after the set time
+WINDOW_MIN = 5           # fire within this many minutes after the set time
 NUDGE_TITLE = "Nightly check-in"
 
 
