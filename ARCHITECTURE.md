@@ -41,22 +41,23 @@ reminders.json   ← you edit this to change reminder timings
 6. **Pinned, stable integrations.** Action versions are pinned (`@v4`); the APIs
    used are long-stable public endpoints.
 
-## How to extend it
+## Notification philosophy — keep it minimal
 
-**Add a nudge** (e.g. for to-dos or a specific daily) — the whole point:
-1. In `scripts/notify.py`, write a function that takes `tasks` and returns lines:
-   ```python
-   def nudge_stale_todos(tasks):
-       old = [t["text"] for t in tasks.get("todos", []) if is_old(t)]
-       return ["📋 Stale to-dos: " + ", ".join(old)] if old else []
-   ```
-2. Add it to the `NUDGES` list. Done — it runs daily, and if it ever errors it
-   won't affect the other nudges.
+**Notifications are precious. More is worse.** If the phone buzzes for everything,
+you tune it all out — including the prayer reminders that matter. So the default
+is deliberately small: **5 prayer reminders + one gentle nightly nudge.** Don't
+add more unless something is genuinely worth interrupting the day for.
+
+## How to extend it (sparingly)
 
 **Change reminder timings** → edit `reminders.json` (`before_end` / `after_start`
 minutes per prayer). Takes effect next run.
 
 **Change city** → set the `PRAYER_CITY` variable (`Lahore`, `Islamabad`, …).
+
+**Add a nudge** — only if it clears the "worth a buzz?" bar. It's a small function
+in `scripts/notify.py` returning lines, added to the `NUDGES` list; a failing
+nudge never affects the others. That's the mechanism — but restraint is the rule.
 
 ## Testing
 

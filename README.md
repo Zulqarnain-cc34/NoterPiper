@@ -64,10 +64,12 @@ python scripts/selftest.py           # proves reminders fire on time
 
 ## Make it yours
 - **Change reminder times** → edit **`reminders.json`** (minutes `before_end` or
-  `after_start`, per prayer). No code needed — even editable from GitHub's website.
-- **Add new nudges** (to-dos, dailies, anything) → see **`ARCHITECTURE.md`**; it's
-  a 5-line function.
+  `after_start`, per prayer). No code needed — editable right on GitHub's website.
+- **Change city** → set the `PRAYER_CITY` variable.
+
+Notifications are kept **deliberately small** — 5 prayer reminders + one gentle
+nightly check-in — so they stay meaningful instead of becoming noise.
 
 ## Under the hood
-- **`ARCHITECTURE.md`** — how it's built to run for years and how to extend it.
+- **`ARCHITECTURE.md`** — how it's built to run for years.
 - **`reports/data_guide.md`** — plain-English guide to every habit tracked.
