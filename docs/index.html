@@ -45,6 +45,23 @@
     box-shadow:0 10px 30px -22px #000}
   .row{display:flex;align-items:center;gap:12px;padding:15px 0;border-bottom:1px solid var(--edge);min-height:56px}
   .row:last-child{border-bottom:none}
+  /* Skeleton loaders: shimmer the setting rows until real values (incl. the private
+     location fetched from repo Variables) load — hides the first-paint placeholder. */
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  body.loading .card .row > *, body.loading .card .prow > * { visibility: hidden; }
+  body.loading .card .row, body.loading .card .prow { position: relative; }
+  body.loading .card .row::before, body.loading .card .prow::before,
+  body.loading .card .row::after,  body.loading .card .prow::after {
+    content:''; position:absolute; top:50%; transform:translateY(-50%);
+    background:linear-gradient(90deg,var(--card2) 25%,var(--edge) 50%,var(--card2) 75%);
+    background-size:200% 100%; animation:shimmer 1.3s infinite linear; }
+  body.loading .card .row::before, body.loading .card .prow::before { left:0; width:42%; height:14px; border-radius:7px; }
+  body.loading .card .row::after,  body.loading .card .prow::after  { right:0; width:84px; height:28px; border-radius:15px; }
+  body.loading .resolve { position:relative; overflow:hidden; background:var(--card); border-color:var(--edge); }
+  body.loading .resolve > * { visibility:hidden; }   /* also hide the placeholder location line while loading */
+  body.loading .resolve::after { content:''; position:absolute; inset:0;
+    background:linear-gradient(90deg,var(--card2) 25%,var(--edge) 50%,var(--card2) 75%);
+    background-size:200% 100%; animation:shimmer 1.3s infinite linear; }
   .rname{font-size:16px;font-weight:500;min-width:0}
   .rname .hint{display:block;font-size:11.5px;color:var(--muted);font-weight:400;margin-top:2px}
   .spacer{flex:1}
@@ -124,7 +141,7 @@
   .toast.err{background:var(--warn);color:#2a1407}
 </style>
 </head>
-<body>
+<body class="loading">
   <div class="wrap">
     <div class="appbar"><span class="logo">🕌</span><h1>NoterPiper</h1><span class="sub" id="status">settings</span></div>
 
@@ -486,6 +503,7 @@
       renderPrayers(); applyState(); checkCity();
       setStatus(token() ? 'loaded ✓' : 'loaded · connect to see your location + save');
     } catch (e) { setStatus('load failed'); toast('Load failed: ' + e.message, true); }
+    finally { document.body.classList.remove('loading'); }       // reveal real values (skeleton → content)
   }
   // ─── Autosave: any change schedules a debounced save (a burst → one save) ───
   let userTouched = false, saveTimer = null, saving = false, dirtyAgain = false;
@@ -570,6 +588,7 @@
   document.getElementById('nudgeNow').onclick = doNudge;
 
   renderMethods(); renderPrayers(); bind(); updateNudgeNow(); updateRamOpts(); checkCity(); loadConfig();
+  setTimeout(() => document.body.classList.remove('loading'), 6000);   // safety: never leave the skeleton stuck
 </script>
 </body>
 </html>
