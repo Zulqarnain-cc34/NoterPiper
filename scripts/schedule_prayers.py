@@ -25,13 +25,15 @@ from muezzin import config, net  # noqa: E402
 STARTS_AT = {"Fajr": "Fajr", "Zohar": "Dhuhr", "Asr": "Asr", "Maghrib": "Maghrib", "Isha": "Isha"}
 ENDS_AT = {"Fajr": "Sunrise", "Zohar": "Asr", "Asr": "Maghrib", "Maghrib": "Isha", "Isha": "Midnight"}
 DEFAULT_RULE = {"before_end": 30}
-MESSAGES = {
-    "Fajr": "🌅 Fajr ends soon — pray now and start your day in light.",
-    "Zohar": "☀️ Zohar is ending — take a few minutes and pray.",
-    "Asr": "🌤️ Asr ends soon — pause and pray before it passes.",
-    "Maghrib": "🌇 Maghrib is short — pray now before Isha begins.",
-    "Isha": "🌙 Isha ends soon — close your day with prayer.",
-}
+
+
+def fmt(t: datetime) -> str:
+    return t.strftime("%I:%M %p").lstrip("0")  # "3:14 PM"
+
+
+def message(prayer: str, end: datetime) -> tuple[str, str]:
+    """Clean, professional notification: title = prayer, body = concise + end time."""
+    return prayer, f"Time to pray · ends {fmt(end)}"
 
 
 def load_rules() -> dict:
@@ -101,9 +103,13 @@ def main() -> int:
 
     sent = failed = 0
     for prayer, remind in planned:
+        end = to_dt(timings[ENDS_AT[prayer]], now)
+        while end < remind:                    # align the window-end to this occurrence
+            end += timedelta(days=1)
+        title, body = message(prayer, end)
         if topic:
             try:
-                schedule(topic, remind, f"{prayer} - time to pray", MESSAGES[prayer])
+                schedule(topic, remind, title, body)
                 sent += 1
             except Exception as e:             # one failed send never aborts the rest
                 failed += 1

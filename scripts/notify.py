@@ -19,24 +19,24 @@ PRAYERS = ("Fajr", "Zohar", "Asr", "Maghrib", "Isha")  # standard prayer names
 STREAK_RISK = 7  # warn when a streak this long is unticked
 
 
-# ─── nudges ───  each takes grouped tasks and returns display lines.
+# ─── nudges ───  each takes grouped tasks and returns display lines (clean, no emoji).
 def nudge_prayers_not_logged(t: dict) -> list[str]:
     missing = [h["text"].strip() for h in t.get("habits", [])
                if any(p in h.get("text", "") for p in PRAYERS)
                and (h.get("counterUp", 0) + h.get("counterDown", 0)) == 0]
-    return ["🕌 Prayers not logged: " + ", ".join(missing)] if missing else []
+    return ["Prayers left: " + ", ".join(missing)] if missing else []
 
 
 def nudge_dailies_not_done(t: dict) -> list[str]:
     due = [d["text"].strip() for d in t.get("dailys", [])
            if d.get("isDue") and not d.get("completed")]
-    return ["📋 Not done today: " + ", ".join(due)] if due else []
+    return ["Not done: " + ", ".join(due)] if due else []
 
 
 def nudge_streaks_at_risk(t: dict) -> list[str]:
     risk = [f"{d['text'].strip()} ({d['streak']})" for d in t.get("dailys", [])
             if d.get("isDue") and not d.get("completed") and d.get("streak", 0) >= STREAK_RISK]
-    return ["🔥 Streak at risk: " + ", ".join(risk)] if risk else []  # 🔥 = urgent
+    return ["Streak at risk: " + ", ".join(risk)] if risk else []
 
 
 NUDGES = [nudge_prayers_not_logged, nudge_dailies_not_done, nudge_streaks_at_risk]
@@ -60,11 +60,11 @@ def main() -> int:
         except Exception as e:                 # one bad nudge never breaks the run
             print(f"[warn] {nudge.__name__} failed: {e}")
 
-    urgent = any(line.startswith("🔥") for line in lines)
+    urgent = any(line.startswith("Streak at risk") for line in lines)
     if not lines:
-        title, body, priority, tags = "Habitica - all logged", "Everything's done for today. Nice work!", "default", "white_check_mark"
+        title, body, priority, tags = "All done today", "Everything is logged.", "low", "white_check_mark"
     else:
-        title, body = "Habitica - before midnight", "\n".join(lines)
+        title, body = "Before midnight", "\n".join(lines)
         priority, tags = ("high", "warning") if urgent else ("default", "bell")
 
     topic = config.env("NTFY_TOPIC")
