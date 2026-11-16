@@ -40,7 +40,7 @@ def _get(path: str) -> Any:
     headers = {
         "x-api-user": user_id,
         "x-api-key": token,
-        "x-client": f"{user_id}-muezzin",  # "UserID-AppName" per Habitica guidelines
+        "x-client": f"{user_id}-noterpiper",  # "UserID-AppName" per Habitica guidelines
         "Content-Type": "application/json",
     }
     return net.get_json(API_BASE + path, headers=headers, timeout=30)["data"]

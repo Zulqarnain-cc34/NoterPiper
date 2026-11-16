@@ -16,7 +16,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from muezzin import api, config, net, settings  # noqa: E402
+from noterpiper import api, config, net, settings  # noqa: E402
 
 PRAYERS = ("Fajr", "Zohar", "Asr", "Maghrib", "Isha")  # standard prayer names
 STREAK_RISK = 7  # warn when a streak this long is unticked

@@ -8,7 +8,7 @@ from datetime import datetime
 
 import pytest
 
-from muezzin.engine import Channel, Notification, Source
+from noterpiper.engine import Channel, Notification, Source
 
 
 def test_notification_requires_title_and_body():

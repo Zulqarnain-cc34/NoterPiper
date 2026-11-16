@@ -80,10 +80,10 @@ flowchart TB
 |---|---|
 | `scripts/schedule_prayers.py` | Fetch prayer times → compute reminders → send any due now to ntfy |
 | `scripts/notify.py` | Read Habitica tasks → run nudges → send one notification |
-| `src/muezzin/net.py` | Resilient HTTP (retries, backoff) — the only network layer |
-| `src/muezzin/api.py` | Read-only Habitica client (optional) |
-| `src/muezzin/config.py` | Secrets from env / `.env` |
-| `src/muezzin/settings.py` | Reads `config.json` → typed `Settings` (env > file > default) |
+| `src/noterpiper/net.py` | Resilient HTTP (retries, backoff) — the only network layer |
+| `src/noterpiper/api.py` | Read-only Habitica client (optional) |
+| `src/noterpiper/config.py` | Secrets from env / `.env` |
+| `src/noterpiper/settings.py` | Reads `config.json` → typed `Settings` (env > file > default) |
 | `config.json` | Owner-editable: location, offsets, nudge — the single source of truth |
 | `docs/` | Phone config page (GitHub Pages) — `index.html` + `app.js`, edits `config.json` via the GitHub API |
 | `.github/workflows/*` | `prayers` · `notify` · `keepalive` · `ci` |

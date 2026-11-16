@@ -1,4 +1,4 @@
-"""muezzin.engine — the notification engine's core contracts.
+"""noterpiper.engine — the notification engine's core contracts.
 
   Notification — the immutable value object every layer passes around
   Source       — the plugin contract (decide what to notify, and when)

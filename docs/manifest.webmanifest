@@ -1,6 +1,6 @@
 {
-  "name": "Muezzin",
-  "short_name": "Muezzin",
+  "name": "NoterPiper",
+  "short_name": "NoterPiper",
   "description": "Prayer reminders & nightly nudge settings",
   "start_url": "./",
   "scope": "./",

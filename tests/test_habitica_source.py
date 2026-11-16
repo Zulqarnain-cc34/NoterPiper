@@ -5,8 +5,8 @@ message, now behind the Source contract. A stable title gives it robust once-per
 dedup under the ~2-minute engine. Habitica is mocked."""
 from datetime import datetime, timedelta, timezone
 
-from muezzin.engine import Source
-from muezzin.plugins.habitica import HabiticaSource
+from noterpiper.engine import Source
+from noterpiper.plugins.habitica import HabiticaSource
 
 TZ = timezone(timedelta(hours=5))
 AT_NUDGE = datetime(2026, 11, 16, 21, 35, tzinfo=TZ)      # within [21:30, 22:00)
@@ -18,8 +18,8 @@ TASKS = {"habits": [{"text": "Fajr", "counterUp": 0, "counterDown": 0}],
 
 
 def _ready(monkeypatch, tasks=TASKS):
-    monkeypatch.setattr("muezzin.plugins.habitica.api.configured", lambda: True)
-    monkeypatch.setattr("muezzin.plugins.habitica.api.fetch_tasks_by_type", lambda: tasks)
+    monkeypatch.setattr("noterpiper.plugins.habitica.api.configured", lambda: True)
+    monkeypatch.setattr("noterpiper.plugins.habitica.api.fetch_tasks_by_type", lambda: tasks)
 
 
 def test_habiticasource_satisfies_the_Source_contract():
@@ -28,7 +28,7 @@ def test_habiticasource_satisfies_the_Source_contract():
 
 
 def test_no_nudge_when_habitica_is_not_configured(monkeypatch):
-    monkeypatch.setattr("muezzin.plugins.habitica.api.configured", lambda: False)
+    monkeypatch.setattr("noterpiper.plugins.habitica.api.configured", lambda: False)
     assert HabiticaSource().check(AT_NUDGE, CONFIG) == []
 
 
@@ -53,8 +53,8 @@ def test_nudge_at_time_is_one_notification_with_a_stable_dedup_title(monkeypatch
 
 
 def test_task_fetch_failure_sends_nothing(monkeypatch):
-    monkeypatch.setattr("muezzin.plugins.habitica.api.configured", lambda: True)
+    monkeypatch.setattr("noterpiper.plugins.habitica.api.configured", lambda: True)
     def boom():
         raise RuntimeError("habitica down")
-    monkeypatch.setattr("muezzin.plugins.habitica.api.fetch_tasks_by_type", boom)
+    monkeypatch.setattr("noterpiper.plugins.habitica.api.fetch_tasks_by_type", boom)
     assert HabiticaSource().check(AT_NUDGE, CONFIG) == []

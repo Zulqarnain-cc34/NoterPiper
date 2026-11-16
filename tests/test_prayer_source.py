@@ -4,8 +4,8 @@ Same reminder logic as before, now behind the Source contract: given `now` and i
 config slice, return the prayers due right now as Notifications. Aladhan is mocked."""
 from datetime import datetime, timedelta, timezone
 
-from muezzin.engine import Notification, Source
-from muezzin.plugins.prayer import PrayerSource
+from noterpiper.engine import Notification, Source
+from noterpiper.plugins.prayer import PrayerSource
 
 TZ = timezone(timedelta(hours=5))
 TIMINGS = {"Fajr": "05:00", "Sunrise": "06:30", "Dhuhr": "12:00", "Asr": "15:30",
@@ -15,7 +15,7 @@ CONFIG = {"city": "Makkah", "country": "Saudi Arabia", "method": "4",
 
 
 def _patch(monkeypatch, timings=TIMINGS):
-    monkeypatch.setattr("muezzin.plugins.prayer.fetch_timings", lambda c, co, m: timings)
+    monkeypatch.setattr("noterpiper.plugins.prayer.fetch_timings", lambda c, co, m: timings)
 
 
 def test_prayersource_satisfies_the_Source_contract():

@@ -30,7 +30,7 @@ A short, honest threat model for a personal, serverless notifier.
 
 ## The one real caveat: your ntfy topic
 Because the topic is a bearer secret, **choose a long, random topic name** (e.g.
-`muezzin-7f3qk9zx2m`). If it ever leaks, rotate it (pick a new one, update the
+`noterpiper-7f3qk9zx2m`). If it ever leaks, rotate it (pick a new one, update the
 `NTFY_TOPIC` secret, and re-subscribe in the app). For stronger protection, use
 ntfy **access tokens / reserved topics** (self-hosted or ntfy Pro).
 

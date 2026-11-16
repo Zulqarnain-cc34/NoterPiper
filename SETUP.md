@@ -7,7 +7,7 @@ About 10 minutes, once. Then it runs itself — forever.
 ## 1 · Phone
 
 1. Install **ntfy** — [iPhone](https://apps.apple.com/us/app/ntfy/id1625396347) · [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy).
-2. Think of a **secret topic name** — random text, e.g. `muezzin-7f3qk9zx`. Keep it private.
+2. Think of a **secret topic name** — random text, e.g. `noterpiper-7f3qk9zx`. Keep it private.
 3. In the app: tap **＋** → type your topic → **Subscribe**.
 4. Allow notifications for ntfy in your phone settings.
 
@@ -53,7 +53,7 @@ every couple of minutes, on the dot.
 
    | Field | Value |
    |---|---|
-   | URL | `https://api.github.com/repos/<you>/muezzin/actions/workflows/prayers.yml/dispatches` |
+   | URL | `https://api.github.com/repos/<you>/noterpiper/actions/workflows/prayers.yml/dispatches` |
    | Schedule | every **2 minutes** |
    | Request method | `POST` |
    | Request body | `{"ref":"main"}` |
@@ -84,7 +84,7 @@ applies within minutes.
   1. **Make the repo public** — *Settings → General → Change visibility → Public*. (Your
      secrets stay private; only `config.json` — your city and offsets — becomes visible.)
   2. **Turn on Pages** — *Settings → Pages → Source: Deploy from a branch → `main` / `/docs`*.
-     Your page appears at `https://<you>.github.io/muezzin/`.
+     Your page appears at `https://<you>.github.io/noterpiper/`.
   3. **Make a token** — *Settings → Developer settings → Fine-grained tokens → Generate*.
      Repository access: **only this repo**. Permissions: **Contents → Read and write** and
      **Actions → Read and write**. Copy it.

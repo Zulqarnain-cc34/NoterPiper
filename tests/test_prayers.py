@@ -8,7 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import schedule_prayers as sp  # noqa: E402
-from muezzin import settings  # noqa: E402
+from noterpiper import settings  # noqa: E402
 
 TZ = timezone(timedelta(hours=5))
 TIMINGS = {  # sample prayer times (HH:MM, local)

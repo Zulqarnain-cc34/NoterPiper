@@ -4,8 +4,8 @@ The engine knows nothing about prayers or Habitica — only the Source and Chann
 contracts. Driven here with fakes so the loop's behavior is pinned exactly."""
 from datetime import datetime, timedelta, timezone
 
-from muezzin.engine import Notification
-from muezzin.engine.engine import Engine
+from noterpiper.engine import Notification
+from noterpiper.engine.engine import Engine
 
 TZ = timezone(timedelta(hours=5))
 NOW = datetime(2026, 11, 16, 17, 30, tzinfo=TZ)

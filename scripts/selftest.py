@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "src"))
 import schedule_prayers as sp  # noqa: E402
-from muezzin import config, settings  # noqa: E402
+from noterpiper import config, settings  # noqa: E402
 
 
 def main() -> int:

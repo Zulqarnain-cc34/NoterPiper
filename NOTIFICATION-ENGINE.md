@@ -1,6 +1,6 @@
-# Muezzin as a Notification Engine — Architecture & Path Forward
+# NoterPiper as a Notification Engine — Architecture & Path Forward
 
-> The direction: Muezzin is a **serverless notification engine** — a small, stable
+> The direction: NoterPiper is a **serverless notification engine** — a small, stable
 > core plus **pluggable sources**. Two plugins ship today (prayer reminders, Habitica
 > nightly nudge); the engine is built so more can be added *without touching the core*.
 > The model to aim for is how LangChain treats integrations: a clear interface, a
@@ -37,7 +37,7 @@ one small file, without editing anything that already works?* If yes, the seam i
 Every serious notification system separates into **three decoupled layers**. Naming
 them is half the battle:
 
-| Layer | Also called | Responsibility | In Muezzin |
+| Layer | Also called | Responsibility | In NoterPiper |
 |---|---|---|---|
 | **Sources** | producers, triggers, plugins | Decide *what* to notify and *when* | prayer reminders, Habitica nudge |
 | **Engine** | dispatcher, orchestrator, core | On each run, ask every source "anything due?", collect, route, de-duplicate | the new `engine` module |
@@ -226,8 +226,8 @@ deferred until you actually open-source.
 
 - **New sources** (weather, calendar, RSS, a standup reminder) with zero engine changes.
 - **New channels** (email, Telegram, SMS) — notifications flow unchanged.
-- **Third-party plugins** — anyone can publish a Muezzin plugin and register it.
+- **Third-party plugins** — anyone can publish a NoterPiper plugin and register it.
 - **The same quiet, free, serverless promise** — the engine is tiny; plugins are optional.
 
-> Muezzin stops being "a prayer app with a Habitica feature" and becomes **a free,
+> NoterPiper stops being "a prayer app with a Habitica feature" and becomes **a free,
 > serverless notification engine that happens to ship two excellent plugins.**

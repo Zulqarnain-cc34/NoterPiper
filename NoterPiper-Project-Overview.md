@@ -1,8 +1,8 @@
-# Muezzin — Project Overview
+# NoterPiper — Project Overview
 
 **A free, serverless notification engine — with prayer reminders and a Habitica nudge as its first two plugins.**
 
-Muezzin is a small engine that runs on free infrastructure and delivers the right
+NoterPiper is a small engine that runs on free infrastructure and delivers the right
 message to your phone at the right time. It ships with two plugins out of the box —
 **prayer reminders** and an optional **nightly Habitica check-in** — and it is built
 so new kinds of reminders can be plugged in without touching the core.
@@ -11,7 +11,7 @@ so new kinds of reminders can be plugged in without touching the core.
 
 ## 1. In one sentence
 
-> Muezzin is a notification engine you fully own: a tiny core that quietly runs on free
+> NoterPiper is a notification engine you fully own: a tiny core that quietly runs on free
 > services, and plugins that decide what to tell you — starting with your five daily
 > prayers — with nothing for you to keep switched on.
 
@@ -23,7 +23,7 @@ Most reminder apps come with a cost: ads, bloat, battery drain, a sign-up, or a
 company quietly collecting your location and habits. And they stop working the day the
 app is abandoned.
 
-Muezzin takes the opposite approach — a personal notification system that is:
+NoterPiper takes the opposite approach — a personal notification system that is:
 
 - **Yours.** You own the whole thing; there is no company in the middle.
 - **Private.** It only ever *reads* public data; nothing personal is sold or tracked.
@@ -39,7 +39,7 @@ Your phone rings for Fajr, Zohar, Asr, Maghrib, and Isha — at a time you pick 
 one (e.g. "30 minutes after Fajr begins"). The times are calculated live for your city.
 
 🌙 **A nightly check-in (the second plugin, optional)**
-If you track habits in Habitica, Muezzin can send one calm end-of-day summary of
+If you track habits in Habitica, NoterPiper can send one calm end-of-day summary of
 what's still unticked and which streaks are at risk. Entirely optional — the prayer
 plugin works perfectly without it.
 
@@ -53,7 +53,7 @@ times whenever you like. Changes take effect within minutes.
 
 ## 4. What it looks like
 
-<img src="assets/demo.png" alt="Muezzin settings screen" width="280">
+<img src="assets/demo.png" alt="NoterPiper settings screen" width="280">
 
 When a prayer is due, this is all that reaches your phone:
 
@@ -66,7 +66,7 @@ One ring, when it matters — clear and to the point. Nothing else, ever.
 
 ## 5. How it works (the big picture)
 
-Muezzin has three simple parts, each doing one job:
+NoterPiper has three simple parts, each doing one job:
 
 ```
    SOURCES (plugins)          THE ENGINE                 A CHANNEL          Your phone
@@ -124,7 +124,7 @@ Simple on the surface, carefully thought-through underneath:
 
 ## 9. The architecture: a notification engine with a plugin ecosystem
 
-This is the heart of the project. Muezzin is built as three decoupled layers:
+This is the heart of the project. NoterPiper is built as three decoupled layers:
 
 - **The engine** — a tiny core that, on each run, asks every registered plugin
   "anything due?", collects the results, removes duplicates, and routes them. It knows
@@ -138,7 +138,7 @@ Because the engine depends only on the plugin *interface* (not on the plugins
 themselves), new plugins can be added without ever touching the core — the same idea
 that lets a library like LangChain accept endless third-party integrations.
 
-> Muezzin isn't "a prayer app with a Habitica feature." It's **a free, serverless
+> NoterPiper isn't "a prayer app with a Habitica feature." It's **a free, serverless
 > notification engine that happens to ship two excellent plugins.**
 
 ---
@@ -148,7 +148,7 @@ that lets a library like LangChain accept endless third-party integrations.
 - **Formalize the plugin interface** so writing a new plugin is a documented, 30-line job.
 - **A smarter nightly summary** that stays one calm message even as you track more habits.
 - **More plugins and channels** — new reminder types, new delivery methods.
-- **A plugin ecosystem** — third parties publishing their own Muezzin plugins.
+- **A plugin ecosystem** — third parties publishing their own NoterPiper plugins.
 
 Every step keeps the founding promise: free, serverless, and quiet.
 
@@ -164,7 +164,7 @@ Every step keeps the founding promise: free, serverless, and quiet.
 
 ## 12. In short
 
-Muezzin is a small idea executed with care: a notification engine that is genuinely
+NoterPiper is a small idea executed with care: a notification engine that is genuinely
 free, genuinely private, and genuinely built to last — a tiny core, two excellent
 plugins today, and room for many more. It says exactly one thing, at exactly the right
 moment.

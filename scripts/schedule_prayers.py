@@ -20,7 +20,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from muezzin import config, net, settings  # noqa: E402
+from noterpiper import config, net, settings  # noqa: E402
 
 # Aladhan timing names for when each prayer STARTS and when its window ENDS
 # (a prayer's window ends when the next one starts; Isha ends at Islamic midnight).

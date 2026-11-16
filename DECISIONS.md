@@ -1,6 +1,6 @@
 # Decisions
 
-Why Muezzin is built the way it is, and the notable changes along the way.
+Why NoterPiper is built the way it is, and the notable changes along the way.
 For how the pieces fit together, see [ARCHITECTURE](ARCHITECTURE.md).
 
 ---

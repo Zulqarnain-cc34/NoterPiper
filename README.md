@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🕌 Muezzin
+# 🕌 NoterPiper
 
 **Your call to prayer — on your phone.**
 
@@ -12,7 +12,7 @@
 
 <br>
 
-<img src="assets/demo.png" alt="Muezzin" width="300">
+<img src="assets/demo.png" alt="NoterPiper" width="300">
 
 </div>
 
