@@ -58,3 +58,13 @@ def test_task_fetch_failure_sends_nothing(monkeypatch):
         raise RuntimeError("habitica down")
     monkeypatch.setattr("noterpiper.plugins.habitica.api.fetch_tasks_by_type", boom)
     assert HabiticaSource().check(AT_NUDGE, CONFIG) == []
+
+
+def test_force_sends_even_when_off_and_out_of_time(monkeypatch):
+    """The on-demand 'send now' button: fire regardless of the enabled flag or the
+    clock, and with no dedup key so it always delivers."""
+    _ready(monkeypatch)
+    forced = {"time": "21:30", "enabled": False, "force": True}
+    notes = HabiticaSource().check(BEFORE, forced)       # disabled + wrong time, but forced
+    assert len(notes) == 1
+    assert notes[0].dedup_key is None                    # forced → no dedup, always delivers

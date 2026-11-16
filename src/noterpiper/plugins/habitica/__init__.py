@@ -62,15 +62,17 @@ class HabiticaSource:
     def check(self, now: datetime, config: dict) -> list[Notification]:
         if not api.configured():
             return []                                       # Habitica is optional
-        if not config.get("enabled", True):
-            return []
-        nudge_time = str(config.get("nudge_time") or config.get("time") or "21:30")
-        if not _due_now(now, nudge_time):
-            return []
+        forced = bool(config.get("force"))                  # on-demand 'send now' button
+        if not forced:
+            if not config.get("enabled", True):
+                return []
+            nudge_time = str(config.get("nudge_time") or config.get("time") or "21:30")
+            if not _due_now(now, nudge_time):
+                return []
         try:
             tasks = api.fetch_tasks_by_type()
         except Exception:
             return []                                       # Habitica down → skip tonight, don't crash
         body, priority, tag = summarize(*collect(tasks))
-        return [Notification(NUDGE_TITLE, body, priority=priority,
-                             tags=(tag,), dedup_key=NUDGE_TITLE)]
+        dedup = None if forced else NUDGE_TITLE              # forced always delivers; scheduled dedups
+        return [Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup)]
