@@ -1,0 +1,45 @@
+name: Keepalive
+
+# GitHub pauses scheduled workflows after 60 days of no repo activity. This runs
+# monthly and makes a tiny commit so the notification / prayer jobs keep running
+# forever. The commit is attributed to you (your GitHub noreply), not a bot.
+
+on:
+  schedule:
+    - cron: "0 3 1 * *"   # 03:00 UTC on the 1st of each month
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    env:
+      ACTOR: ${{ github.actor }}
+      ACTOR_ID: ${{ github.actor_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Touch a heartbeat file and commit
+        run: |
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .keepalive
+          git config user.name "$ACTOR"
+          git config user.email "${ACTOR_ID}+${ACTOR}@users.noreply.github.com"
+          git add .keepalive
+          git commit -m "chore: keepalive" || echo "nothing to commit"
+          git push
+
+      # Keepalive keeps the schedules from pausing — alert loudly if it breaks.
+      - name: Alert me if this job failed
+        if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          WF: ${{ github.workflow }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -s --max-time 20 \
+            -H "Title: Muezzin failed: ${WF}" \
+            -H "Priority: urgent" \
+            -H "Tags: rotating_light" \
+            -d "The '${WF}' run failed. Tap for logs: ${RUN_URL}" \
+            "https://ntfy.sh/${NTFY_TOPIC}" || true

@@ -1,0 +1,138 @@
+// Muezzin config page — PURE logic only (no `document`), so Node can unit-test it
+// and the browser can import it as a module. All DOM building lives in index.html.
+
+export const PRAYERS = ['Fajr', 'Zohar', 'Asr', 'Maghrib', 'Isha'];
+
+// Drives how index.html renders its controls — add a setting here + a key below.
+export const SCHEMA = {
+  location: [
+    { key: 'city', label: 'City', type: 'city' },
+    { key: 'country', label: 'Country', type: 'country' },
+    { key: 'method', label: 'Method', type: 'method' },
+  ],
+  nudge: [
+    { key: 'nudgeTime', label: 'Time', type: 'time' },
+    { key: 'nudgeEnabled', label: 'Habitica nudge', type: 'toggle' },
+  ],
+};
+
+// "HH:MM" in a real 24-hour range.
+export function validTime(t) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(t).trim());
+  if (!m) return false;
+  const h = +m[1], mi = +m[2];
+  return h >= 0 && h < 24 && mi >= 0 && mi < 60;
+}
+
+// Pure mapping for the location "resolve line": empty / typing(pending) / valid / unknown.
+export function resolveState(city, pending, resolved) {
+  if (!String(city).trim()) return 'empty';
+  if (resolved) return 'valid';
+  if (pending) return 'typing';
+  return 'unknown';
+}
+
+// Common cities for type-ahead suggestions (datalist). Not exhaustive — any city
+// still works via the live Aladhan check; these just speed up the common ones and
+// auto-fill the country. [city, country].
+export const CITIES = [
+  ['Lahore', 'Pakistan'], ['Karachi', 'Pakistan'], ['Islamabad', 'Pakistan'], ['Rawalpindi', 'Pakistan'],
+  ['Faisalabad', 'Pakistan'], ['Multan', 'Pakistan'], ['Peshawar', 'Pakistan'], ['Quetta', 'Pakistan'],
+  ['Istanbul', 'Turkey'], ['Ankara', 'Turkey'], ['Izmir', 'Turkey'], ['Cairo', 'Egypt'], ['Alexandria', 'Egypt'],
+  ['Dubai', 'United Arab Emirates'], ['Abu Dhabi', 'United Arab Emirates'], ['Sharjah', 'United Arab Emirates'],
+  ['Mecca', 'Saudi Arabia'], ['Medina', 'Saudi Arabia'], ['Riyadh', 'Saudi Arabia'], ['Jeddah', 'Saudi Arabia'],
+  ['Doha', 'Qatar'], ['Kuwait City', 'Kuwait'], ['Manama', 'Bahrain'], ['Muscat', 'Oman'], ['Amman', 'Jordan'],
+  ['Baghdad', 'Iraq'], ['Beirut', 'Lebanon'], ['Damascus', 'Syria'], ['Tehran', 'Iran'],
+  ['London', 'United Kingdom'], ['Birmingham', 'United Kingdom'], ['Manchester', 'United Kingdom'],
+  ['New York', 'United States'], ['Chicago', 'United States'], ['Los Angeles', 'United States'],
+  ['Houston', 'United States'], ['Dearborn', 'United States'], ['Toronto', 'Canada'], ['Montreal', 'Canada'],
+  ['Paris', 'France'], ['Berlin', 'Germany'], ['Amsterdam', 'Netherlands'], ['Brussels', 'Belgium'],
+  ['Stockholm', 'Sweden'], ['Kuala Lumpur', 'Malaysia'], ['Jakarta', 'Indonesia'], ['Dhaka', 'Bangladesh'],
+  ['Delhi', 'India'], ['Mumbai', 'India'], ['Hyderabad', 'India'], ['Casablanca', 'Morocco'], ['Tunis', 'Tunisia'],
+  ['Lagos', 'Nigeria'], ['Nairobi', 'Kenya'], ['Singapore', 'Singapore'], ['Sydney', 'Australia'], ['Melbourne', 'Australia'],
+];
+
+// Fixed country list for the dropdown (can't go stale). Aladhan-friendly English names.
+export const COUNTRIES = [
+  'Afghanistan','Albania','Algeria','Andorra','Angola','Argentina','Armenia','Australia','Austria','Azerbaijan',
+  'Bahrain','Bangladesh','Belarus','Belgium','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil',
+  'Brunei','Bulgaria','Burkina Faso','Burundi','Cambodia','Cameroon','Canada','Chad','Chile','China',
+  'Colombia','Comoros','Congo','Costa Rica','Croatia','Cuba','Cyprus','Czechia','Denmark','Djibouti',
+  'Dominican Republic','Ecuador','Egypt','El Salvador','Eritrea','Estonia','Ethiopia','Fiji','Finland','France',
+  'Gabon','Gambia','Georgia','Germany','Ghana','Greece','Guatemala','Guinea','Guyana','Haiti',
+  'Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy',
+  'Ivory Coast','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kosovo','Kuwait','Kyrgyzstan','Laos',
+  'Latvia','Lebanon','Lesotho','Liberia','Libya','Lithuania','Luxembourg','Madagascar','Malawi','Malaysia',
+  'Maldives','Mali','Malta','Mauritania','Mauritius','Mexico','Moldova','Mongolia','Montenegro','Morocco',
+  'Mozambique','Myanmar','Namibia','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria','North Macedonia',
+  'Norway','Oman','Pakistan','Palestine','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland',
+  'Portugal','Qatar','Romania','Russia','Rwanda','Saudi Arabia','Senegal','Serbia','Sierra Leone','Singapore',
+  'Slovakia','Slovenia','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname',
+  'Sweden','Switzerland','Syria','Taiwan','Tajikistan','Tanzania','Thailand','Togo','Trinidad and Tobago','Tunisia',
+  'Turkey','Turkmenistan','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan','Venezuela',
+  'Vietnam','Yemen','Zambia','Zimbabwe',
+];
+
+// Each prayer's window = [start, end] in Aladhan timing names.
+const _WINDOW = {
+  Fajr: ['Fajr', 'Sunrise'], Zohar: ['Dhuhr', 'Asr'], Asr: ['Asr', 'Maghrib'],
+  Maghrib: ['Maghrib', 'Isha'], Isha: ['Isha', 'Midnight'],
+};
+function _toMin(t) { const p = String(t).trim().split(' ')[0].split(':'); return (+p[0]) * 60 + (+p[1]); }
+
+// Aladhan timings → { prayer: window length in minutes } (wrapping past midnight for Isha).
+export function prayerWindows(timings) {
+  const out = {};
+  for (const p in _WINDOW) {
+    const [a, b] = _WINDOW[p];
+    if (timings[a] == null || timings[b] == null) continue;
+    let d = _toMin(timings[b]) - _toMin(timings[a]);
+    if (d < 0) d += 1440;            // Isha → Islamic midnight crosses 00:00
+    if (d > 0) out[p] = d;
+  }
+  return out;
+}
+
+// Largest offset that keeps the reminder inside the window (leaving a margin), rounded to 5.
+export function maxOffset(windowMin, margin = 10) {
+  if (!windowMin || windowMin <= margin) return 120;   // unknown yet → conservative cap
+  return Math.max(5, Math.floor((windowMin - margin) / 5) * 5);
+}
+
+// config object → base64 of pretty JSON (+ trailing newline) for the GitHub
+// Contents API. UTF-8 safe and diff-friendly (stable 2-space formatting).
+export function encodeContent(obj) {
+  const text = JSON.stringify(obj, null, 2) + '\n';
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+// config.json object → flat form state the controls bind to.
+export function fromConfig(o = {}) {
+  const nudge = (o && typeof o.nudge === 'object' && o.nudge) || {};
+  return {
+    city: o.city ?? '',
+    country: o.country ?? '',
+    method: String(o.method ?? '1'),
+    timezone: o.timezone ?? '',
+    reminders: o.reminders ?? {},
+    nudgeTime: nudge.time ?? '21:30',
+    nudgeEnabled: nudge.enabled !== false,   // default on; only explicit false is off
+  };
+}
+
+// Form state → config.json object. `base` is the loaded file so unknown keys
+// (anything a future version adds) survive a round-trip untouched.
+export function toConfig(s, base = {}) {
+  return {
+    ...base,
+    city: s.city,
+    country: s.country,
+    method: String(s.method),
+    timezone: s.timezone,
+    reminders: s.reminders,
+    nudge: { ...(base.nudge || {}), time: s.nudgeTime, enabled: Boolean(s.nudgeEnabled) },
+  };
+}

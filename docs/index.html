@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Muezzin · Settings</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b1018">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Muezzin">
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}</script>
+<style>
+  :root{
+    --bg:#0b1018; --card:#141b26; --card2:#0e1420; --edge:#26303f;
+    --text:#eceef2; --muted:#8795a8;
+    --gold:#f0b429; --goldSoft:rgba(240,180,41,.13); --goldEdge:rgba(240,180,41,.32); --ink:#2a1e02;
+    --good:#5bbf7a; --goodSoft:rgba(91,191,122,.11); --goodEdge:rgba(91,191,122,.3);
+    --warn:#e5804a; --warnSoft:rgba(229,128,74,.12); --warnEdge:rgba(229,128,74,.36);
+    --r:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;min-height:100vh;color:var(--text);
+    background:radial-gradient(1100px 560px at 50% -8%,#13203a,#0b1018 62%);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.3}
+  .wrap{width:100%;max-width:480px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) clamp(14px,4vw,20px) 120px}
+
+  .appbar{display:flex;align-items:center;gap:11px;padding:6px 2px 20px}
+  .appbar .logo{font-size:25px;filter:drop-shadow(0 0 12px rgba(240,180,41,.35))}
+  .appbar h1{margin:0;font-size:clamp(19px,5.5vw,22px);font-weight:700;letter-spacing:-.3px;font-family:Georgia,"Times New Roman",serif}
+  .appbar .sub{margin-left:auto;font-size:12px;color:var(--muted);background:var(--card);border:1px solid var(--edge);
+    padding:6px 12px;border-radius:30px;display:flex;align-items:center;gap:7px;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .label{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin:24px 6px 10px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .label::before{content:"";width:13px;height:2px;border-radius:2px;background:var(--gold)}
+  .cap{font-size:12px;color:var(--muted);margin:-5px 6px 10px;line-height:1.5}
+  .cap b{color:var(--text);font-weight:600}
+  .note{font-size:12px;color:var(--muted);line-height:1.55;margin:20px 6px 2px}
+
+  .card{background:var(--card);border:1px solid var(--edge);border-radius:var(--r);padding:0 clamp(13px,3.5vw,17px);
+    box-shadow:0 10px 30px -22px #000}
+  .row{display:flex;align-items:center;gap:12px;padding:15px 0;border-bottom:1px solid var(--edge);min-height:56px}
+  .row:last-child{border-bottom:none}
+  .rname{font-size:16px;font-weight:500;min-width:0}
+  .rname .hint{display:block;font-size:11.5px;color:var(--muted);font-weight:400;margin-top:2px}
+  .spacer{flex:1}
+
+  input,select{background:var(--card2);color:var(--text);border:1px solid var(--edge);border-radius:11px;
+    padding:11px 12px;font-size:15px;font-family:inherit;outline:none;max-width:100%;transition:border-color .15s,box-shadow .15s;appearance:none}
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%238795a8' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;padding-right:30px}
+  .row > input,.row > select{width:clamp(140px,46vw,200px)}
+  .row > input.text{text-align:right}
+  #nudgeTime{width:clamp(108px,34vw,134px);font-weight:700;text-align:center}
+  input:focus,select:focus{border-color:var(--goldEdge);box-shadow:0 0 0 3px var(--goldSoft)}
+
+  #cityRow{position:relative}
+  .suggest{position:absolute;z-index:30;top:calc(100% - 6px);right:0;width:min(250px,72vw);
+    background:var(--card2);border:1px solid var(--edge);border-radius:12px;overflow:hidden;display:none;box-shadow:0 14px 34px -10px #000}
+  .suggest.show{display:block}
+  .suggest .opt{display:flex;align-items:center;gap:9px;padding:12px 14px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--edge)}
+  .suggest .opt:last-child{border-bottom:none}
+  .suggest .opt:hover,.suggest .opt:active{background:var(--goldSoft)}
+  .suggest .pin{color:var(--gold);font-size:13px}
+  .suggest .co{margin-left:auto;color:var(--muted);font-size:12px}
+
+  .resolve{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:11px 2px 2px;padding:12px 14px;border-radius:13px;font-size:13.5px;
+    background:var(--card2);border:1px solid var(--edge);transition:background .2s,border-color .2s;color:var(--muted)}
+  .resolve.good{background:var(--goodSoft);border-color:var(--goodEdge);color:var(--good)}
+  .resolve.warn{background:var(--warnSoft);border-color:var(--warnEdge);color:var(--warn)}
+  .resolve .rtxt{color:var(--muted)} .resolve.good .rtxt,.resolve.warn .rtxt{color:var(--text)}
+  .resolve .rtag{margin-left:auto;font-weight:700;color:var(--muted)}
+  .resolve.good .rtag{color:var(--good)} .resolve.warn .rtag{color:var(--warn)}
+
+  .prow{display:flex;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid var(--edge);min-height:58px}
+  .prow:last-child{border-bottom:none}
+  .pname{font-size:16px;font-weight:600;min-width:52px;display:flex;align-items:center;gap:9px}
+  .pdot{width:7px;height:7px;border-radius:50%;background:var(--gold);opacity:.85;box-shadow:0 0 7px rgba(240,180,41,.5)}
+  .pctrl{margin-left:auto;display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+  .stepper{display:flex;align-items:center;background:var(--card2);border:1px solid var(--edge);border-radius:12px;overflow:hidden}
+  .stepper button{width:38px;height:42px;border:none;background:transparent;color:var(--gold);font-size:21px;font-weight:700;cursor:pointer;transition:background .12s}
+  .stepper button:active{background:var(--goldSoft)}
+  .stepper .val{min-width:46px;text-align:center;font-size:15px;font-weight:700}
+  .stepper .val small{font-size:10px;color:var(--muted);font-weight:500;margin-left:1px}
+  .mode{border:1px solid var(--edge);background:var(--card2);color:var(--muted);border-radius:12px;padding:10px 12px;
+    font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:border-color .15s;
+    min-width:82px;justify-content:center}   /* fixed width so before/after don't shift the row */
+  .mode:active{border-color:var(--goldEdge)}
+  .mode b{color:var(--text);font-weight:700} .mode .sw{color:var(--gold);font-size:13px}
+
+  .toggle{margin-left:auto;width:50px;height:30px;border-radius:16px;background:var(--gold);position:relative;cursor:pointer;transition:background .2s;flex:none}
+  .toggle .knob{position:absolute;top:3px;left:23px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px #0007}
+  .toggle.off{background:var(--edge)} .toggle.off .knob{left:3px}
+
+  .sendnow{background:var(--card2);color:var(--gold);border:1px solid var(--goldEdge);border-radius:12px;padding:10px 18px;
+    font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;transition:transform .1s,background .15s}
+  .sendnow:active{transform:translateY(1px);background:var(--goldSoft)} .sendnow:disabled{opacity:.5;cursor:not-allowed}
+
+  details.connect{background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:12px 15px;margin:4px 2px 2px;font-size:13.5px}
+  details.connect summary{cursor:pointer;color:var(--muted);font-weight:600;list-style:none;display:flex;align-items:center}
+  details.connect summary::-webkit-details-marker{display:none}
+  details[open].connect summary{margin-bottom:4px}
+  .crow{display:flex;gap:9px;margin-top:11px}
+  .crow input{flex:1;min-width:0;text-align:left;width:auto;-webkit-text-security:disc}
+  .crow button{background:var(--gold);color:var(--ink);border:none;border-radius:11px;padding:0 16px;font-weight:800;cursor:pointer;flex:none}
+  .chint{margin-top:9px;color:var(--muted);font-size:12px;line-height:1.5}
+  .chint b{color:var(--text)}
+
+  .savebar{position:fixed;left:0;right:0;bottom:0;padding:14px clamp(14px,4vw,20px) calc(18px + env(safe-area-inset-bottom));
+    background:linear-gradient(0deg,var(--bg) 68%,transparent)}
+  .savebar .inner{max-width:480px;margin:0 auto}
+  .save{width:100%;background:linear-gradient(180deg,#f6c243,var(--gold));color:var(--ink);border:none;border-radius:15px;
+    padding:17px;font-size:16px;font-weight:800;letter-spacing:.2px;font-family:inherit;cursor:pointer;
+    box-shadow:0 12px 32px -12px rgba(240,180,41,.55);transition:transform .1s,filter .15s}
+  .save:active{transform:translateY(1px)} .save:disabled{filter:grayscale(.55) brightness(.6);cursor:not-allowed;box-shadow:none}
+
+  .toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%) translateY(6px);background:var(--good);color:#06230f;font-weight:800;
+    font-size:13.5px;padding:11px 18px;border-radius:30px;opacity:0;transition:.25s;pointer-events:none;max-width:90%;text-align:center;box-shadow:0 10px 30px -8px #0008}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{background:var(--warn);color:#2a1407}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="appbar"><span class="logo">🕌</span><h1>Muezzin</h1><span class="sub" id="status">settings</span></div>
+
+    <details class="connect" id="connect"><summary>⚙&nbsp; Connect to GitHub</summary>
+      <div class="crow"><input id="token" placeholder="fine-grained token" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true"><button id="saveToken">Save</button></div>
+      <div class="chint" id="chint">Your settings load without this. A token is only needed to <b>save</b> — GitHub never allows anonymous writes, even on a public repo. Fine-grained token: Contents + Actions, this repo only. Stored just on this device.</div>
+    </details>
+
+    <div class="label">Location</div>
+    <div class="card">
+      <div class="row" id="cityRow"><span class="rname">City</span><span class="spacer"></span><input class="text" id="city" name="muezzin-city" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-form-type="other"><div class="suggest" id="suggest"></div></div>
+      <div class="row"><span class="rname">Country</span><span class="spacer"></span><select id="country"></select></div>
+      <div class="row"><span class="rname">Method<span class="hint">calculation</span></span><span class="spacer"></span>
+        <select id="method"></select></div>
+    </div>
+    <div class="resolve" id="resolve"><span id="ricon">🕓</span><span class="rtxt" id="rtxt">Enter your city</span><span class="rtag" id="rtag"></span></div>
+
+    <div class="label">Prayer reminders</div>
+    <div class="cap">Minutes <b>before</b> each prayer's window ends — tap <b>⇄</b> to switch to <b>after</b> it starts.</div>
+    <div class="card" id="prayers"></div>
+
+    <div class="label">Nightly nudge</div>
+    <div class="card">
+      <div class="row"><span class="rname">Time<span class="hint">end-of-day check</span></span><span class="spacer"></span>
+        <select id="nudgeTime"></select></div>
+      <div class="row"><span class="rname">Habitica nudge<span class="hint">optional</span></span>
+        <div class="toggle" id="nudgeEnabled"><div class="knob"></div></div></div>
+      <div class="row" id="nudgeNowRow"><span class="rname">Send now<span class="hint">push my summary immediately</span></span><span class="spacer"></span>
+        <button class="sendnow" id="nudgeNow">Send</button></div>
+    </div>
+
+    <p class="note">Changes take effect within a few minutes — prayer reminders are checked live, and the nightly nudge reads your settings each run.</p>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="savebar"><div class="inner"><button class="save" id="save">Save changes</button></div></div>
+
+<script type="module">
+  import { PRAYERS, fromConfig, toConfig, validTime, resolveState, COUNTRIES, CITIES, encodeContent, prayerWindows, maxOffset } from './app.js';
+
+  // Offline shell: a default config stands in until loadConfig() fetches the real file.
+  const DEFAULT = {
+    city: 'Makkah', country: 'Saudi Arabia', method: '4', timezone: 'Asia/Riyadh',
+    reminders: { Fajr:{before_end:30}, Zohar:{before_end:30}, Asr:{before_end:30}, Maghrib:{before_end:30}, Isha:{after_start:60} },
+    nudge: { time: '21:30', enabled: true },
+  };
+  // Curated shortlist of the stable, long-established methods only. The full list is
+  // Aladhan's (aladhan.com/calculation-methods) and changes over time — don't hand-sync
+  // it here. Any id not in this list is still preserved on load (see loadConfig below).
+  const METHODS = [['1','Univ. of Karachi'],['2','ISNA'],['3','Muslim World League'],['4','Umm al-Qura'],
+    ['5','Egyptian Authority'],['0','Shia Ithna-Ashari (Jafari)'],['7','Tehran'],['8','Gulf Region'],['9','Kuwait'],
+    ['10','Qatar'],['11','Singapore'],['12','France'],['13','Turkey (Diyanet)'],['14','Russia'],['15','Moonsighting Committee'],['16','Dubai']];
+
+  let state = fromConfig(DEFAULT);
+
+  function renderMethods() {
+    document.getElementById('method').innerHTML =
+      METHODS.map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+    document.getElementById('country').innerHTML =
+      COUNTRIES.map(c => `<option value="${c}">${c}</option>`).join('');
+    let times = '';
+    for (let h = 18; h <= 23; h++) for (const m of ['00', '30'])   // 18:00 … 23:30, the window the job sweeps
+      times += `<option value="${String(h).padStart(2,'0')}:${m}">${String(h).padStart(2,'0')}:${m}</option>`;
+    document.getElementById('nudgeTime').innerHTML = times;
+  }
+
+  // ─── live city validation against Aladhan (the real "can't save a bad city" check) ───
+  let pending = false, resolved = null, debounce, seq = 0, windows = {};
+  const aladhan = (city, country, method) =>
+    `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=${encodeURIComponent(method)}`;
+
+  async function checkCity() {
+    const my = ++seq;                                  // only the latest check may set state
+    const g = id => document.getElementById(id);
+    const city = g('city').value.trim(), country = g('country').value;
+    if (!city) { resolved = null; pending = false; paint(); return; }
+    pending = true; paint();
+    let tz = null, timings = null;
+    try {
+      const r = await fetch(aladhan(city, country, g('method').value));
+      const j = await r.json();
+      if (r.ok && j && j.data) { tz = (j.data.meta && j.data.meta.timezone) || null; timings = j.data.timings || null; }
+    } catch { tz = null; }
+    if (my !== seq) return;                             // a newer check superseded this one
+    resolved = tz; if (tz) state.timezone = tz;
+    if (timings) { windows = prayerWindows(timings); clampAll(); }   // cap offsets to each prayer's window
+    pending = false; paint();
+  }
+
+  // Keep every offset inside its prayer's window (5 ≤ offset ≤ window − margin).
+  function clampAll() {
+    document.querySelectorAll('.prow').forEach(prow => {
+      const p = prow.dataset.prayer, vEl = prow.querySelector('.n');
+      const cap = maxOffset(windows[p]);
+      const v = Math.min(cap, Math.max(5, parseInt(vEl.textContent)));
+      if (v !== parseInt(vEl.textContent)) { vEl.textContent = v; writeRule(p, prow); }
+    });
+  }
+
+  function paint() {
+    const g = id => document.getElementById(id);
+    const city = g('city').value.trim(), country = g('country').value;
+    const st = resolveState(city, pending, resolved);
+    const box = g('resolve');
+    box.className = 'resolve' + (st === 'valid' ? ' good' : st === 'unknown' ? ' warn' : '');
+    const icon = g('ricon'), txt = g('rtxt'), tag = g('rtag');
+    if (st === 'empty')      { icon.textContent = '🕓'; txt.textContent = 'Enter your city to begin'; tag.textContent = ''; }
+    else if (st === 'typing'){ icon.textContent = '🕓'; txt.textContent = 'Checking…'; tag.textContent = '…'; }
+    else if (st === 'valid') { icon.textContent = '🕓'; txt.textContent = `${city}, ${country} → ${resolved}`; tag.textContent = '✓ valid'; }
+    else                     { icon.textContent = '⚠'; txt.textContent = `“${city}” not found`; tag.textContent = "can’t resolve"; }
+    g('save').disabled = st !== 'valid' || !validTime(g('nudgeTime').value);
+  }
+  function renderPrayers() {
+    document.getElementById('prayers').innerHTML = PRAYERS.map(p => {
+      const rule = state.reminders[p] || { before_end: 30 };
+      const mode = 'after_start' in rule ? 'after' : 'before';
+      const n = rule.after_start ?? rule.before_end ?? 30;
+      return `<div class="prow" data-prayer="${p}">
+        <div class="pname"><span class="pdot"></span>${p}</div>
+        <div class="pctrl">
+          <div class="stepper">
+            <button data-step="-5">−</button>
+            <div class="val"><span class="n">${n}</span><small>min</small></div>
+            <button data-step="5">+</button>
+          </div>
+          <button class="mode"><span class="sw">⇄</span> <b>${mode}</b></button>
+        </div></div>`;
+    }).join('');
+  }
+  // Inline city suggestions (our own dropdown — appears right under the field, not
+  // the native one that pops at the bottom of the screen on mobile).
+  function renderSuggest(q) {
+    const sug = document.getElementById('suggest');
+    q = String(q).trim().toLowerCase();
+    const hits = q ? CITIES.filter(([c]) => c.toLowerCase().startsWith(q)).slice(0, 6) : [];
+    if (!hits.length || (hits.length === 1 && hits[0][0].toLowerCase() === q)) { sug.className = 'suggest'; sug.innerHTML = ''; return; }
+    sug.innerHTML = hits.map(([c, co]) =>
+      `<div class="opt" data-city="${c}"><span class="pin">📍</span><span>${c}</span><span class="co">${co}</span></div>`).join('');
+    sug.className = 'suggest show';
+  }
+
+  function bind() {
+    const g = id => document.getElementById(id);
+    g('city').value = state.city; g('country').value = state.country;
+    g('method').value = state.method; g('nudgeTime').value = state.nudgeTime;
+    g('nudgeEnabled').classList.toggle('off', !state.nudgeEnabled);
+
+    g('nudgeEnabled').onclick = e => { state.nudgeEnabled = !state.nudgeEnabled; e.currentTarget.classList.toggle('off', !state.nudgeEnabled); updateNudgeNow(); };
+    g('city').oninput = () => {
+      resolved = null;
+      const v = g('city').value.trim();
+      const hit = CITIES.find(([c]) => c.toLowerCase() === v.toLowerCase());
+      if (hit) g('country').value = hit[1];        // auto-fill country when a known city is picked
+      renderSuggest(v);
+      paint(); clearTimeout(debounce); debounce = setTimeout(checkCity, 400);
+    };
+    g('city').onblur = () => setTimeout(() => { g('suggest').className = 'suggest'; }, 150);
+    g('suggest').addEventListener('mousedown', e => e.preventDefault());   // keep focus so onblur doesn't beat the click
+    g('suggest').addEventListener('click', e => {
+      const opt = e.target.closest('.opt'); if (!opt) return;
+      const c = opt.dataset.city, hit = CITIES.find(([x]) => x === c);
+      g('city').value = c; if (hit) g('country').value = hit[1];
+      g('suggest').className = 'suggest';
+      resolved = null; paint(); clearTimeout(debounce); checkCity();
+    });
+    g('country').onchange = checkCity;
+    g('method').onchange = checkCity;
+    g('nudgeTime').onchange = paint;
+    document.getElementById('prayers').addEventListener('click', e => {
+      const prow = e.target.closest('.prow'); if (!prow) return;
+      const p = prow.dataset.prayer, valEl = prow.querySelector('.n');
+      if (e.target.dataset.step) {
+        const cap = maxOffset(windows[p]);               // bounded by this prayer's window
+        const v = Math.min(cap, Math.max(5, parseInt(valEl.textContent) + parseInt(e.target.dataset.step)));
+        valEl.textContent = v; writeRule(p, prow);
+      } else if (e.target.closest('.mode')) {
+        const b = prow.querySelector('.mode b');
+        b.textContent = b.textContent === 'before' ? 'after' : 'before';
+        writeRule(p, prow);
+      }
+    });
+  }
+  function writeRule(p, prow) {
+    const n = parseInt(prow.querySelector('.n').textContent);
+    const mode = prow.querySelector('.mode b').textContent;
+    state.reminders[p] = mode === 'after' ? { after_start: n } : { before_end: n };
+  }
+  window.readForm = function () {
+    const g = id => document.getElementById(id);
+    state.city = g('city').value.trim();
+    state.country = g('country').value.trim();
+    state.method = g('method').value;
+    state.nudgeTime = g('nudgeTime').value.trim();
+    return state;
+  };
+
+  // ─── GitHub integration (Contents API + token in localStorage) ───
+  const LKEY = 'muezzin_token';
+  const token = () => localStorage.getItem(LKEY) || '';
+  function repoSlug() {
+    const h = location.hostname, p = location.pathname.split('/').filter(Boolean);
+    if (h.endsWith('github.io')) return `${h.split('.')[0]}/${p[0] || ''}`;
+    return 'Zulqarnain-cc34/muezzin';   // local dev / custom-domain fallback
+  }
+  const API = () => 'https://api.github.com/repos/' + repoSlug();
+  const ghHeaders = () => {
+    const h = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+    if (token()) h.Authorization = 'Bearer ' + token();   // omit on public reads; required for write
+    return h;
+  };
+  async function ghGet(path) {
+    const r = await fetch(API() + path, { headers: ghHeaders() });
+    if (!r.ok) throw new Error('GitHub ' + r.status);
+    return r.json();
+  }
+  async function ghPut(path, body) {
+    const r = await fetch(API() + path, { method: 'PUT', headers: { ...ghHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
+    return r.json();
+  }
+  function decodeB64(b64) {
+    const bin = atob(String(b64).replace(/\s/g, ''));
+    return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+  }
+  function ghHint(e) {
+    const m = e && e.message || '';
+    if (/403|not accessible|Resource not/i.test(m)) return 'your token needs “Contents: Read and write” on this repo (and “Actions” for Send now)';
+    if (/401|Bad credentials/i.test(m)) return 'the token is invalid or expired — paste a fresh one';
+    if (/404/.test(m)) return 'not found — check the token’s repository access points at this repo';
+    if (/409/.test(m)) return 'the file just changed — tap Save again';
+    return m;
+  }
+
+  let loaded = null;
+  const setStatus = t => { document.getElementById('status').textContent = t; };
+  function toast(msg, err) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.className = 'toast show' + (err ? ' err' : '');
+    setTimeout(() => { el.className = 'toast'; }, 2000);
+  }
+  function applyState() {
+    const g = id => document.getElementById(id);
+    g('city').value = state.city; g('country').value = state.country;
+    const sel = g('method');
+    if (![...sel.options].some(o => o.value === state.method)) {   // never drop a method not in our list
+      const o = document.createElement('option');
+      o.value = state.method; o.textContent = 'Method ' + state.method;
+      sel.appendChild(o);
+    }
+    sel.value = state.method;
+    const tsel = g('nudgeTime');
+    if (![...tsel.options].some(o => o.value === state.nudgeTime)) {   // keep an out-of-range saved time selectable
+      const o = document.createElement('option');
+      o.value = state.nudgeTime; o.textContent = state.nudgeTime; tsel.appendChild(o);
+    }
+    tsel.value = state.nudgeTime;
+    g('nudgeEnabled').classList.toggle('off', !state.nudgeEnabled);
+    updateNudgeNow();
+  }
+  async function loadConfig() {
+    try {
+      const d = await ghGet('/contents/config.json?ref=main');   // public read — no token needed
+      loaded = JSON.parse(decodeB64(d.content));
+      state = fromConfig(loaded);
+      renderPrayers(); applyState(); checkCity();
+      setStatus(token() ? 'loaded ✓' : 'loaded · connect to save');
+    } catch (e) { setStatus('load failed'); toast('Load failed: ' + e.message, true); }
+  }
+  async function doSave() {
+    const g = id => document.getElementById(id);
+    if (!validTime(g('nudgeTime').value)) { toast('Enter a valid time (HH:MM)', true); return; }
+    if (resolveState(g('city').value.trim(), pending, resolved) !== 'valid') { toast('Check the city — it must resolve first', true); return; }
+    if (!token()) { document.getElementById('connect').open = true; toast('Add your GitHub token first', true); return; }
+    readForm();
+    g('save').disabled = true; setStatus('saving…');
+    try {
+      const cur = await ghGet('/contents/config.json?ref=main');         // fresh sha + latest content
+      const base = JSON.parse(decodeB64(cur.content));
+      const next = toConfig(state, base);
+      const body = { message: 'Update settings via Muezzin config page', content: encodeContent(next), sha: cur.sha, branch: 'main' };
+      await ghPut('/contents/config.json', body);
+      loaded = next;
+      toast('Saved ✓ · applies within ~5 min'); setStatus('saved ✓');
+    } catch (e) { toast('Save failed — ' + ghHint(e), true); setStatus('error'); }
+    g('save').disabled = false; paint();
+  }
+
+  // On-demand nudge: trigger the notify workflow now (it bypasses the time gate).
+  async function doNudge() {
+    if (!token()) { document.getElementById('connect').open = true; toast('Add your GitHub token first', true); return; }
+    const b = document.getElementById('nudgeNow'); b.disabled = true;
+    try {
+      const r = await fetch(API() + '/actions/workflows/notify.yml/dispatches',
+        { method: 'POST', headers: { ...ghHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ ref: 'main' }) });
+      if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
+      toast('Sent — arrives in ~30s');
+    } catch (e) { toast('Send failed — ' + ghHint(e), true); }
+    b.disabled = false;
+  }
+  function updateNudgeNow() { document.getElementById('nudgeNowRow').style.display = state.nudgeEnabled ? 'flex' : 'none'; }
+
+  document.getElementById('saveToken').onclick = () => {
+    const el = document.getElementById('token'), v = el.value.trim();
+    if (!v) return;
+    localStorage.setItem(LKEY, v); el.value = '';
+    document.getElementById('connect').open = false;
+    toast('Token saved on this device'); loadConfig();
+  };
+  document.getElementById('save').onclick = doSave;
+  document.getElementById('nudgeNow').onclick = doNudge;
+
+  renderMethods(); renderPrayers(); bind(); updateNudgeNow(); checkCity(); loadConfig();
+</script>
+</body>
+</html>

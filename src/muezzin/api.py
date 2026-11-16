@@ -1,0 +1,62 @@
+"""Minimal, read-only Habitica API client (stdlib only).
+
+Reads credentials from the environment / `.env` and never logs them. Every call
+here is GET (read-only). Habitica is optional — see `configured()`.
+"""
+from __future__ import annotations
+
+import json
+from typing import Any
+
+from . import config, net
+
+API_BASE = "https://habitica.com/api/v3"
+
+
+def _creds() -> tuple[str, str]:
+    token = config.env("HABITICA_API_TOKEN") or config.env("API_TOKEN")
+    user_id = config.env("HABITICA_USER_ID") or config.env("USER_ID")
+    if not user_id:  # fallback: read the id from a saved snapshot, if present
+        try:
+            user_id = (json.loads(config.RAW_JSON.read_text()).get("id"))
+        except Exception:
+            pass
+    if not token or not user_id:
+        raise RuntimeError("Habitica not configured (need HABITICA_API_TOKEN + HABITICA_USER_ID).")
+    return user_id, token
+
+
+def configured() -> bool:
+    """True if Habitica credentials are available (the nightly nudge is optional)."""
+    try:
+        _creds()
+        return True
+    except RuntimeError:
+        return False
+
+
+def _get(path: str) -> Any:
+    user_id, token = _creds()
+    headers = {
+        "x-api-user": user_id,
+        "x-api-key": token,
+        "x-client": f"{user_id}-muezzin",  # "UserID-AppName" per Habitica guidelines
+        "Content-Type": "application/json",
+    }
+    return net.get_json(API_BASE + path, headers=headers, timeout=30)["data"]
+
+
+def fetch_tasks() -> list[dict[str, Any]]:
+    """GET /tasks/user — all active tasks (with their history arrays)."""
+    return _get("/tasks/user")
+
+
+def fetch_tasks_by_type() -> dict[str, list]:
+    """Tasks grouped: {'dailys': [...], 'todos': [...], 'habits': [...]}."""
+    groups: dict[str, list] = {"dailys": [], "todos": [], "habits": [], "rewards": []}
+    key = {"daily": "dailys", "todo": "todos", "habit": "habits", "reward": "rewards"}
+    for t in fetch_tasks():
+        g = key.get(t.get("type", ""))
+        if g:
+            groups[g].append(t)
+    return groups

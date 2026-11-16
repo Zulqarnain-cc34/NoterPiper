@@ -1,0 +1,21 @@
+# Secrets — never commit
+.env
+*.key
+
+# Local data / snapshots (personal)
+data/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# brainstorming mockups (local only)
+.superpowers/
+
+# local secret — never commit (repo is public)
+token.txt
+*.token

@@ -1,0 +1,5 @@
+# The app itself needs NOTHING — the reminder and nudge scripts use only the
+# Python standard library, so nothing here can break them.
+#
+# This single dev dependency is only for running the test suite.
+pytest>=7.0

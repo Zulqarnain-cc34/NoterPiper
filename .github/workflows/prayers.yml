@@ -1,0 +1,51 @@
+name: Prayer Reminders
+
+# No-server prayer-time reminders:
+#   An external timer triggers this every ~2 min (see SETUP step 3); it reads your
+#   settings fresh and sends each prayer reminder the moment it's due (max priority,
+#   rings). Changes take effect within minutes; ntfy's message cache de-dups so each
+#   reminder goes out once. A 20-min due window absorbs any late run.
+#
+# Secrets:   NTFY_TOPIC (secret)  your ntfy topic — subscribe to it in the ntfy app
+# Location, reminder offsets, and the nudge live in config.json. (PRAYER_CITY /
+# PRAYER_COUNTRY / PRAYER_METHOD / PRAYER_TIMEZONE repo Variables override it if set.)
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 minutes — sends reminders live when due
+  workflow_dispatch:
+
+jobs:
+  schedule-prayers:
+    runs-on: ubuntu-latest
+    env:
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      # Optional location override — used if these repo Variables are set.
+      PRAYER_CITY: ${{ vars.PRAYER_CITY }}
+      PRAYER_COUNTRY: ${{ vars.PRAYER_COUNTRY }}
+      PRAYER_METHOD: ${{ vars.PRAYER_METHOD }}
+      PRAYER_TIMEZONE: ${{ vars.PRAYER_TIMEZONE }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # schedule_prayers.py uses only the Python standard library — no install.
+      - run: python scripts/schedule_prayers.py
+
+      # If anything above failed (bad location, ntfy down, a crash), push an
+      # urgent alert to your phone with a one-tap link to the logs. GitHub also
+      # emails you on failure — so if ntfy itself is down, the email still lands.
+      - name: Alert me if this job failed
+        if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          WF: ${{ github.workflow }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -s --max-time 20 \
+            -H "Title: Muezzin failed: ${WF}" \
+            -H "Priority: urgent" \
+            -H "Tags: rotating_light" \
+            -d "The '${WF}' run failed. Tap for logs: ${RUN_URL}" \
+            "https://ntfy.sh/${NTFY_TOPIC}" || true

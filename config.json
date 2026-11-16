@@ -1,0 +1,27 @@
+{
+  "city": "Makkah",
+  "country": "Saudi Arabia",
+  "method": "4",
+  "timezone": "Asia/Riyadh",
+  "reminders": {
+    "Fajr": {
+      "after_start": 5
+    },
+    "Zohar": {
+      "after_start": 5
+    },
+    "Asr": {
+      "after_start": 5
+    },
+    "Maghrib": {
+      "after_start": 5
+    },
+    "Isha": {
+      "after_start": 5
+    }
+  },
+  "nudge": {
+    "time": "18:00",
+    "enabled": true
+  }
+}
