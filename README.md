@@ -20,10 +20,8 @@
 
 | | Feature | Detail |
 |:--:|---|---|
-| 🔔 | **Prayer reminders** | Your phone **rings at each of the 5 prayer times** — e.g. 30 min before a prayer ends — using live prayer times for **any city** (timezone auto-detected). Needs no Habitica. |
+| 🔔 | **Prayer reminders** | Your phone **rings at each of the 5 prayer times** — e.g. 30 min before a prayer ends — using live prayer times for **any city** (timezone auto-detected). |
 | 🌙 | **One nightly nudge** *(optional)* | If you use Habitica: a single end-of-day check — what's still unlogged and which streaks are at risk. |
-
-> No dashboards, no spam. Notifications are kept **deliberately minimal** so they stay meaningful.
 
 ---
 
