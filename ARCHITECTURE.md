@@ -63,6 +63,8 @@ A source or a single delivery that fails is isolated, so one can never stop the
 others. The on-demand **"send now"** button (`notify.yml`) runs the same entry point
 with `FORCE_SOURCE=habitica`, firing just the nudge immediately.
 
+<div align="center"><img src="assets/one-run.svg" width="620" alt="What happens in one run, step by step"></div>
+
 ## Why this is a good build
 
 - **Serverless & free.** Nothing to host, pay for, or patch. GitHub Actions is the
@@ -81,6 +83,8 @@ with `FORCE_SOURCE=habitica`, firing just the nudge immediately.
   is driven by an external free timer calling `workflow_dispatch`, which GitHub honours.
 
 ## Components
+
+<div align="center"><img src="assets/code-map.svg" width="680" alt="The code, mapped — which file does what"></div>
 
 | Path | Role |
 |---|---|

@@ -1,0 +1,45 @@
+<svg viewBox="0 0 760 430" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  <defs>
+    <marker id="a2" markerWidth="12" markerHeight="12" refX="8" refY="5" orient="auto">
+      <path d="M1,1 L9,5 L1,9" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="760" height="430" rx="20" fill="#f8fafc"/>
+  <text x="40" y="40" font-size="18" font-weight="700" fill="#0f172a">The code, mapped</text>
+  <text x="40" y="62" font-size="13" fill="#64748b">which file does what — read them in this shape</text>
+
+  <!-- entry point -->
+  <rect x="220" y="86" width="320" height="58" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="380" y="110" text-anchor="middle" font-size="14" font-weight="700" fill="#0f172a" font-family="ui-monospace,Menlo,Consolas,monospace">scripts/run_engine.py</text>
+  <text x="380" y="130" text-anchor="middle" font-size="12" fill="#64748b">the entry point — wires it together, runs one pass</text>
+
+  <path d="M380,144 L380,176" stroke="#94a3b8" stroke-width="2" marker-end="url(#a2)"/>
+
+  <!-- three core folders -->
+  <rect x="40" y="180" width="220" height="92" rx="12" fill="#eef2ff" stroke="#c7d2fe" stroke-width="1.5"/>
+  <text x="150" y="206" text-anchor="middle" font-size="13.5" font-weight="700" fill="#3730a3" font-family="ui-monospace,Menlo,Consolas,monospace">engine/</text>
+  <text x="150" y="228" text-anchor="middle" font-size="11.5" fill="#475569">the core contracts</text>
+  <text x="150" y="246" text-anchor="middle" font-size="11.5" fill="#475569">Notification · Source ·</text>
+  <text x="150" y="263" text-anchor="middle" font-size="11.5" fill="#475569">Channel · Engine</text>
+
+  <rect x="280" y="180" width="200" height="92" rx="12" fill="#fffbeb" stroke="#fde68a" stroke-width="1.5"/>
+  <text x="380" y="206" text-anchor="middle" font-size="13.5" font-weight="700" fill="#92400e" font-family="ui-monospace,Menlo,Consolas,monospace">plugins/</text>
+  <text x="380" y="230" text-anchor="middle" font-size="11.5" fill="#475569">WHAT to notify</text>
+  <text x="380" y="252" text-anchor="middle" font-size="12" fill="#0f172a">prayer · habitica</text>
+
+  <rect x="500" y="180" width="220" height="92" rx="12" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/>
+  <text x="610" y="206" text-anchor="middle" font-size="13.5" font-weight="700" fill="#115e59" font-family="ui-monospace,Menlo,Consolas,monospace">channels/</text>
+  <text x="610" y="230" text-anchor="middle" font-size="11.5" fill="#475569">HOW to deliver</text>
+  <text x="610" y="252" text-anchor="middle" font-size="12" fill="#0f172a">ntfy · webhook</text>
+
+  <!-- supporting -->
+  <rect x="150" y="320" width="220" height="72" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="260" y="346" text-anchor="middle" font-size="13.5" font-weight="700" fill="#0f172a" font-family="ui-monospace,Menlo,Consolas,monospace">config.json</text>
+  <text x="260" y="368" text-anchor="middle" font-size="11.5" fill="#64748b">your settings — location,</text>
+  <text x="260" y="384" text-anchor="middle" font-size="11.5" fill="#64748b">times, nudge, windows</text>
+
+  <rect x="400" y="320" width="220" height="72" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="510" y="346" text-anchor="middle" font-size="13.5" font-weight="700" fill="#0f172a" font-family="ui-monospace,Menlo,Consolas,monospace">.github/workflows/</text>
+  <text x="510" y="368" text-anchor="middle" font-size="11.5" fill="#64748b">the triggers — prayers</text>
+  <text x="510" y="384" text-anchor="middle" font-size="11.5" fill="#64748b">(engine) · notify (button)</text>
+</svg>
