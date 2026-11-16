@@ -8,21 +8,15 @@ each has its own short setup. You never touch the engine again.
 
 ---
 
-## 1 · Delivery — the ntfy channel
+## 1 · A channel — how notifications reach you
 
-This is how notifications reach your phone (the default channel).
+The engine needs at least one **channel** (a delivery method). The simplest is **ntfy**
+(free push to your phone); you can add more (Discord, Slack, …) anytime.
 
-1. Install **ntfy** — [iPhone](https://apps.apple.com/us/app/ntfy/id1625396347) · [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy).
-2. Think of a **secret topic name** — random text, e.g. `noterpiper-7f3qk9zx`. Keep it private.
-3. In the app: tap **＋** → type your topic → **Subscribe**, and allow notifications.
-4. On GitHub → **Settings → Secrets and variables → Actions → New repository secret**:
+### **→ Set one up from the [channels guide](src/noterpiper/channels/README.md).**
 
-   | Secret | Value |
-   |---|---|
-   | `NTFY_TOPIC` | your topic from step 2 |
-
-> Want to also receive on Discord / Slack / email? Add another channel —
-> see **[channels](src/noterpiper/channels/README.md)**.
+(ntfy takes two minutes — install the app and add the `NTFY_TOPIC` secret. The guide
+has the exact steps for ntfy and for the webhook channel.)
 
 ---
 
