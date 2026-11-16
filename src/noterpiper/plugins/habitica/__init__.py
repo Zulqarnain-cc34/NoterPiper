@@ -39,8 +39,9 @@ def _todo_date(todo: dict) -> date | None:
         return None
 
 
-def collect(tasks: dict, now: datetime) -> dict:
-    """Group everything still open tonight."""
+def collect(tasks: dict, now: datetime, streak_risk: int = STREAK_RISK) -> dict:
+    """Group everything still open tonight. `streak_risk` is the streak length at or
+    above which an unticked daily is flagged "at risk" and pushed to the top."""
     today = now.date()
     prayers = [h["text"].strip() for h in tasks.get("habits", [])
                if any(p in h.get("text", "") for p in PRAYERS)
@@ -48,9 +49,9 @@ def collect(tasks: dict, now: datetime) -> dict:
 
     due_dailies = [(d["text"].strip(), int(d.get("streak", 0))) for d in tasks.get("dailys", [])
                    if d.get("isDue") and not d.get("completed")]
-    at_risk = sorted((t for t in due_dailies if t[1] >= STREAK_RISK),
+    at_risk = sorted((t for t in due_dailies if t[1] >= streak_risk),
                      key=lambda t: t[1], reverse=True)
-    dailies = [name for name, streak in due_dailies if streak < STREAK_RISK]
+    dailies = [name for name, streak in due_dailies if streak < streak_risk]
 
     todos_overdue, todos_due = [], []
     for t in tasks.get("todos", []):
@@ -116,6 +117,13 @@ class HabiticaSource:
             tasks = api.fetch_tasks_by_type()
         except Exception:
             return []                                       # Habitica down → skip tonight, don't crash
-        body, priority, tag = summarize(collect(tasks, now))
+        c = collect(tasks, now, int(config.get("streak_risk", STREAK_RISK)))
+        if not config.get("show_todos", True):              # include-toggles set in the app
+            c["todos_overdue"], c["todos_due"] = [], []
+        if not config.get("show_dailies", True):            # dailies off → their at-risk goes too
+            c["at_risk"], c["dailies"] = [], []
+        if not config.get("show_prayers", True):
+            c["prayers"] = []
+        body, priority, tag = summarize(c)
         dedup = None if forced else NUDGE_TITLE              # forced always delivers; scheduled dedups
         return [Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup)]
