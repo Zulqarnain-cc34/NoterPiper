@@ -75,3 +75,38 @@ def test_force_sends_even_when_off_and_out_of_time(monkeypatch):
     notes = HabiticaSource().check(BEFORE, forced)       # disabled + wrong time, but forced
     assert len(notes) == 1
     assert notes[0].dedup_key is None                    # forced → no dedup, always delivers
+
+
+def test_todos_due_and_overdue_appear_with_overdue_marked(monkeypatch):
+    tasks = {"habits": [], "dailys": [], "rewards": [], "todos": [
+        {"text": "Submit report", "date": "2026-11-14T00:00:00.000Z"},   # overdue
+        {"text": "Call dentist", "date": "2026-11-16T00:00:00.000Z"},    # due today
+        {"text": "Future plan", "date": "2026-11-20T00:00:00.000Z"},     # not due yet
+        {"text": "Someday"}]}                                            # no due date
+    _ready(monkeypatch, tasks)
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "To-dos · 2" in body                          # only the due + overdue counted
+    assert "Submit report (overdue)" in body
+    assert "Call dentist" in body
+    assert "Future plan" not in body and "Someday" not in body
+
+
+def test_at_risk_streaks_surface_at_the_top(monkeypatch):
+    tasks = {"habits": [], "rewards": [], "todos": [], "dailys": [
+        {"text": "Mulk", "isDue": True, "completed": False, "streak": 52},   # at risk (>=7)
+        {"text": "Walk", "isDue": True, "completed": False, "streak": 3}]}   # normal
+    _ready(monkeypatch, tasks)
+    n = HabiticaSource().check(AT_NUDGE, CONFIG)[0]
+    assert "at risk 🔥" in n.body.splitlines()[0]        # headline flags it
+    assert "At risk" in n.body
+    assert n.body.index("Mulk") < n.body.index("Walk")   # at-risk shown before the normal daily
+    assert n.priority == "high"
+
+
+def test_long_lists_are_capped_but_count_stays_true(monkeypatch):
+    many = [{"text": f"Daily{i}", "isDue": True, "completed": False, "streak": 1} for i in range(9)]
+    tasks = {"habits": [], "rewards": [], "todos": [], "dailys": many}
+    _ready(monkeypatch, tasks)
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "Dailies · 9" in body                         # the count covers everything
+    assert "+4 more" in body                             # but only ~5 names are listed
