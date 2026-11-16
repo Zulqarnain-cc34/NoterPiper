@@ -76,11 +76,12 @@ def main() -> int:
     if streak_risk:
         lines.append("🔥 Streak at risk: " + ", ".join(streak_risk))
 
+    # Title must be ASCII (HTTP header); emoji come from the Tags header + body.
     if not lines:
-        title, body = "✅ Habitica — all logged", "Everything's done for today. Nice work!"
+        title, body = "Habitica - all logged", "Everything's done for today. Nice work!"
         priority, tags = "default", "white_check_mark"
     else:
-        title = "🌙 Habitica — before midnight"
+        title = "Habitica - before midnight"
         body = "\n".join(lines)
         priority = "high" if streak_risk else "default"
         tags = "warning" if streak_risk else "bell"

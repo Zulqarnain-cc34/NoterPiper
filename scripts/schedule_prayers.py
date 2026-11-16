@@ -92,7 +92,8 @@ def main() -> int:
             continue
         planned.append((prayer, remind))
         if topic:
-            schedule(topic, remind, f"🕌 {prayer} — time to pray", MESSAGES[prayer])
+            # Title must be ASCII (HTTP header); the mosque emoji comes from Tags.
+            schedule(topic, remind, f"{prayer} - time to pray", MESSAGES[prayer])
 
     print(f"City: {city} · lead: {lead} min · now: {now:%a %H:%M} PKT")
     for prayer, remind in planned:
