@@ -25,10 +25,9 @@ import schedule_prayers as sp  # noqa: E402
 def main() -> int:
     topic = sp.setting("NTFY_TOPIC")
     city = sp.setting("PRAYER_CITY", "Lahore")
-    lead = int(sp.setting("LEAD_MIN", "30"))
 
     now = datetime.now(sp.PKT)
-    plan = sp.plan_reminders(sp.fetch_timings(city), now, lead)
+    plan = sp.plan_reminders(sp.fetch_timings(city), now, sp.load_rules())
     print(f"Planned reminders for {city} (now {now:%a %H:%M} PKT):")
     for prayer, remind in plan:
         print(f"  {prayer:8} → {remind:%a %H:%M}")

@@ -9,11 +9,10 @@ from __future__ import annotations
 
 import json
 import os
-import urllib.request
 from pathlib import Path
 from typing import Any
 
-from . import config
+from . import config, net
 
 API_BASE = "https://habitica.com/api/v3"
 
@@ -49,18 +48,13 @@ def _creds() -> tuple[str, str]:
 
 def _get(path: str) -> Any:
     user_id, token = _creds()
-    req = urllib.request.Request(
-        API_BASE + path,
-        headers={
-            "x-api-user": user_id,
-            "x-api-key": token,
-            # x-client: "UserID-AppName" per Habitica guidelines
-            "x-client": f"{user_id}-habitica-productivity",
-            "Content-Type": "application/json",
-        },
-    )
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read().decode("utf-8"))["data"]
+    headers = {
+        "x-api-user": user_id,
+        "x-api-key": token,
+        "x-client": f"{user_id}-habitica-salah",  # "UserID-AppName" per guidelines
+        "Content-Type": "application/json",
+    }
+    return net.get_json(API_BASE + path, headers=headers, timeout=30)["data"]
 
 
 def fetch_user() -> dict[str, Any]:

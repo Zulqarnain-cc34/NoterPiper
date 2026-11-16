@@ -62,5 +62,12 @@ python scripts/selftest.py           # proves reminders fire on time
 - Your Habitica key stays private — it's kept as a hidden secret, never shown or shared.
 - Your prayer data stays in **your** private project. Nothing is public.
 
-## What's tracked
-Plain-English guide to every habit: **`reports/data_guide.md`**.
+## Make it yours
+- **Change reminder times** → edit **`reminders.json`** (minutes `before_end` or
+  `after_start`, per prayer). No code needed — even editable from GitHub's website.
+- **Add new nudges** (to-dos, dailies, anything) → see **`ARCHITECTURE.md`**; it's
+  a 5-line function.
+
+## Under the hood
+- **`ARCHITECTURE.md`** — how it's built to run for years and how to extend it.
+- **`reports/data_guide.md`** — plain-English guide to every habit tracked.

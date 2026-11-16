@@ -1,0 +1,9 @@
+{
+  "__how_to_edit": "Set when each prayer reminder rings. For each prayer use ONE line: 'before_end' = minutes BEFORE the prayer's time runs out, OR 'after_start' = minutes AFTER the prayer begins. Change the numbers, or swap which word you use. Save, and it takes effect on the next run.",
+
+  "Fajr":    { "before_end": 30 },
+  "Zohar":   { "before_end": 30 },
+  "Asr":     { "before_end": 30 },
+  "Maghrib": { "before_end": 30 },
+  "Isha":    { "after_start": 60 }
+}
