@@ -77,18 +77,20 @@ def test_force_sends_even_when_off_and_out_of_time(monkeypatch):
     assert notes[0].dedup_key is None                    # forced → no dedup, always delivers
 
 
-def test_todos_due_and_overdue_appear_with_overdue_marked(monkeypatch):
+def test_all_open_todos_appear_with_overdue_marked_first(monkeypatch):
     tasks = {"habits": [], "dailys": [], "rewards": [], "todos": [
         {"text": "Submit report", "date": "2026-11-14T00:00:00.000Z"},   # overdue
         {"text": "Call dentist", "date": "2026-11-16T00:00:00.000Z"},    # due today
-        {"text": "Future plan", "date": "2026-11-20T00:00:00.000Z"},     # not due yet
-        {"text": "Someday"}]}                                            # no due date
+        {"text": "Future plan", "date": "2026-11-20T00:00:00.000Z"},     # future
+        {"text": "Someday"},                                             # no due date
+        {"text": "Done", "completed": True}]}                            # completed → still excluded
     _ready(monkeypatch, tasks)
     body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
-    assert "To-dos · 2" in body                          # only the due + overdue counted
-    assert "Submit report (overdue)" in body
-    assert "Call dentist" in body
-    assert "Future plan" not in body and "Someday" not in body
+    assert "To-dos · 4" in body                          # every open to-do counts (completed excluded)
+    assert "Submit report (overdue)" in body             # overdue is flagged
+    assert "Call dentist" in body and "Future plan" in body and "Someday" in body
+    assert "Done" not in body                            # completed stays out
+    assert body.index("Submit report") < body.index("Call dentist")  # overdue listed first
 
 
 def test_at_risk_streaks_surface_at_the_top(monkeypatch):

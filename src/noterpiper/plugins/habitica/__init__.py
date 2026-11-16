@@ -1,7 +1,8 @@
 """Habitica nightly-nudge source — the second plugin.
 
 One calm end-of-day summary of everything still open: unlogged prayer habits, due
-dailies (streaks at risk flagged first), and due/overdue to-dos. Gated to fire only
+dailies (streaks at risk flagged first), and every open to-do (overdue flagged first).
+Gated to fire only
 when Habitica is configured, the nudge is enabled, and it's the set time. A stable
 title ("Nightly check-in") gives it robust once-per-day dedup under the ~2-min engine.
 
@@ -53,20 +54,18 @@ def collect(tasks: dict, now: datetime, streak_risk: int = STREAK_RISK) -> dict:
                      key=lambda t: t[1], reverse=True)
     dailies = [name for name, streak in due_dailies if streak < streak_risk]
 
-    todos_overdue, todos_due = [], []
+    todos_overdue, todos_open = [], []
     for t in tasks.get("todos", []):
         if t.get("completed"):
-            continue
+            continue                                 # only completed to-dos are excluded
         d = _todo_date(t)
-        if d is None:
-            continue
-        if d < today:
-            todos_overdue.append(t["text"].strip())
-        elif d == today:
-            todos_due.append(t["text"].strip())      # future to-dos aren't "due" yet
+        if d is not None and d < today:
+            todos_overdue.append(t["text"].strip())  # past its due date → flagged, shown first
+        else:
+            todos_open.append(t["text"].strip())     # due today, future, or undated — all still open
 
     return {"prayers": prayers, "at_risk": at_risk, "dailies": dailies,
-            "todos_overdue": todos_overdue, "todos_due": todos_due}
+            "todos_overdue": todos_overdue, "todos_due": todos_open}
 
 
 def _cap(names: list[str]) -> str:

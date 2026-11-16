@@ -5,8 +5,8 @@
 **A NoterPiper plugin — one calm end-of-day check-in.** *(optional)*
 
 *If you track habits in Habitica, this sends one calm summary each night of everything
-still open — unlogged habits, due dailies, and due or overdue to-dos — with at-risk
-streaks flagged first.*
+still open — unlogged habits, due dailies, and every open to-do — with at-risk streaks
+and overdue to-dos flagged first.*
 
 </div>
 
@@ -16,9 +16,9 @@ streaks flagged first.*
 
 Once a night, at the time you set, it reads your Habitica tasks and sends **one grouped
 message** covering everything still open — unlogged prayer habits, due-but-not-done
-dailies, and **due or overdue to-dos**. It leads with what's urgent (at-risk streaks,
-overdue to-dos) and caps long lists with `+N more`, so it stays readable whether you
-have 3 items or 30. One nudge, never a stream.
+dailies, and **every open to-do** (due, upcoming, or undated). It leads with what's
+urgent (at-risk streaks and overdue to-dos first) and caps long lists with `+N more`,
+so it stays readable whether you have 3 items or 30. One nudge, never a stream.
 
 ## What lands on your phone
 
@@ -65,7 +65,7 @@ All of these are editable from the phone config page — no JSON needed.
 | `nudge.time` | When to send it (24-hour local time) |
 | `nudge.enabled` | Turn it on/off without removing it |
 | `nudge.streak_risk` *(optional)* | Streak length that flags a daily "at risk" — defaults to 7 |
-| `nudge.show_todos` *(optional)* | Include due/overdue to-dos — defaults to true |
+| `nudge.show_todos` *(optional)* | Include your open to-dos (overdue flagged first) — defaults to true |
 | `nudge.show_dailies` *(optional)* | Include due dailies (and their at-risk flag) — defaults to true |
 | `nudge.show_prayers` *(optional)* | Include unlogged prayer habits — defaults to true |
 | `nudge.window` *(optional)* | Minutes the nudge stays "due" — defaults to 5 |
