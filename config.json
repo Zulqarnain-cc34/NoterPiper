@@ -22,6 +22,10 @@
   },
   "nudge": {
     "time": "22:30",
-    "enabled": true
+    "enabled": true,
+    "streak_risk": 7,
+    "show_todos": true,
+    "show_dailies": true,
+    "show_prayers": false
   }
 }
