@@ -1,0 +1,32 @@
+name: Prayer Reminders
+
+# No-server prayer-time reminders:
+#   Runs once each morning, fetches today's prayer times for your city, and
+#   PRE-SCHEDULES 5 notifications on ntfy — each delivered 30 min before that
+#   prayer's window ends, at max priority (rings). ntfy handles the exact timing,
+#   so this job's own schedule can be loose.
+#
+# Secrets / variables needed:
+#   NTFY_TOPIC    (secret)   your ntfy topic — subscribe to it in the ntfy app
+#   PRAYER_CITY   (variable) Lahore or Islamabad   (optional, defaults to Lahore)
+#   LEAD_MIN      (variable) minutes before a prayer ends (optional, default 30)
+
+on:
+  schedule:
+    - cron: "20 19 * * *"   # 00:20 Pakistan time (19:20 UTC) — before Fajr
+  workflow_dispatch:
+
+jobs:
+  schedule-prayers:
+    runs-on: ubuntu-latest
+    env:
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      PRAYER_CITY: ${{ vars.PRAYER_CITY }}
+      LEAD_MIN: ${{ vars.LEAD_MIN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # schedule_prayers.py uses only the Python standard library — no install.
+      - run: python scripts/schedule_prayers.py

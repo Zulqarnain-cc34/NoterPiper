@@ -66,9 +66,30 @@ One-time setup:
 3. The Action runs ~9:30 PM Pakistan time daily (editable in `notify.yml`); or
    press **Run** in the Actions tab.
 
-**Timing note:** GitHub's schedule can be 5–30 min late — great for a once-a-day
-"before midnight" nudge, **not** for exact prayer-time alerts (use a prayer-time
-app for those).
+**Timing note:** GitHub's schedule can be 5–30 min late — fine for a once-a-day
+"before midnight" nudge.
+
+## Prayer reminders (precise, no server)
+
+`scripts/schedule_prayers.py` + `.github/workflows/prayers.yml` send a **ringing**
+reminder **30 min before each of the 5 prayers ends**, at the real prayer times
+for your city.
+
+**How it stays exact without a server:** a morning Action fetches today's times
+([Aladhan API](https://aladhan.com), Karachi method) and **pre-schedules** all 5
+on ntfy using its `At:` header — ntfy then delivers each at the exact second, at
+**max priority (rings/vibrates, bypasses silent)**.
+
+Setup (adds to the ntfy setup above):
+- Secret `NTFY_TOPIC` (same topic as before).
+- Variable `PRAYER_CITY` = `Lahore` or `Islamabad` (defaults to Lahore).
+- Variable `LEAD_MIN` = `30` (minutes before a prayer ends; optional).
+
+**Honest limits:**
+- ntfy **rings** but does **not speak** the message (no built-in text-to-speech).
+  For spoken voice you'd add a Tasker/Automate rule on Android that reads ntfy
+  notifications aloud.
+- Prayer windows use Aladhan's times; Isha's end uses Islamic midnight.
 
 ---
 
@@ -84,9 +105,10 @@ See **`reports/data_guide.md`** (human) and **`reports/data_guide_technical.md`*
 .env                         your token + NTFY_TOPIC (git-ignored)
 .github/workflows/
   dashboard.yml              no-server dashboard (Actions → Pages)
-  notify.yml                 no-server daily notification (Actions → ntfy.sh)
+  notify.yml                 daily "not logged / streak at risk" nudge (→ ntfy)
+  prayers.yml                precise prayer-time reminders (→ ntfy scheduled)
 src/habitica_etl/            api · config · loaders · transform · database · validation · analytics
-scripts/   sync_from_api.py · notify.py · build_recitations_dashboard.py
+scripts/   sync_from_api.py · notify.py · schedule_prayers.py · build_recitations_dashboard.py
 notebooks/recitations_dashboard.ipynb
 reports/   data_guide.md · data_guide_technical.md
 ```
