@@ -130,7 +130,7 @@
 
     <details class="connect" id="connect"><summary>⚙&nbsp; Connect to GitHub</summary>
       <div class="crow"><input id="token" placeholder="fine-grained token" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true"><button id="saveToken">Save</button></div>
-      <div class="chint" id="chint">Your settings load without this. A token is only needed to <b>save</b> — GitHub never allows anonymous writes, even on a public repo. Fine-grained token: Contents + Actions, this repo only. Stored just on this device.</div>
+      <div class="chint" id="chint">Your settings load without this. A token is only needed to <b>save</b> — GitHub never allows anonymous writes, even on a public repo. Fine-grained token: Contents + Actions + Variables, this repo only. Stored just on this device.</div>
     </details>
 
     <div class="label">Location</div>
@@ -345,13 +345,31 @@
     if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
     return r.json();
   }
+  // Your real location lives in private repo Variables (not the public config.json).
+  // These read/write it via the Actions Variables API — token needs "Variables: R&W".
+  async function ghGetVar(name) {
+    if (!token()) return null;                       // Variables are private — need the token
+    const r = await fetch(API() + '/actions/variables/' + name, { headers: ghHeaders() });
+    if (r.status === 404) return null;               // not set yet
+    if (!r.ok) throw new Error('GitHub ' + r.status);
+    return (await r.json()).value;
+  }
+  async function ghSetVar(name, value) {
+    let r = await fetch(API() + '/actions/variables/' + name, {
+      method: 'PATCH', headers: { ...ghHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, value }) });
+    if (r.status === 404) r = await fetch(API() + '/actions/variables', {   // create if missing
+      method: 'POST', headers: { ...ghHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, value }) });
+    if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
+  }
   function decodeB64(b64) {
     const bin = atob(String(b64).replace(/\s/g, ''));
     return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
   }
   function ghHint(e) {
     const m = e && e.message || '';
-    if (/403|not accessible|Resource not/i.test(m)) return 'your token needs “Contents: Read and write” on this repo (and “Actions” for Send now)';
+    if (/403|not accessible|Resource not/i.test(m)) return 'your token needs Contents + Variables (and Actions for Send now) — Read and write, this repo';
     if (/401|Bad credentials/i.test(m)) return 'the token is invalid or expired — paste a fresh one';
     if (/404/.test(m)) return 'not found — check the token’s repository access points at this repo';
     if (/409/.test(m)) return 'the file just changed — tap Save again';
@@ -384,13 +402,23 @@
     g('nudgeEnabled').classList.toggle('off', !state.nudgeEnabled);
     updateNudgeNow();
   }
+  async function loadLocationFromVars() {
+    if (!token()) return;              // can't read private Variables without the token
+    try {
+      const c = await ghGetVar('PRAYER_CITY');      if (c)  state.city = c;
+      const co = await ghGetVar('PRAYER_COUNTRY');  if (co) state.country = co;
+      const m = await ghGetVar('PRAYER_METHOD');    if (m)  state.method = m;
+      const tz = await ghGetVar('PRAYER_TIMEZONE'); if (tz) state.timezone = tz;
+    } catch (e) { toast('Location: ' + ghHint(e), true); }
+  }
   async function loadConfig() {
     try {
       const d = await ghGet('/contents/config.json?ref=main');   // public read — no token needed
       loaded = JSON.parse(decodeB64(d.content));
       state = fromConfig(loaded);
+      await loadLocationFromVars();                              // real location lives in private Variables
       renderPrayers(); applyState(); checkCity();
-      setStatus(token() ? 'loaded ✓' : 'loaded · connect to save');
+      setStatus(token() ? 'loaded ✓' : 'loaded · connect to see your location + save');
     } catch (e) { setStatus('load failed'); toast('Load failed: ' + e.message, true); }
   }
   async function doSave() {
@@ -401,9 +429,17 @@
     readForm();
     g('save').disabled = true; setStatus('saving…');
     try {
+      // 1. location → private repo Variables (kept out of the public file)
+      await ghSetVar('PRAYER_CITY', state.city);
+      await ghSetVar('PRAYER_COUNTRY', state.country);
+      await ghSetVar('PRAYER_METHOD', state.method);
+      if (state.timezone) await ghSetVar('PRAYER_TIMEZONE', state.timezone);
+      // 2. offsets + nudge → config.json (its location stays the public placeholder)
       const cur = await ghGet('/contents/config.json?ref=main');         // fresh sha + latest content
       const base = JSON.parse(decodeB64(cur.content));
       const next = toConfig(state, base);
+      next.city = base.city; next.country = base.country;                // keep placeholder; real location is in Variables
+      next.method = base.method; next.timezone = base.timezone;
       const body = { message: 'Update settings via NoterPiper config page', content: encodeContent(next), sha: cur.sha, branch: 'main' };
       await ghPut('/contents/config.json', body);
       loaded = next;
