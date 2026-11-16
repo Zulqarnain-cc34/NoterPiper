@@ -4,17 +4,29 @@ A **channel** is how a notification reaches you. The engine fans a notification 
 *every* enabled channel, so you can receive on more than one at once. Each channel
 satisfies the `Channel` contract: `send(notification)` and `already_sent(dedup_key, now)`.
 
-## Shipped channels
+## The channels
 
-### `NtfyChannel` — push to an ntfy topic
-The default. Delivers to your [ntfy](https://ntfy.sh) topic and **de-duplicates** using
-ntfy's own recent-message cache, so each notification is sent at most once per day with
-no database. Configured by `NTFY_TOPIC`.
+### `ntfy` — push to your phone *(the default)*
 
-### `WebhookChannel` — POST to any URL
+Delivers to your [ntfy](https://ntfy.sh) topic and **de-duplicates** using ntfy's own
+recent-message cache, so each notification is sent at most once per day — no database.
+
+**Setup**
+1. Install **ntfy** — [iPhone](https://apps.apple.com/us/app/ntfy/id1625396347) · [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy).
+2. Pick a **secret topic name** (random text, e.g. `noterpiper-7f3qk9zx`). In the app:
+   tap **＋** → type it → **Subscribe**, and allow notifications.
+3. Add it as a repo secret — *Settings → Secrets and variables → Actions → New repository
+   secret* → `NTFY_TOPIC` = your topic.
+
+### `webhook` — POST to any URL
+
 One channel for everything that accepts an HTTP POST: **Discord, Slack, Microsoft
-Teams, Google Chat, Home Assistant, IFTTT, Zapier, or your own endpoint.** Set
-`WEBHOOK_URL` (as a repo secret) to enable it.
+Teams, Google Chat, Home Assistant, IFTTT, Zapier, or your own endpoint.**
+
+**Setup**
+1. Get an incoming-webhook URL from your service (e.g. Discord → *Channel Settings →
+   Integrations → Webhooks → New Webhook → Copy URL*).
+2. Add it as a repo secret → `WEBHOOK_URL` = that URL. That's it — it's now a channel.
 
 It POSTs this JSON:
 
