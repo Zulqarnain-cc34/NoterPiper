@@ -158,7 +158,7 @@ Every step keeps the founding promise: free, serverless, and quiet.
 
 - **Setup** takes about ten minutes, once — see the project's `SETUP` guide.
 - **The engine design and the path to the full plugin system** are written up in
-  `NOTIFICATION-ENGINE`, and the reasoning behind each choice is in `DECISIONS`.
+  `PLUGINS`, and the reasoning behind each choice is in `DECISIONS`.
 
 ---
 

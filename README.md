@@ -45,7 +45,7 @@ each **plugin** what's due and sends it through a **channel** (ntfy). The engine
 nothing about prayers or habits — only the small plugin interface — which is what lets
 new plugins drop in without touching the core.
 
-See **[NOTIFICATION-ENGINE.md](NOTIFICATION-ENGINE.md)** for the full design and how to
+See **[PLUGINS.md](PLUGINS.md)** for the full design and how to
 write a plugin.
 
 ---
@@ -71,7 +71,7 @@ About ten minutes, once — then it runs itself.
 
 ## Learn more
 
-- **[NOTIFICATION-ENGINE.md](NOTIFICATION-ENGINE.md)** — engine design + writing a plugin
+- **[PLUGINS.md](PLUGINS.md)** — engine design + writing a plugin
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** · **[DECISIONS.md](DECISIONS.md)** · **[SECURITY.md](SECURITY.md)**
 - Plugins: **[prayer](src/noterpiper/plugins/prayer/)** · **[habitica](src/noterpiper/plugins/habitica/)**
 

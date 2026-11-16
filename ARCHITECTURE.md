@@ -15,7 +15,7 @@ nudge** — and new ones drop in without touching the core.
 
 The engine depends only on the `Source` and `Channel` *interfaces*, never on a
 concrete plugin — which is what lets new sources plug in untouched (Dependency
-Inversion). Full design + how to write a plugin: **[NOTIFICATION-ENGINE.md](NOTIFICATION-ENGINE.md)**.
+Inversion). Full design + how to write a plugin: **[PLUGINS.md](PLUGINS.md)**.
 
 ## How it works
 
@@ -103,7 +103,7 @@ with `FORCE_SOURCE=habitica`, firing just the nudge immediately.
 
 A plugin is one class with an `id` and `check(now, config) → list[Notification]`. Add
 it to `SOURCES` in `run_engine.py` and give it a config slice. Nothing else changes —
-see **[NOTIFICATION-ENGINE.md](NOTIFICATION-ENGINE.md)** and the two plugin READMEs
+see **[PLUGINS.md](PLUGINS.md)** and the two plugin READMEs
 ([prayer](src/noterpiper/plugins/prayer/README.md),
 [habitica](src/noterpiper/plugins/habitica/README.md)) for worked examples.
 
