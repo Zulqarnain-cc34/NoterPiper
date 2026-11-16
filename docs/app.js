@@ -18,6 +18,11 @@ export const SCHEMA = {
     { key: 'nudgeShowDailies', label: 'Include dailies', type: 'toggle' },
     { key: 'nudgeShowPrayers', label: 'Include prayers', type: 'toggle' },
   ],
+  ramadan: [
+    { key: 'ramadanEnabled', label: 'Suhoor & iftar', type: 'toggle' },
+    { key: 'ramadanSuhoorLead', label: 'Suhoor lead', type: 'stepper' },
+    { key: 'ramadanIftarLead', label: 'Iftar lead', type: 'stepper' },
+  ],
 };
 
 // "HH:MM" in a real 24-hour range.
@@ -116,6 +121,8 @@ export function encodeContent(obj) {
 // config.json object → flat form state the controls bind to.
 export function fromConfig(o = {}) {
   const nudge = (o && typeof o.nudge === 'object' && o.nudge) || {};
+  const ram = (o && typeof o.ramadan === 'object' && o.ramadan) || {};
+  const _lead = (v, d) => (Number.isFinite(+v) && +v >= 0 ? +v : d);
   return {
     city: o.city ?? '',
     country: o.country ?? '',
@@ -128,6 +135,9 @@ export function fromConfig(o = {}) {
     nudgeShowTodos: nudge.show_todos !== false,       // the three include-toggles default on
     nudgeShowDailies: nudge.show_dailies !== false,
     nudgeShowPrayers: nudge.show_prayers !== false,
+    ramadanEnabled: ram.enabled !== false,           // default on; silent outside Ramadan anyway
+    ramadanSuhoorLead: _lead(ram.suhoor_lead, 45),
+    ramadanIftarLead: _lead(ram.iftar_lead, 0),
   };
 }
 
@@ -145,6 +155,10 @@ export function toConfig(s, base = {}) {
       ...(base.nudge || {}), time: s.nudgeTime, enabled: Boolean(s.nudgeEnabled),
       streak_risk: Number(s.nudgeStreakRisk), show_todos: Boolean(s.nudgeShowTodos),
       show_dailies: Boolean(s.nudgeShowDailies), show_prayers: Boolean(s.nudgeShowPrayers),
+    },
+    ramadan: {
+      ...(base.ramadan || {}), enabled: Boolean(s.ramadanEnabled),
+      suhoor_lead: Number(s.ramadanSuhoorLead), iftar_lead: Number(s.ramadanIftarLead),
     },
   };
 }
