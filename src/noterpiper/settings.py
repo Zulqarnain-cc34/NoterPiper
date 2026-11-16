@@ -31,6 +31,10 @@ class Settings:
     timezone: str        # IANA name, used to fire the nudge at the right local time
     prayer_window: int = 5    # minutes a prayer reminder stays "due" after its time
     nudge_window: int = 5     # minutes the nightly nudge stays "due" after its time
+    nudge_streak_risk: int = 7     # streak length at which an unticked daily is "at risk"
+    nudge_show_todos: bool = True      # include due/overdue to-dos in the nudge
+    nudge_show_dailies: bool = True    # include due dailies (and their at-risk flag)
+    nudge_show_prayers: bool = True    # include unlogged prayer habits
 
 
 DEFAULTS = Settings(
@@ -53,6 +57,11 @@ def _as_int(v, default: int) -> int:
         return int(v)
     except (TypeError, ValueError):          # missing / hand-edited junk → default
         return default
+
+
+def _pos_int(v, default: int) -> int:
+    n = _as_int(v, default)
+    return n if n >= 1 else default          # 0 / negative is out-of-range junk → default
 
 
 def _as_bool(v, default: bool = True) -> bool:
@@ -107,4 +116,8 @@ def load_settings(path: Path | None = None) -> Settings:
         timezone=tz,
         prayer_window=_as_int(raw.get("window"), DEFAULTS.prayer_window),
         nudge_window=_as_int(nudge.get("window"), DEFAULTS.nudge_window),
+        nudge_streak_risk=_pos_int(nudge.get("streak_risk"), DEFAULTS.nudge_streak_risk),
+        nudge_show_todos=_as_bool(nudge.get("show_todos")),
+        nudge_show_dailies=_as_bool(nudge.get("show_dailies")),
+        nudge_show_prayers=_as_bool(nudge.get("show_prayers")),
     )

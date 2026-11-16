@@ -12,7 +12,9 @@ import run_engine  # noqa: E402
 S = SimpleNamespace(city="Lahore", country="Pakistan", method="1",
                     reminders={"Fajr": {"after_start": 5}}, nudge_time="21:30",
                     nudge_enabled=True, timezone="Asia/Karachi",
-                    prayer_window=20, nudge_window=30)
+                    prayer_window=20, nudge_window=30,
+                    nudge_streak_risk=7, nudge_show_todos=True,
+                    nudge_show_dailies=True, nudge_show_prayers=True)
 
 
 def test_build_config_passes_each_plugins_window():
@@ -28,6 +30,14 @@ def test_build_config_splits_settings_into_plugin_slices():
     assert cfg["habitica"]["time"] == "21:30"
     assert cfg["habitica"]["enabled"] is True
     assert cfg["habitica"]["force"] is False
+
+
+def test_build_config_passes_the_habitica_controls():
+    s = SimpleNamespace(**{**vars(S), "nudge_streak_risk": 10, "nudge_show_todos": False,
+                           "nudge_show_dailies": True, "nudge_show_prayers": False})
+    h = run_engine.build_config(s)["habitica"]
+    assert h["streak_risk"] == 10
+    assert h["show_todos"] is False and h["show_dailies"] is True and h["show_prayers"] is False
 
 
 def test_build_config_marks_the_forced_source():

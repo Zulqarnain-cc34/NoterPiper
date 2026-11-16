@@ -75,3 +75,87 @@ def test_force_sends_even_when_off_and_out_of_time(monkeypatch):
     notes = HabiticaSource().check(BEFORE, forced)       # disabled + wrong time, but forced
     assert len(notes) == 1
     assert notes[0].dedup_key is None                    # forced → no dedup, always delivers
+
+
+def test_todos_due_and_overdue_appear_with_overdue_marked(monkeypatch):
+    tasks = {"habits": [], "dailys": [], "rewards": [], "todos": [
+        {"text": "Submit report", "date": "2026-11-14T00:00:00.000Z"},   # overdue
+        {"text": "Call dentist", "date": "2026-11-16T00:00:00.000Z"},    # due today
+        {"text": "Future plan", "date": "2026-11-20T00:00:00.000Z"},     # not due yet
+        {"text": "Someday"}]}                                            # no due date
+    _ready(monkeypatch, tasks)
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "To-dos · 2" in body                          # only the due + overdue counted
+    assert "Submit report (overdue)" in body
+    assert "Call dentist" in body
+    assert "Future plan" not in body and "Someday" not in body
+
+
+def test_at_risk_streaks_surface_at_the_top(monkeypatch):
+    tasks = {"habits": [], "rewards": [], "todos": [], "dailys": [
+        {"text": "Mulk", "isDue": True, "completed": False, "streak": 52},   # at risk (>=7)
+        {"text": "Walk", "isDue": True, "completed": False, "streak": 3}]}   # normal
+    _ready(monkeypatch, tasks)
+    n = HabiticaSource().check(AT_NUDGE, CONFIG)[0]
+    assert "at risk 🔥" in n.body.splitlines()[0]        # headline flags it
+    assert "At risk" in n.body
+    assert n.body.index("Mulk") < n.body.index("Walk")   # at-risk shown before the normal daily
+    assert n.priority == "high"
+
+
+def test_long_lists_are_capped_but_count_stays_true(monkeypatch):
+    many = [{"text": f"Daily{i}", "isDue": True, "completed": False, "streak": 1} for i in range(9)]
+    tasks = {"habits": [], "rewards": [], "todos": [], "dailys": many}
+    _ready(monkeypatch, tasks)
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "Dailies · 9" in body                         # the count covers everything
+    assert "+4 more" in body                             # but only ~5 names are listed
+
+
+def test_streak_risk_threshold_is_configurable(monkeypatch):
+    tasks = {"habits": [], "rewards": [], "todos": [],
+             "dailys": [{"text": "Walk", "isDue": True, "completed": False, "streak": 5}]}
+    _ready(monkeypatch, tasks)
+    assert "At risk" not in HabiticaSource().check(AT_NUDGE, CONFIG)[0].body      # default 7 → not at risk
+    low = HabiticaSource().check(AT_NUDGE, {**CONFIG, "streak_risk": 3})[0].body  # 3 → streak 5 is at risk
+    assert "At risk" in low
+
+
+def test_show_todos_toggle(monkeypatch):
+    tasks = {"habits": [], "rewards": [],
+             "dailys": [{"text": "Walk", "isDue": True, "completed": False, "streak": 2}],
+             "todos": [{"text": "Call dentist", "date": "2026-11-16T00:00:00.000Z"}]}
+    _ready(monkeypatch, tasks)
+    assert "To-dos" in HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    off = HabiticaSource().check(AT_NUDGE, {**CONFIG, "show_todos": False})[0].body
+    assert "Call dentist" not in off and "Walk" in off   # to-dos hidden, dailies still shown
+
+
+def test_show_dailies_toggle_also_hides_at_risk(monkeypatch):
+    tasks = {"habits": [{"text": "Fajr", "counterUp": 0, "counterDown": 0}], "rewards": [], "todos": [],
+             "dailys": [{"text": "Mulk", "isDue": True, "completed": False, "streak": 50}]}
+    _ready(monkeypatch, tasks)
+    off = HabiticaSource().check(AT_NUDGE, {**CONFIG, "show_dailies": False})[0].body
+    assert "Mulk" not in off and "At risk" not in off    # dailies + their at-risk gone
+    assert "Fajr" in off                                 # prayers still shown
+
+
+def test_all_groups_off_sends_nothing(monkeypatch):
+    _ready(monkeypatch)                                  # has prayers + a due daily to show
+    off = {**CONFIG, "show_todos": False, "show_dailies": False, "show_prayers": False}
+    assert HabiticaSource().check(AT_NUDGE, off) == []   # every group hidden → no nudge at all
+
+
+def test_force_sends_nothing_when_all_groups_off(monkeypatch):
+    _ready(monkeypatch)                                  # even 'send now' can't show a hidden-everything nudge
+    off = {"time": "21:30", "enabled": False, "force": True,
+           "show_todos": False, "show_dailies": False, "show_prayers": False}
+    assert HabiticaSource().check(BEFORE, off) == []     # the all-off guard precedes the force path
+
+
+def test_show_prayers_toggle(monkeypatch):
+    tasks = {"habits": [{"text": "Fajr", "counterUp": 0, "counterDown": 0}], "rewards": [], "todos": [],
+             "dailys": [{"text": "Walk", "isDue": True, "completed": False, "streak": 2}]}
+    _ready(monkeypatch, tasks)
+    off = HabiticaSource().check(AT_NUDGE, {**CONFIG, "show_prayers": False})[0].body
+    assert "Fajr" not in off and "Walk" in off

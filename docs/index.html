@@ -152,8 +152,22 @@
         <select id="nudgeTime"></select></div>
       <div class="row"><span class="rname">Habitica nudge<span class="hint">optional</span></span>
         <div class="toggle" id="nudgeEnabled"><div class="knob"></div></div></div>
-      <div class="row" id="nudgeNowRow"><span class="rname">Send now<span class="hint">push my summary immediately</span></span><span class="spacer"></span>
-        <button class="sendnow" id="nudgeNow">Send</button></div>
+      <div id="nudgeOpts">
+        <div class="row"><span class="rname">At-risk streak<span class="hint">flag streaks this long if unticked</span></span><span class="spacer"></span>
+          <div class="stepper" id="streakStepper">
+            <button data-step="-1" aria-label="fewer days">−</button>
+            <div class="val"><span class="n" id="streakVal">7</span><small>days</small></div>
+            <button data-step="1" aria-label="more days">+</button>
+          </div></div>
+        <div class="row"><span class="rname">Include to-dos<span class="hint">due &amp; overdue</span></span>
+          <div class="toggle" id="showTodos"><div class="knob"></div></div></div>
+        <div class="row"><span class="rname">Include dailies<span class="hint">due, at-risk streaks first</span></span>
+          <div class="toggle" id="showDailies"><div class="knob"></div></div></div>
+        <div class="row"><span class="rname">Include prayers<span class="hint">unlogged prayer habits</span></span>
+          <div class="toggle" id="showPrayers"><div class="knob"></div></div></div>
+        <div class="row" id="nudgeNowRow"><span class="rname">Send now<span class="hint">push my summary immediately</span></span><span class="spacer"></span>
+          <button class="sendnow" id="nudgeNow">Send</button></div>
+      </div>
     </div>
 
     <p class="note">Changes take effect within a few minutes — prayer reminders are checked live, and the nightly nudge reads your settings each run.</p>
@@ -273,6 +287,20 @@
     g('nudgeEnabled').classList.toggle('off', !state.nudgeEnabled);
 
     g('nudgeEnabled').onclick = e => { state.nudgeEnabled = !state.nudgeEnabled; e.currentTarget.classList.toggle('off', !state.nudgeEnabled); updateNudgeNow(); };
+
+    const wireToggle = (id, key) => {
+      g(id).classList.toggle('off', !state[key]);
+      g(id).onclick = e => { state[key] = !state[key]; e.currentTarget.classList.toggle('off', !state[key]); };
+    };
+    wireToggle('showTodos', 'nudgeShowTodos');
+    wireToggle('showDailies', 'nudgeShowDailies');
+    wireToggle('showPrayers', 'nudgeShowPrayers');
+    g('streakVal').textContent = state.nudgeStreakRisk;
+    g('streakStepper').onclick = e => {                 // bounded 1..60 days
+      const step = e.target.dataset.step; if (!step) return;
+      state.nudgeStreakRisk = Math.min(60, Math.max(1, state.nudgeStreakRisk + parseInt(step)));
+      g('streakVal').textContent = state.nudgeStreakRisk;
+    };
     g('city').oninput = () => {
       resolved = null;
       const v = g('city').value.trim();
@@ -400,6 +428,10 @@
     }
     tsel.value = state.nudgeTime;
     g('nudgeEnabled').classList.toggle('off', !state.nudgeEnabled);
+    g('showTodos').classList.toggle('off', !state.nudgeShowTodos);
+    g('showDailies').classList.toggle('off', !state.nudgeShowDailies);
+    g('showPrayers').classList.toggle('off', !state.nudgeShowPrayers);
+    g('streakVal').textContent = state.nudgeStreakRisk;
     updateNudgeNow();
   }
   async function loadLocationFromVars() {
@@ -460,7 +492,7 @@
     } catch (e) { toast('Send failed — ' + ghHint(e), true); }
     b.disabled = false;
   }
-  function updateNudgeNow() { document.getElementById('nudgeNowRow').style.display = state.nudgeEnabled ? 'flex' : 'none'; }
+  function updateNudgeNow() { document.getElementById('nudgeOpts').style.display = state.nudgeEnabled ? 'block' : 'none'; }
 
   document.getElementById('saveToken').onclick = () => {
     const el = document.getElementById('token'), v = el.value.trim();

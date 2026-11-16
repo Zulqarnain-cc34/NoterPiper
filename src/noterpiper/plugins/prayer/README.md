@@ -61,8 +61,7 @@ token the **Variables** permission), so your city stays private but still editab
 - **Reads only public data.** Aladhan prayer times need no account and no personal
   info beyond the city name you choose.
 - **Sends no secrets.** The reminder carries only the prayer name and its end time.
-- **No location in logs.** The plugin never prints your city/timezone (Actions logs
-  are public on a public repo).
+- **No location in logs.** The plugin never prints your city or timezone to the logs.
 
 ## How it works
 

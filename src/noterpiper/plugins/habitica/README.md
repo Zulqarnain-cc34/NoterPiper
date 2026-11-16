@@ -4,8 +4,9 @@
 
 **A NoterPiper plugin — one calm end-of-day check-in.** *(optional)*
 
-*If you track habits in Habitica, this sends a single summary each night of what's
-still unlogged and which streaks are at risk. The prayer plugin works without it.*
+*If you track habits in Habitica, this sends one calm summary each night of everything
+still open — unlogged habits, due dailies, and due or overdue to-dos — with at-risk
+streaks flagged first.*
 
 </div>
 
@@ -14,20 +15,29 @@ still unlogged and which streaks are at risk. The prayer plugin works without it
 ## What it does
 
 Once a night, at the time you set, it reads your Habitica tasks and sends **one grouped
-message** — unlogged prayer habits and due-but-not-done dailies, with at-risk streaks
-flagged. One nudge, never a stream.
+message** covering everything still open — unlogged prayer habits, due-but-not-done
+dailies, and **due or overdue to-dos**. It leads with what's urgent (at-risk streaks,
+overdue to-dos) and caps long lists with `+N more`, so it stays readable whether you
+have 3 items or 30. One nudge, never a stream.
 
 ## What lands on your phone
 
 > ### Nightly check-in
-> 3 left before midnight
+> 8 left before midnight · 2 at risk 🔥
+>
+> At risk · 2
+> Surah Mulk · 52, Tasbeeh · 41
+>
+> To-dos · 3
+> Submit report (overdue), Call dentist, Buy milk
+>
+> Dailies · 4
+> Walk, Water, Read, Exercise, +1 more
 >
 > Prayers · 1
 > Fajr
->
-> Dailies · 2
-> Surah Mulk · 52 🔥
-> Morning walk
+
+On a quiet day it's just as short — e.g. `1 left before midnight` with a single line.
 
 ---
 
@@ -48,11 +58,20 @@ If the secrets aren't set, the plugin simply does nothing — nothing breaks.
 
 ## Settings reference
 
+All of these are editable from the phone config page — no JSON needed.
+
 | Key | Meaning |
 |---|---|
 | `nudge.time` | When to send it (24-hour local time) |
 | `nudge.enabled` | Turn it on/off without removing it |
+| `nudge.streak_risk` *(optional)* | Streak length that flags a daily "at risk" — defaults to 7 |
+| `nudge.show_todos` *(optional)* | Include due/overdue to-dos — defaults to true |
+| `nudge.show_dailies` *(optional)* | Include due dailies (and their at-risk flag) — defaults to true |
+| `nudge.show_prayers` *(optional)* | Include unlogged prayer habits — defaults to true |
 | `nudge.window` *(optional)* | Minutes the nudge stays "due" — defaults to 5 |
+
+Switch **all three** `show_*` off and the nudge sends nothing at all, rather than
+an empty summary — so an all-off config is the same as turning the nudge off.
 
 ## Security
 
@@ -60,14 +79,14 @@ If the secrets aren't set, the plugin simply does nothing — nothing breaks.
   modify or delete anything in your account.
 - **Credential, not shipped.** The API token lives only as a GitHub **Secret** (or a
   git-ignored `.env`); it is never committed, printed, or logged.
-- **No task content in logs.** Your task names go to your phone, never into the
-  (public) Actions logs.
+- **No task content in logs.** Your task names go to your phone, never into the logs.
 
 ## How it works
 
-At the set time (once per day), the plugin fetches your tasks, groups what's still
-outstanding, flags streaks at risk, and returns one notification. A stable title gives
-it robust **once-per-day** delivery under the frequent engine runs. The on-demand
+At the set time (once per day), the plugin fetches your tasks and builds one message:
+**at-risk streaks and overdue to-dos first**, then to-dos, dailies, and prayers — each
+a capped comma-list that ends in `+N more` when it's long. A stable title gives it
+robust **once-per-day** delivery under the frequent engine runs. The on-demand
 "send now" button forces it immediately, bypassing the time gate. Code:
 [`__init__.py`](__init__.py) — the `HabiticaSource` class satisfies NoterPiper's
 `Source` contract (`id = "habitica"`, `check(now, config) → [Notification]`).
