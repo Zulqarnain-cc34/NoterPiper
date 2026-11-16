@@ -44,7 +44,8 @@ the trigger). This plugin only needs its **location and timings**, in `config.js
 
 Prefer to keep your location **out of a public repo?** Set `PRAYER_CITY`,
 `PRAYER_COUNTRY`, `PRAYER_METHOD`, `PRAYER_TIMEZONE` as repo **Variables** instead —
-they override the file.
+they override the file. The phone config page reads and writes these for you (give its
+token the **Variables** permission), so your city stays private but still editable.
 
 ## Settings reference
 

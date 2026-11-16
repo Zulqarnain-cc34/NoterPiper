@@ -83,6 +83,9 @@ A small page lets you change your settings from your phone instead of GitHub's f
    secrets stay private; only `config.json` — your settings — becomes visible.)
 2. **Turn on Pages** — *Settings → Pages → Source: Deploy from a branch → `main` / `/docs`*.
    Your page appears at `https://<you>.github.io/noterpiper/`.
-3. **Reuse your token** (add **Contents → Read and write** to it as well).
+3. **Token** — a fine-grained token on this repo with **Contents + Actions + Variables →
+   Read and write**. (The page saves your offsets to `config.json`, and your **location**
+   to the private repo Variables — so your city stays off the public file, but the app
+   still shows and edits it.)
 4. **Install** — open the Pages URL on your phone → **⚙ Connect to GitHub** → paste the
    token → Save. Then your browser's menu → **Add to Home Screen**.
