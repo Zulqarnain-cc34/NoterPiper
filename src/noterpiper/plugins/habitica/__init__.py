@@ -79,16 +79,26 @@ def _section(task: dict, tags: dict, fallback: str) -> str:
     return names[0].capitalize() if names else fallback
 
 
+def _priority(task: dict) -> float:
+    """Habitica difficulty: 0.1 Trivial · 1 Easy · 1.5 Medium · 2 Hard (higher = harder)."""
+    try:
+        return float(task.get("priority", 1) or 1)
+    except (TypeError, ValueError):
+        return 1.0
+
+
 class _Owed:
-    """Accumulates what's still owed today as collect() walks the tasks."""
+    """Tonight's work as collect() walks the tasks. Section items carry a priority so the
+    summary can lead with the hard ones; open to-dos not owed tonight are just counted."""
 
     def __init__(self) -> None:
         self.at_risk: list[tuple[str, int]] = []  # dailies over the streak threshold (cross-cut)
-        self.sections: dict[str, list[str]] = {}  # section name → display names
-        self.overdue: list[str] = []
+        self.overdue: list[tuple[str, float]] = []  # to-dos past their due date
+        self.sections: dict[str, list[tuple[str, float]]] = {}  # section → [(name, priority)]
+        self.later = 0  # open to-dos not owed tonight (undated or scheduled later) → a count
 
-    def add(self, section: str, display: str) -> None:
-        self.sections.setdefault(section, []).append(display)
+    def add(self, section: str, name: str, prio: float) -> None:
+        self.sections.setdefault(section, []).append((name, prio))
 
 
 def _owe_daily(owed: _Owed, d: dict, tags: dict, streak_risk: int) -> None:
@@ -98,19 +108,20 @@ def _owe_daily(owed: _Owed, d: dict, tags: dict, streak_risk: int) -> None:
     if streak >= streak_risk:
         owed.at_risk.append((name, streak))  # urgency trumps category
     else:
-        owed.add(_section(d, tags, "Dailies"), name)
+        owed.add(_section(d, tags, "Dailies"), name, _priority(d))
 
 
 def _owe_todo(owed: _Owed, t: dict, tags: dict, today: date) -> None:
     if t.get("completed") or _hidden(t, tags):
         return
-    name = t["text"].strip()
+    name, prio = t["text"].strip(), _priority(t)
     dd = _todo_date(t)
-    if dd is not None and dd < today:
-        owed.overdue.append(name)
-        owed.add(_section(t, tags, "To-dos"), f"{name} (overdue)")
-    else:
-        owed.add(_section(t, tags, "To-dos"), name)
+    if dd is None or dd > today:  # undated or scheduled later → backlog, not owed tonight
+        owed.later += 1
+    elif dd < today:  # overdue — you're late; gets its own urgent block
+        owed.overdue.append((name, prio))
+    else:  # due today
+        owed.add(_section(t, tags, "To-dos"), name, prio)
 
 
 def _owe_habit(owed: _Owed, h: dict, tags: dict) -> None:
@@ -120,11 +131,11 @@ def _owe_habit(owed: _Owed, h: dict, tags: dict) -> None:
         return
     if (h.get("counterUp", 0) + h.get("counterDown", 0)) != 0:
         return
-    owed.add(_section(h, tags, "Habits"), h["text"].strip())
+    owed.add(_section(h, tags, "Habits"), h["text"].strip(), _priority(h))
 
 
 def collect(tasks: dict, tags: dict, now: datetime, streak_risk: int = STREAK_RISK) -> dict:
-    """Group everything still owed today by section. `tags` maps tag-id → name."""
+    """Tonight's work grouped by section; open to-dos not owed tonight are counted as backlog."""
     owed = _Owed()
     for d in tasks.get("dailys", []):
         _owe_daily(owed, d, tags, streak_risk)
@@ -132,8 +143,12 @@ def collect(tasks: dict, tags: dict, now: datetime, streak_risk: int = STREAK_RI
         _owe_todo(owed, t, tags, now.date())
     for h in tasks.get("habits", []):
         _owe_habit(owed, h, tags)
-    owed.at_risk.sort(key=lambda x: x[1], reverse=True)
-    return {"at_risk": owed.at_risk, "sections": owed.sections, "overdue": owed.overdue}
+    return {
+        "at_risk": owed.at_risk,
+        "overdue": owed.overdue,
+        "sections": owed.sections,
+        "later": owed.later,
+    }
 
 
 def _cap(names: list[str]) -> str:
@@ -142,27 +157,45 @@ def _cap(names: list[str]) -> str:
     return ", ".join(names[:CAP]) + f", +{len(names) - CAP} more"
 
 
+def _plural(n: int) -> str:
+    return "" if n == 1 else "s"
+
+
 # Sections that come from the type fallback (shown after the user's tag sections).
 _FALLBACK = ("Dailies", "To-dos", "Habits")
 
 
 def summarize(c: dict) -> tuple[str, str, str]:
-    """One grouped, scalable message. Returns (body, priority, tags-as-one)."""
-    at_risk, sections, overdue = c["at_risk"], c["sections"], c["overdue"]
-    total = len(at_risk) + sum(len(v) for v in sections.values())
-    if total == 0:
-        return "All done today — everything is logged. 🌙", "low", "white_check_mark"
+    """One ruthlessly-ordered message — at-risk → overdue → due-today → backlog count — so
+    the single nightly notification leads with what hurts to miss. Returns (body, priority, tag)."""
+    at_risk, overdue, sections, later = c["at_risk"], c["overdue"], c["sections"], c["later"]
+    time_bound = len(at_risk) + len(overdue) + sum(len(v) for v in sections.values())
+
+    if time_bound == 0:  # nothing owed tonight — stay calm, just note any backlog
+        tail = (
+            f" — {later} open to-do{_plural(later)} whenever you like"
+            if later
+            else " — everything is logged"
+        )
+        return f"All done today{tail}. 🌙", "low", "white_check_mark"
 
     blocks = []
     if at_risk:
+        at_risk.sort(key=lambda x: x[1], reverse=True)  # longest streak first
         blocks.append(f"At risk · {len(at_risk)}\n" + _cap([f"{n} · {s}" for n, s in at_risk]))
+    if overdue:
+        overdue.sort(key=lambda x: x[1], reverse=True)  # hardest first
+        blocks.append(f"Overdue · {len(overdue)}\n" + _cap([n for n, _ in overdue]))
     tag_sections = sorted(
         (s for s in sections if s not in _FALLBACK), key=lambda s: len(sections[s]), reverse=True
     )
     for s in list(tag_sections) + [s for s in _FALLBACK if s in sections]:
-        blocks.append(f"{s} · {len(sections[s])}\n" + _cap(sections[s]))
+        names = [n for n, _ in sorted(sections[s], key=lambda x: x[1], reverse=True)]  # hard first
+        blocks.append(f"{s} · {len(names)}\n" + _cap(names))
+    if later:
+        blocks.append(f"+ {later} open to-do{_plural(later)} in your backlog")
 
-    headline = f"{total} left before midnight"
+    headline = f"{time_bound} to do before midnight"
     if at_risk:
         headline += f" · {len(at_risk)} at risk 🔥"
     priority, tag = ("high", "warning") if (at_risk or overdue) else ("default", "bell")

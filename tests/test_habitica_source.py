@@ -13,6 +13,7 @@ from noterpiper.plugins.habitica import AUTH_FAIL_TITLE, NUDGE_TITLE, HabiticaSo
 TZ = timezone(timedelta(hours=5))
 AT_NUDGE = datetime(2026, 11, 16, 21, 34, tzinfo=TZ)  # within the default window of 21:30
 BEFORE = datetime(2026, 11, 16, 20, 0, tzinfo=TZ)
+TODAY_ISO = "2026-11-16T00:00:00.000Z"  # a to-do due today (== AT_NUDGE's date)
 CONFIG = {"time": "21:30", "enabled": True}
 TAGS = {"tP": "prayer", "tQ": "quran", "tA": "Archived"}  # tag-id → name
 
@@ -27,13 +28,14 @@ def _ready(monkeypatch, tasks, tags=TAGS):
     monkeypatch.setattr("noterpiper.plugins.habitica.api.fetch_tags", lambda: tags)
 
 
-def _daily(text, streak=1, tags=(), isDue=True, completed=False):
+def _daily(text, streak=1, tags=(), isDue=True, completed=False, priority=1):
     return {
         "text": text,
         "isDue": isDue,
         "completed": completed,
         "streak": streak,
         "tags": list(tags),
+        "priority": priority,
     }
 
 
@@ -48,8 +50,14 @@ def _habit(text, tags=(), frequency="daily", up=True, counterUp=0):
     }
 
 
-def _todo(text, tags=(), completed=False, date=None):
-    return {"text": text, "completed": completed, "date": date, "tags": list(tags)}
+def _todo(text, tags=(), completed=False, date=None, priority=1):
+    return {
+        "text": text,
+        "completed": completed,
+        "date": date,
+        "tags": list(tags),
+        "priority": priority,
+    }
 
 
 # ─── gating (unchanged behaviour) ───
@@ -168,7 +176,7 @@ def test_markdown_header_tasks_are_skipped_as_dividers(monkeypatch):
 
 
 def test_separator_rule_tasks_are_skipped_as_dividers(monkeypatch):
-    _ready(monkeypatch, _tasks(todos=[_todo("--------"), _todo("Buy milk")]))
+    _ready(monkeypatch, _tasks(todos=[_todo("--------"), _todo("Buy milk", date=TODAY_ISO)]))
     body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
     assert "Buy milk" in body and "--------" not in body
 
@@ -202,8 +210,8 @@ def test_untagged_daily_falls_back_to_type(monkeypatch):
     assert "Dailies · 1" in body and "Random daily" in body
 
 
-def test_untagged_todo_falls_back_to_type(monkeypatch):
-    _ready(monkeypatch, _tasks(todos=[_todo("Buy milk")]))
+def test_due_today_todo_falls_back_to_type(monkeypatch):
+    _ready(monkeypatch, _tasks(todos=[_todo("Buy milk", date=TODAY_ISO)]))
     body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
     assert "To-dos · 1" in body and "Buy milk" in body
 
@@ -265,19 +273,46 @@ def test_streak_risk_threshold_is_configurable(monkeypatch):
     assert "At risk" in HabiticaSource().check(AT_NUDGE, {**CONFIG, "streak_risk": 3})[0].body
 
 
-def test_overdue_todo_is_flagged_and_urgent(monkeypatch):
+def test_overdue_todo_gets_its_own_urgent_block(monkeypatch):
     _ready(monkeypatch, _tasks(todos=[_todo("Report", date="2026-11-14T00:00:00.000Z")]))
     n = HabiticaSource().check(AT_NUDGE, CONFIG)[0]
-    assert "Report (overdue)" in n.body and n.priority == "high"
+    assert "Overdue · 1" in n.body and "Report" in n.body and n.priority == "high"
 
 
-def test_future_and_undated_todos_show_without_overdue(monkeypatch):
+def test_future_and_undated_todos_collapse_to_a_backlog_count(monkeypatch):
     _ready(
         monkeypatch,
         _tasks(todos=[_todo("Future", date="2026-11-20T00:00:00.000Z"), _todo("Someday")]),
     )
     body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
-    assert "To-dos · 2" in body and "overdue" not in body
+    assert "2 open to-do" in body  # neither is owed tonight → one honest count line
+    assert "Future" not in body and "Someday" not in body
+    assert "overdue" not in body.lower()
+
+
+def test_backlog_is_excluded_from_the_headline_count(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(dailys=[_daily("Pray")], todos=[_todo("Someday A"), _todo("Someday B")]),
+    )
+    n = HabiticaSource().check(AT_NUDGE, CONFIG)[0]
+    assert n.body.splitlines()[0].startswith("1 to do before midnight")  # counts only time-bound
+    assert "2 open to-do" in n.body and "Someday A" not in n.body
+
+
+def test_all_done_still_mentions_the_backlog(monkeypatch):
+    _ready(monkeypatch, _tasks(todos=[_todo("Someday")]))  # nothing owed tonight, 1 in backlog
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "All done" in body and "1 open to-do" in body
+
+
+def test_hard_tasks_lead_within_a_section(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(dailys=[_daily("Trivial thing", priority=0.1), _daily("Hard thing", priority=2)]),
+    )
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert body.index("Hard thing") < body.index("Trivial thing")
 
 
 def test_long_lists_are_capped_but_count_stays_true(monkeypatch):
