@@ -23,3 +23,4 @@ jobs:
         with:
           node-version: "20"
       - run: node --test docs/            # config page (pure-logic tests)
+      - run: npx --yes @biomejs/biome@2.6.8 ci   # config-page JS: lint + format gate
