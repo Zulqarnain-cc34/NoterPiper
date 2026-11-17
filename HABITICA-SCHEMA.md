@@ -7,12 +7,14 @@ Captured live from a real account (identifiers + personal text redacted).
 
 | Call | Returns |
 |---|---|
-| `GET /api/v3/tasks/user` | all active tasks (habits, dailies, to-dos, rewards) in one flat array; each has a `type` field |
+| `GET /api/v3/tasks/user` | all active tasks in one flat array; each has a `type` field |
 | `GET /api/v3/tags` | the tag dictionary: `[{ "id": "<uuid>", "name": "<tag name>" }, …]` |
+| `GET /api/v3/user?userFields=preferences` | the day boundary — see [Day boundary](#the-day-boundary-why-isdue--completed-can-be-trusted) |
 
 Auth headers: `x-api-user: <USER_ID>`, `x-api-key: <API_TOKEN>`. **Read-only (GET) only.**
-The client splits the flat array by `type` into `habits / dailys / todos / rewards`
-(see [`api.py`](src/noterpiper/api.py)).
+The client splits the flat array by `type` into **`habits / dailys / todos`**
+(see [`api.py`](src/noterpiper/api.py)). Habitica also returns `reward` tasks — NoterPiper
+**ignores rewards**; only these three types matter.
 
 > ⚠️ A task's `tags` field is an array of **tag UUIDs**, not names. Resolve them against
 > `GET /tags`.
@@ -34,8 +36,8 @@ The client splits the flat array by `type` into `habits / dailys / todos / rewar
 | `id` / `_id` | uuid | task id *(redacted here)* |
 | `userId` | uuid | owner *(redacted here)* |
 | `createdAt` / `updatedAt` | ISO-8601 | timestamps |
-| `reminders` | array | reminder objects *(redacted)* |
-| `challenge` / `group` | object | challenge / party linkage *(redacted)* |
+| `reminders` | array | per-task reminder times — see [Nested structures](#nested-structures--context-inside-a-task) |
+| `challenge` / `group` | object | shared-task linkage — see [Nested structures](#nested-structures--context-inside-a-task) |
 
 ---
 
@@ -49,7 +51,7 @@ Reinforcement behaviour with `+` and/or `−`. **No `isDue`, no `completed`, no 
 | `up` / `down` | bool | is the `+` / `−` button enabled |
 | `counterUp` / `counterDown` | int | taps since the last reset (`frequency`) |
 | `frequency` | `"daily" \| "weekly" \| "monthly"` | **counter reset period** |
-| `history` | array | `[{ "date": <ms>, "value": <num> }, …]` *(redacted)* |
+| `history` | array | past scores — see [Nested structures](#nested-structures--context-inside-a-task) |
 
 ```json
 {
@@ -91,7 +93,7 @@ A scheduled recurring commitment — the backbone of the nudge. Has the full "ow
 | `yesterDaily` | bool | was it due yesterday (for streak grace) |
 | `checklist` | array | sub-items (see below) |
 | `collapseChecklist` | bool | UI-only |
-| `history` | array | `[{ "date": <ms>, "value": <num>, "completed": <bool> }, …]` *(redacted)* |
+| `history` | array | past due/completion — see [Nested structures](#nested-structures--context-inside-a-task) |
 
 ```json
 {
@@ -153,13 +155,52 @@ A one-off, finite task. Optional due date; never "resets."
 
 ---
 
-## Checklist item (inside a daily / to-do `checklist`)
+## Nested structures & context (inside a task)
+
+These live **inside** each task object — richer context than the top-level flags.
+
+### `history[]` — past completions (the consistency signal)
+
+A habit and a daily each keep a per-day history. **Shapes differ by type:**
+
+```json
+// habit history entry — how many times you scored it that day
+{ "date": 1794792213461, "value": 1, "scoredUp": 1, "scoredDown": 0 }
+
+// daily history entry — whether it was due, and whether you did it
+{ "date": 1794906067151, "value": 20.1, "isDue": true, "completed": true }
+```
+
+`date` is epoch **milliseconds**. This is the raw material for context like
+"completed 5 of the last 7 due days" or "missed yesterday" — beyond just the current
+`streak`. To-dos have no history.
+
+### `checklist[]` — sub-tasks (dailies & to-dos)
 
 ```json
 { "id": "<uuid>", "text": "<sub-task>", "completed": false }
 ```
 
-Progress for a task = `sum(completed) / len(checklist)` → e.g. `2/3`.
+Progress = `sum(completed) / len(checklist)` → e.g. `2/3`.
+
+### `reminders[]` — per-task reminder times (often empty)
+
+```json
+{ "id": "<uuid>", "time": "2026-11-16T05:00:00.000Z", "startDate": null }
+```
+
+### `challenge{}` / `group{}` — shared-task linkage (empty for solo use)
+
+```json
+// challenge: {} when the task isn't part of a Challenge; otherwise:
+{ "id": "<uuid>", "taskId": "<uuid>", "shortName": "<challenge name>", "broken": null }
+
+// group: party/Guild assignment — empty-ish for a solo account:
+{ "completedBy": {}, "assignedUsers": [] }
+```
+
+NoterPiper doesn't use `reminders` / `challenge` / `group` today, but they're here so
+nothing is a surprise later.
 
 ## Tags (`GET /tags`)
 
@@ -168,6 +209,15 @@ Progress for a task = `sum(completed) / len(checklist)` → e.g. `2/3`.
 ```
 
 A task references these by `id` in its `tags` array; map id → name to get the label.
+
+## The day boundary — why `isDue` / `completed` can be trusted
+
+Habitica doesn't roll over at literal midnight; it rolls at the user's **`dayStart`**
+hour (`GET /user → preferences.dayStart`, `0`–`23`; e.g. `0` = midnight, `3` = 3 AM),
+in their `preferences.timezoneOffset`. Habitica computes `isDue`, `completed`, and
+`streak` **server-side relative to that boundary** — so the plugin can **trust those
+fields directly** and never has to recompute "is it today?" itself. (That's why the
+nudge keys off `isDue && !completed` rather than parsing dates.)
 
 ---
 
@@ -180,6 +230,7 @@ A task references these by `id` in its `tags` array; map id → name to get the 
 | Category / section | `tags` → `/tags` names |
 | Importance (later) | `priority` |
 | Progress (later) | `checklist` |
+| Consistency context (later) | `history` (e.g. "did 5 of last 7 due days"), `value` (struggling) |
 | Due / overdue (to-do) | `date` |
 
-Everything else (`value`, `attribute`, `history`, `reminders`, `nextDue`, …) is ignored.
+Everything else (`attribute`, `reminders`, `nextDue`, `challenge`, `group`, …) is ignored.
