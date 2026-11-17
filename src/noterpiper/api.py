@@ -44,8 +44,10 @@ def _get(path: str) -> Any:
         "Content-Type": "application/json",
     }
     payload = net.get_json(API_BASE + path, headers=headers, timeout=30)
-    if isinstance(payload, dict) and payload.get("success") is False:  # {success:false} → surface it
-        raise RuntimeError(f"Habitica API error: {payload.get('message') or payload.get('error') or 'unknown'}")
+    # {success:false} (often with no `data`) → surface the message, not a bare KeyError
+    if isinstance(payload, dict) and payload.get("success") is False:
+        msg = payload.get("message") or payload.get("error") or "unknown"
+        raise RuntimeError(f"Habitica API error: {msg}")
     return payload["data"]
 
 
