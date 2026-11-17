@@ -7,11 +7,11 @@ work as expected.
 
 import shutil
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 import pytest
 
 from noterpiper.plugins.habitica import MORNING_TITLE, NUDGE_TITLE, WEEKLY_TITLE, HabiticaSource
+from noterpiper.plugins.habitica import weekly as state_module
 
 TZ = timezone(timedelta(hours=5))
 AT_NUDGE = datetime(2026, 11, 16, 21, 34, tzinfo=TZ)
@@ -64,7 +64,7 @@ def _todo(text, tags=(), completed=False, date=None, priority=1):
 @pytest.fixture(autouse=True)
 def cleanup_state():
     """Clean up state dir before and after each test."""
-    state_dir = Path(".noterpiper_state")
+    state_dir = state_module.STATE_DIR
     if state_dir.exists():
         shutil.rmtree(state_dir)
     yield
@@ -214,7 +214,6 @@ def test_phase4_weekly_accumulates_across_multiple_runs(monkeypatch):
     tuesday = datetime(2026, 11, 18, 21, 34, tzinfo=TZ)
     HabiticaSource().check(tuesday, config)
     # Verify 2 runs in state
-    from noterpiper import state as state_module
 
     ws = state_module.load_weekly_state()
     assert len(ws["day_runs"]) == 2
@@ -233,7 +232,6 @@ def test_phase4_weekly_does_not_duplicate_same_day(monkeypatch):
     HabiticaSource().check(monday, config)
     HabiticaSource().check(monday, config)
     # Should have only 1 day
-    from noterpiper import state as state_module
 
     ws = state_module.load_weekly_state()
     assert len(ws["day_runs"]) == 1

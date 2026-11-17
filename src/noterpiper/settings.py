@@ -85,9 +85,12 @@ def keyed_config(path: Path | None = None) -> dict:
     for key, val in raw.items():
         if key == "reminders" or not isinstance(val, dict):
             continue  # location strings + legacy reminders: below
-        out[_LEGACY_SECTIONS.get(key, key)] = dict(
-            val
-        )  # a plugin section (renaming any legacy key)
+        slot = out.setdefault(_LEGACY_SECTIONS.get(key, key), {})
+        if key in _LEGACY_SECTIONS:  # a half-migrated file: legacy fills gaps only,
+            for k, v in val.items():  # the new-shape section always wins
+                slot.setdefault(k, v)
+        else:
+            slot.update(val)
     if isinstance(raw.get("reminders"), dict):  # legacy top-level prayer config
         out.setdefault("prayer", {}).setdefault("reminders", raw["reminders"])
     if "window" in raw and not isinstance(raw.get("window"), dict):

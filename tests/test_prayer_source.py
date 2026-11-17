@@ -72,3 +72,13 @@ def test_a_broken_timing_skips_only_that_prayer(monkeypatch):
     now = datetime(2026, 11, 16, 5, 6, tzinfo=TZ)
     config = {**CONFIG, "reminders": {"Fajr": {"after_start": 5}, "Zohar": {"after_start": 5}}}
     assert [n.title for n in PrayerSource().check(now, config)] == ["Fajr"]
+
+
+def test_prayer_can_be_disabled_like_every_other_plugin(monkeypatch):
+    called = []
+    monkeypatch.setattr(
+        "noterpiper.plugins.prayer.fetch_timings", lambda *a: called.append(1) or {}
+    )
+    now = datetime(2026, 11, 16, 12, 0, tzinfo=timezone(timedelta(hours=5)))
+    assert PrayerSource().check(now, {"enabled": False}) == []
+    assert called == []  # disabled → not even a fetch

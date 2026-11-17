@@ -35,11 +35,13 @@ from noterpiper.engine.registry import discover_all
 SOURCES = discover_all(plugins)
 
 
-def build_config(sources, s, raw: dict, force_source: str | None = None) -> dict:
+def build_config(
+    sources, s, raw: dict, force_source: str | None = None, force_kind: str | None = None
+) -> dict:
     """Assemble each plugin's config generically: the plugin's own defaults <- the shared
     location (if it wants it) <- the user's overrides in config[id]. No per-plugin wiring."""
     location = {"city": s.city, "country": s.country, "method": s.method, "timezone": s.timezone}
-    return build_slices(sources, raw, location, force_source)
+    return build_slices(sources, raw, location, force_source, force_kind)
 
 
 def select_sources(force_source: str | None = None) -> list:
@@ -54,7 +56,7 @@ def main() -> int:
     s = settings.load_settings()
     topic = config.env("NTFY_TOPIC")
     if not topic:
-        print("[dry-run] NTFY_TOPIC not set — nothing delivered")
+        print("NTFY_TOPIC not set — nowhere to deliver, exiting")
         return 0
     force = os.environ.get("FORCE_SOURCE")
     now = datetime.now(ZoneInfo(s.timezone))
@@ -62,10 +64,7 @@ def main() -> int:
     webhook_url = config.env("WEBHOOK_URL")
     if webhook_url:
         channels.append(WebhookChannel(webhook_url))
-    cfg = build_config(SOURCES, s, settings.keyed_config(), force)
-    kind = os.environ.get("FORCE_KIND")
-    if force and kind and force in cfg:
-        cfg[force]["force_kind"] = kind  # which format the forced send uses (plugin-defined)
+    cfg = build_config(SOURCES, s, settings.keyed_config(), force, os.environ.get("FORCE_KIND"))
     sent = Engine(channels, select_sources(force)).run(now, cfg)
     print(f"{sent} sent this run")
     return 0

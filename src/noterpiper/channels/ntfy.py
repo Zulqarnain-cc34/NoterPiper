@@ -36,19 +36,24 @@ class NtfyChannel:
         net.request(f"{NTFY}/{self.topic}", data=notification.body.encode("utf-8"), headers=headers)
 
     def already_sent(self, dedup_key: str, now: datetime) -> bool:
-        """True if a message whose title equals `dedup_key` already went out since
-        local midnight, read back from ntfy's cache. On any poll failure, returns
-        False — we'd rather risk a duplicate than silently drop a reminder."""
+        """True if a message for `dedup_key` already went out since local midnight,
+        read back from ntfy's cache. ntfy stores the *delivered* title, which send()
+        passes through `_header_safe` — so the key is normalized the same way before
+        comparing, otherwise an emoji-bearing or differently-cased key could never
+        match and dedup would silently fail (sources should still follow the
+        title == dedup_key convention). On any poll failure, returns False — we'd
+        rather risk a duplicate than silently drop a reminder."""
         midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
         since = int(midnight.timestamp())
         try:
             raw = net.request(f"{NTFY}/{self.topic}/json?poll=1&since={since}").decode()
         except Exception:
             return False
+        key = _header_safe(dedup_key)
         for line in raw.splitlines():
             if not line.strip():
                 continue
             msg = json.loads(line)
-            if msg.get("event") == "message" and msg.get("title") == dedup_key:
+            if msg.get("event") == "message" and msg.get("title") == key:
                 return True
         return False

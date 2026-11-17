@@ -3,25 +3,6 @@
 
 export const PRAYERS = ['Fajr', 'Zohar', 'Asr', 'Maghrib', 'Isha'];
 
-// Drives how index.html renders its controls — add a setting here + a key below.
-export const SCHEMA = {
-  location: [
-    { key: 'city', label: 'City', type: 'city' },
-    { key: 'country', label: 'Country', type: 'country' },
-    { key: 'method', label: 'Method', type: 'method' },
-  ],
-  nudge: [
-    { key: 'nudgeTime', label: 'Time', type: 'time' },
-    { key: 'nudgeEnabled', label: 'Habitica nudge', type: 'toggle' },
-    { key: 'nudgeStreakRisk', label: 'At-risk streak', type: 'stepper' },
-  ],
-  ramadan: [
-    { key: 'ramadanEnabled', label: 'Suhoor & iftar', type: 'toggle' },
-    { key: 'ramadanSuhoorLead', label: 'Suhoor lead', type: 'stepper' },
-    { key: 'ramadanIftarLead', label: 'Iftar lead', type: 'stepper' },
-  ],
-};
-
 // "HH:MM" in a real 24-hour range.
 export function validTime(t) {
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(t).trim());
@@ -39,7 +20,7 @@ export function resolveState(city, pending, resolved) {
   return 'unknown';
 }
 
-// Common cities for type-ahead suggestions (datalist). Not exhaustive — any city
+// Common cities for type-ahead suggestions (the custom .suggest dropdown). Not exhaustive — any city
 // still works via the live Aladhan check; these just speed up the common ones and
 // auto-fill the country. [city, country].
 // biome-ignore format: compact hand-packed reference table — one country per line is noise
@@ -122,6 +103,12 @@ export function encodeContent(obj) {
   let bin = '';
   for (const b of bytes) bin += String.fromCharCode(b);
   return btoa(bin);
+}
+
+// Inverse of encodeContent: GitHub's base64 (with embedded newlines) → text.
+export function decodeContent(b64) {
+  const bin = atob(String(b64).replace(/\s/g, ''));
+  return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
 }
 
 // "prayer, Quran" → ["prayer", "quran"] · empty/blank → null (no filtering).

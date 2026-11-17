@@ -61,3 +61,27 @@ def test_a_plugin_with_no_defaults_still_works():
             return []
 
     assert slice_for(Bare(), {"bare": {"on": True}}, {}) == {"on": True, "force": False}
+
+
+def test_dict_defaults_merge_one_level_deep():
+    """A partial user section keeps the rest of its defaults — writing
+    {"morning": {"enabled": true}} must not wipe the default morning time."""
+
+    class Src:
+        id = "x"
+        defaults = {"time": "21:30", "morning": {"enabled": False, "time": "06:00"}}
+
+    cfg = slice_for(Src(), {"x": {"morning": {"enabled": True}}}, {})
+    assert cfg["morning"] == {"enabled": True, "time": "06:00"}
+    assert cfg["time"] == "21:30"
+
+
+def test_force_kind_rides_along_only_on_the_forced_source():
+    class Src:
+        id = "x"
+        defaults = {}
+
+    forced = slice_for(Src(), {}, {}, force_id="x", force_kind="morning")
+    assert forced["force"] is True and forced["force_kind"] == "morning"
+    other = slice_for(Src(), {}, {}, force_id="y", force_kind="morning")
+    assert other["force"] is False and "force_kind" not in other

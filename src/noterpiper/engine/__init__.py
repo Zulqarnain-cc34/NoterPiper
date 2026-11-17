@@ -4,7 +4,7 @@
   Source       — the plugin contract (decide what to notify, and when)
   Channel      — the delivery contract (decide how to send)
 
-The engine orchestrates Sources and a Channel; it depends on these abstractions,
+The engine orchestrates Sources and Channels; it depends on these abstractions,
 never on a concrete plugin — which is what lets new sources plug in untouched.
 """
 

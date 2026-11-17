@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   CITIES,
   COUNTRIES,
+  decodeContent,
   encodeContent,
   fromConfig,
   maxOffset,
@@ -265,4 +266,12 @@ test('morning + weekly schedules round-trip; opt-in means only explicit true is 
   const back = toConfig(s, file);
   assert.deepEqual(back.habitica.morning, { enabled: true, time: '05:30' });
   assert.deepEqual(back.habitica.weekly, { enabled: true, day: 'Friday', time: '20:00' });
+});
+
+test('decodeContent inverts encodeContent, unicode included', () => {
+  const obj = { habitica: { tag_whitelist: ['دين', 'quran'] }, note: 'nüdge ✓' };
+  assert.deepEqual(JSON.parse(decodeContent(encodeContent(obj))), obj);
+  // GitHub wraps base64 with newlines — they must be tolerated
+  const wrapped = encodeContent(obj).replace(/(.{40})/g, '$1\n');
+  assert.deepEqual(JSON.parse(decodeContent(wrapped)), obj);
 });

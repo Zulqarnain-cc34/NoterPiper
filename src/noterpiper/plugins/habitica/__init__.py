@@ -37,8 +37,10 @@ import re
 import urllib.error
 from datetime import date, datetime
 
-from ... import api, state
+from ... import api
 from ...engine import Notification
+from .._common import due_now
+from . import weekly
 
 STREAK_RISK = 7  # a daily with a streak this long is "at risk" if still unticked
 WINDOW_MIN = 5  # fire within this many minutes after the set time
@@ -49,17 +51,6 @@ WEEKLY_TITLE = "Habitica weekly digest"
 AUTH_FAIL_TITLE = "Habitica sign-in failed"
 CAP = 5  # max names listed per group before "+N more"
 ARCHIVED = "archived"  # tasks carrying a tag named this (any case) are hidden
-
-
-def _due_now(now: datetime, target_hhmm: str, window: int = WINDOW_MIN) -> bool:
-    # Known limit: the window doesn't wrap midnight — a 23:58 nudge only gets its
-    # pre-midnight ticks. Fine for the ~2-min external timer; don't set times that late.
-    try:
-        th, tm = (int(x) for x in str(target_hhmm).split(":")[:2])
-    except ValueError:
-        return False  # malformed time in config → never due, never a crash
-    delta = (now.hour * 60 + now.minute) - (th * 60 + tm)
-    return 0 <= delta < window
 
 
 def _todo_date(todo: dict) -> date | None:
@@ -267,8 +258,8 @@ def summarize_morning(c: dict) -> tuple[str, str, str]:
     if time_bound == 0:
         return "Nothing owed today — great start! 🌅", "low", "sunny"
 
-    n = c.get("counts", {})
-    d, h, t = n.get("dailies", 0), n.get("habits", 0), n.get("todos", 0)
+    n = c["counts"]  # collect() always provides it; every shown item bumps a bucket
+    d, h, t = n["dailies"], n["habits"], n["todos"]
     parts = []
     if d:
         parts.append(f"{d} dail{'y' if d == 1 else 'ies'}")
@@ -276,7 +267,7 @@ def summarize_morning(c: dict) -> tuple[str, str, str]:
         parts.append(f"{h} habit{_plural(h)}")
     if t:
         parts.append(f"{t} to-do{_plural(t)}")
-    line = " · ".join(parts) or f"{time_bound} to do today"
+    line = " · ".join(parts)
     if at_risk:
         line += f" · {len(at_risk)} at risk 🔥"
     urgent = bool(at_risk or overdue)
@@ -351,24 +342,64 @@ def _weekly_digest(c: dict, now: datetime, cfg: dict, window: int) -> list[Notif
     """Record today's collect() into the week's state; emit the digest when its day/time hits."""
     if not cfg.get("enabled"):
         return []
-    ws = state.append_daily_run(state.load_weekly_state(), c, now)
-    state.save_weekly_state(ws)
+    ws = weekly.append_daily_run(weekly.load_weekly_state(), c, now)
+    weekly.save_weekly_state(ws)
     day = str(cfg.get("day", "Sunday")).strip().lower()
     if day not in _DAYS:
         print(f"[warn] habitica weekly digest: unknown day {cfg.get('day')!r}")
         return []
-    if now.weekday() != _DAYS.index(day) or not _due_now(
+    if now.weekday() != _DAYS.index(day) or not due_now(
         now, str(cfg.get("time") or "19:00"), window
     ):
         return []
-    stats = state.compute_weekly_stats(ws["day_runs"])
-    week_start, week_end = state.get_weekly_bounds(now)
+    stats = weekly.compute_weekly_stats(ws["day_runs"])
+    week_start, week_end = weekly.get_weekly_bounds(now)
     body, priority, tag = summarize_weekly(stats, week_start, week_end)
     ws["day_runs"] = []  # the digest closes the week
     ws["last_digest_sent"] = now.isoformat()
-    state.save_weekly_state(ws)
+    weekly.save_weekly_state(ws)
     return [
         Notification(WEEKLY_TITLE, body, priority=priority, tags=(tag,), dedup_key=WEEKLY_TITLE)
+    ]
+
+
+def _forced_push(c: dict, now: datetime, kind: str) -> Notification:
+    """'Send now' = exactly one push in the chosen format. The full summary is both
+    the default and the fallback — a corrupt weekly state must not eat a button press."""
+    if kind == "morning":
+        body, priority, tag = summarize_morning(c)
+        return Notification(MORNING_TITLE, body, priority=priority, tags=(tag,), dedup_key=None)
+    if kind == "weekly":
+        try:
+            ws = weekly.append_daily_run(weekly.load_weekly_state(), c, now)  # preview — not saved
+            stats = weekly.compute_weekly_stats(ws["day_runs"])
+            body, priority, tag = summarize_weekly(stats, *weekly.get_weekly_bounds(now))
+            return Notification(WEEKLY_TITLE, body, priority=priority, tags=(tag,), dedup_key=None)
+        except Exception as e:
+            print(f"[warn] forced weekly preview failed ({e}); sending the full summary")
+    body, priority, tag = summarize(c)
+    return Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=None)
+
+
+def _evening_push(c: dict, now: datetime, config: dict, window: int) -> list[Notification]:
+    """The classic nightly nudge, when due. Top-level `enabled`/`time` drive it (that's
+    what the phone page writes); a nested `evening` section overrides when present."""
+    evening = config.get("evening") or {}
+    evening_time = str(evening.get("time") or config.get("time") or "21:30")
+    if not evening.get("enabled", True) or not due_now(now, evening_time, window):
+        return []
+    body, priority, tag = summarize(c)
+    return [Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=NUDGE_TITLE)]
+
+
+def _morning_push(c: dict, now: datetime, config: dict, window: int) -> list[Notification]:
+    """The opt-in counts-only briefing, when due."""
+    morning = config.get("morning") or {}
+    if not morning.get("enabled") or not due_now(now, str(morning.get("time") or "06:00"), window):
+        return []
+    body, priority, tag = summarize_morning(c)
+    return [
+        Notification(MORNING_TITLE, body, priority=priority, tags=(tag,), dedup_key=MORNING_TITLE)
     ]
 
 
@@ -425,57 +456,15 @@ class HabiticaSource:
             config.get("tag_whitelist"),
         )
         if forced:
-            # "Send now" = exactly one push, every gate and dedup bypassed. `force_kind`
-            # picks the format (the test page's per-phase buttons); default is the classic
-            # full summary. A forced weekly is a preview — it never resets the week's state.
             kind = str(config.get("force_kind") or "evening").strip().lower()
-            title, (body, priority, tag) = NUDGE_TITLE, (None, None, None)
-            if kind == "morning":
-                title, (body, priority, tag) = MORNING_TITLE, summarize_morning(c)
-            elif kind == "weekly":
-                try:
-                    ws = state.append_daily_run(state.load_weekly_state(), c, now)
-                    stats = state.compute_weekly_stats(ws["day_runs"])
-                    week_start, week_end = state.get_weekly_bounds(now)
-                    title = WEEKLY_TITLE
-                    body, priority, tag = summarize_weekly(stats, week_start, week_end)
-                except Exception as e:  # corrupt state must not eat a button press
-                    print(f"[warn] forced weekly preview failed ({e}); sending the full summary")
-            if body is None:
-                body, priority, tag = summarize(c)
-            return [Notification(title, body, priority=priority, tags=(tag,), dedup_key=None)]
+            return [_forced_push(c, now, kind)]
 
-        notifications = []
         window = int(config.get("window", WINDOW_MIN))
-
-        # Evening — the classic nightly nudge. Top-level `enabled`/`time` drive it (that's
-        # what the phone page and existing configs write); a nested `evening` section,
-        # when present, overrides them.
-        evening = config.get("evening") or {}
-        evening_time = str(
-            evening.get("time") or config.get("nudge_time") or config.get("time") or "21:30"
-        )
-        if evening.get("enabled", True) and _due_now(now, evening_time, window):
-            body, priority, tag = summarize(c)
-            notifications.append(
-                Notification(
-                    NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=NUDGE_TITLE
-                )
-            )
-
-        # Morning briefing — opt-in, counts only.
-        morning = config.get("morning") or {}
-        if morning.get("enabled") and _due_now(now, str(morning.get("time") or "06:00"), window):
-            body, priority, tag = summarize_morning(c)
-            notifications.append(
-                Notification(
-                    MORNING_TITLE, body, priority=priority, tags=(tag,), dedup_key=MORNING_TITLE
-                )
-            )
-
+        notifications = _evening_push(c, now, config, window)
+        notifications += _morning_push(c, now, config, window)
         # Weekly digest — guarded: an aggregation bug must never cost the nightly nudge.
         try:
-            notifications.extend(_weekly_digest(c, now, config.get("weekly") or {}, window))
+            notifications += _weekly_digest(c, now, config.get("weekly") or {}, window)
         except Exception as e:
             print(f"[warn] habitica weekly digest skipped: {e}")
         return notifications
