@@ -142,8 +142,6 @@ class HabiticaSource:
     id = "habitica"
     wants_location = False
     defaults = {"enabled": True, "time": "21:30", "window": WINDOW_MIN, "streak_risk": STREAK_RISK}
-    # UI metadata for the config page — controls are generated from this (see
-    # scripts/gen_plugin_schema.py); a plugin never touches the app's JS.
     # No config_schema: the config page hand-builds this card (docs/index.html), so the
     # generator must not auto-emit competing controls. See PLUGIN-AUTHORING "config UI".
 
