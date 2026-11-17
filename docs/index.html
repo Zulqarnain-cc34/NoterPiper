@@ -116,8 +116,13 @@
   .sendnow{background:var(--card2);color:var(--gold);border:1px solid var(--goldEdge);border-radius:12px;padding:10px 18px;
     font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;transition:transform .1s,background .15s}
   .sendnow:active{transform:translateY(1px);background:var(--goldSoft)} .sendnow:disabled{opacity:.5;cursor:not-allowed}
-  .sendrow{display:flex;gap:7px}
-  .sendrow .sendnow{padding:9px 12px;font-size:16px;line-height:1}
+  .sendblock{padding:15px 0 17px}
+  .sendblock .stitle{font-size:16px;font-weight:500}
+  .sendblock .shint{font-size:11.5px;color:var(--muted);margin:2px 0 12px}
+  .sendrow{display:flex;gap:8px}
+  .sendrow .sendnow{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
+    padding:12px 4px;font-size:13px;line-height:1}
+  .sendrow .e{font-size:15px}
 
   /* list editor: each item is a bordered block, one sub-field per row so it never overflows */
   .litem{border:1px solid var(--edge);border-radius:12px;background:var(--card2);padding:0 12px;margin:10px 0}
@@ -214,12 +219,15 @@
           <select id="weeklyDay"></select></div>
         <div class="row" id="weeklyTimeRow"><span class="rname">Weekly time</span><span class="spacer"></span>
           <select id="weeklyTime"></select></div>
-        <div class="row" id="nudgeNowRow"><span class="rname">Send now<span class="hint">🌙 evening · 🌅 morning · 📊 weekly</span></span><span class="spacer"></span>
+        <div class="sendblock">
+          <div class="stitle">Send now</div>
+          <div class="shint">push a nudge to my phone immediately</div>
           <div class="sendrow">
-            <button class="sendnow" id="sendEvening" title="Send the evening summary" aria-label="Send evening summary">🌙</button>
-            <button class="sendnow" id="sendMorning" title="Send the morning briefing" aria-label="Send morning briefing">🌅</button>
-            <button class="sendnow" id="sendWeekly" title="Send the weekly digest" aria-label="Send weekly digest">📊</button>
-          </div></div>
+            <button class="sendnow" id="sendEvening"><span class="e">🌙</span>Evening</button>
+            <button class="sendnow" id="sendMorning"><span class="e">🌅</span>Morning</button>
+            <button class="sendnow" id="sendWeekly"><span class="e">📊</span>Weekly</button>
+          </div>
+        </div>
       </div>
     </div>
 
