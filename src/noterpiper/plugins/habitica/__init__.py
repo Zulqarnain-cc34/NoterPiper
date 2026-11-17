@@ -52,6 +52,8 @@ ARCHIVED = "archived"  # tasks carrying a tag named this (any case) are hidden
 
 
 def _due_now(now: datetime, target_hhmm: str, window: int = WINDOW_MIN) -> bool:
+    # Known limit: the window doesn't wrap midnight — a 23:58 nudge only gets its
+    # pre-midnight ticks. Fine for the ~2-min external timer; don't set times that late.
     try:
         th, tm = (int(x) for x in str(target_hhmm).split(":")[:2])
     except ValueError:
@@ -81,12 +83,13 @@ def _archived(task: dict, tags: dict) -> bool:
 
 
 def _parse_whitelist(raw) -> list[str] | None:
-    """Normalize `tag_whitelist` to lowercase names. None / empty → no filtering.
+    """Normalize `tag_whitelist` to lowercase names. None / empty / garbage → no filtering.
     Accepts a list or a comma-separated string (what a config text field stores)."""
-    if raw is None:
-        return None
-    parts = raw.split(",") if isinstance(raw, str) else raw
-    names = [str(p).strip().lower() for p in parts if str(p).strip()]
+    if isinstance(raw, str):
+        raw = raw.split(",")
+    if not isinstance(raw, (list, tuple, set)):
+        return None  # None, or a malformed config value — filtering off beats crashing
+    names = [str(p).strip().lower() for p in raw if str(p).strip()]
     return names or None
 
 
