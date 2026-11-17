@@ -69,6 +69,33 @@ test('toConfig writes the ramadan controls as real values', () => {
   assert.equal(c.ramadan.iftar_lead, 15);
 });
 
+test('fromConfig hydrates schema-driven (ext) plugins: defaults ← saved config', () => {
+  const schema = { dates: { defaults: { enabled: true, lead_days: 3, items: [] } } };
+  const st = fromConfig({ dates: { lead_days: 7, items: [{ label: 'X', date: '01-01' }] } }, schema);
+  assert.equal(st.ext.dates.enabled, true);                 // untouched default
+  assert.equal(st.ext.dates.lead_days, 7);                  // saved override wins
+  assert.deepEqual(st.ext.dates.items, [{ label: 'X', date: '01-01' }]);
+});
+
+test('toConfig writes ext plugins back into config[id], preserving base', () => {
+  const c = toConfig({
+    city: 'M', country: 'S', method: '4', timezone: 'Z', reminders: {},
+    nudgeTime: '21:30', nudgeEnabled: true, nudgeStreakRisk: 7,
+    ext: { dates: { enabled: false, lead_days: 5, items: [] } },
+  }, { dates: { _keep: 1 } });
+  assert.equal(c.dates.enabled, false);
+  assert.equal(c.dates.lead_days, 5);
+  assert.equal(c.dates._keep, 1);                           // base key survives
+});
+
+test('no ext plugins → nothing extra written', () => {
+  const st = fromConfig({});
+  assert.deepEqual(st.ext, {});
+  const c = toConfig({ city: '', country: '', method: '1', timezone: '', reminders: {},
+    nudgeTime: '21:30', nudgeEnabled: true, nudgeStreakRisk: 7 });
+  assert.equal(c.dates, undefined);
+});
+
 test('validTime accepts HH:MM, rejects junk and out-of-range', () => {
   assert.equal(validTime('21:30'), true);
   assert.equal(validTime('9pm'), false);

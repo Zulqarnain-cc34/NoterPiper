@@ -203,6 +203,10 @@
       </div>
     </div>
 
+    <!-- Schema-driven plugin cards (dates, and any community plugin that ships a config_schema)
+         render here automatically from plugins.schema.json — no per-plugin app code. -->
+    <div id="extCards"></div>
+
     <p class="note">Changes save automatically and take effect within a few minutes — prayer reminders are checked live, and the nightly nudge and Ramadan reminders read your settings each run.</p>
   </div>
 
@@ -398,6 +402,102 @@
     return state;
   };
 
+  // ─── Schema-driven plugin cards ───────────────────────────────────────────
+  // prayer/habitica/ramadan keep their hand-built cards above; every OTHER plugin
+  // that ships a `config_schema` (→ plugins.schema.json) gets a generic card here,
+  // so community plugins appear on this page with zero app code. Controls bind to
+  // state.ext[pluginId][key] and autosave through the same onEdit() path.
+  const CUSTOM_CARDS = ['prayer', 'habitica', 'ramadan'];
+  let extSchema = {};
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+  const title = id => id.charAt(0).toUpperCase() + id.slice(1);
+
+  async function loadExtSchema() {
+    try {
+      const r = await fetch('plugins.schema.json', { cache: 'no-store' });
+      if (!r.ok) { extSchema = {}; return; }
+      const all = await r.json();
+      extSchema = Object.fromEntries(Object.entries(all).filter(([id]) => !CUSTOM_CARDS.includes(id)));
+    } catch { extSchema = {}; }                 // local file:// or missing file → no ext cards, page unaffected
+  }
+
+  const extVal = (id, key) => (state.ext && state.ext[id] || {})[key];
+  function setExt(id, key, v) { (state.ext ||= {}); (state.ext[id] ||= {})[key] = v; onEdit(); }
+  const nameCell = f => `<span class="rname">${esc(f.label)}${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ''}</span>`;
+
+  // One field spec → a bound .row element (or, for a list, a repeating row editor).
+  function makeControl(id, f) {
+    if (f.type === 'list') return makeListEditor(id, f);
+    const row = document.createElement('div'); row.className = 'row';
+    if (f.type === 'toggle') {
+      row.innerHTML = nameCell(f) + `<div class="toggle"><div class="knob"></div></div>`;
+      const t = row.querySelector('.toggle');
+      const paint = () => t.classList.toggle('off', !extVal(id, f.key));
+      t.onclick = () => { setExt(id, f.key, !extVal(id, f.key)); paint(); };
+      paint();
+    } else if (f.type === 'stepper') {
+      const step = f.step || 1, lo = f.min ?? 0, hi = f.max ?? 999;
+      row.innerHTML = nameCell(f) + `<span class="spacer"></span><div class="stepper">`
+        + `<button aria-label="less">−</button><div class="val"><span class="n"></span><small>${esc(f.unit || '')}</small></div>`
+        + `<button aria-label="more">+</button></div>`;
+      const n = row.querySelector('.n');
+      const paint = () => { n.textContent = extVal(id, f.key) ?? lo; };
+      const [minus, plus] = row.querySelectorAll('.stepper button');
+      minus.onclick = () => { setExt(id, f.key, Math.max(lo, (extVal(id, f.key) ?? lo) - step)); paint(); };
+      plus.onclick = () => { setExt(id, f.key, Math.min(hi, (extVal(id, f.key) ?? lo) + step)); paint(); };
+      paint();
+    } else {                                   // 'time' and 'text' are both a right-aligned input
+      row.innerHTML = nameCell(f) + `<span class="spacer"></span>`
+        + `<input type="${f.type === 'time' ? 'time' : 'text'}" class="text">`;
+      const inp = row.querySelector('input');
+      inp.value = extVal(id, f.key) ?? '';
+      inp[f.type === 'time' ? 'onchange' : 'oninput'] = () => setExt(id, f.key, inp.value);
+    }
+    return row;
+  }
+
+  // A `list` field: a repeating editor over an array of objects (e.g. dates items).
+  function makeListEditor(id, f) {
+    const wrap = document.createElement('div');
+    const head = document.createElement('div'); head.className = 'row';
+    head.innerHTML = nameCell(f) + `<span class="spacer"></span><button class="sendnow" type="button">+ Add</button>`;
+    const rows = document.createElement('div');
+    wrap.append(head, rows);
+    const items = () => (extVal(id, f.key) || []);
+    function render() {
+      rows.innerHTML = '';
+      items().forEach((item, i) => {
+        const r = document.createElement('div'); r.className = 'row';
+        r.innerHTML = f.fields.map(sub =>
+          `<input type="text" class="text" data-sub="${esc(sub.key)}" placeholder="${esc(sub.label)}" style="flex:1;width:auto;text-align:left">`
+        ).join('') + `<button class="sendnow" type="button" aria-label="remove" style="padding:10px 14px">×</button>`;
+        r.querySelectorAll('input').forEach(inp => {
+          inp.value = item[inp.dataset.sub] ?? '';
+          inp.oninput = () => { item[inp.dataset.sub] = inp.value; onEdit(); };
+        });
+        r.querySelector('button').onclick = () => { const a = items(); a.splice(i, 1); setExt(id, f.key, a); render(); };
+        rows.appendChild(r);
+      });
+    }
+    head.querySelector('button').onclick = () => { const a = items(); a.push({}); setExt(id, f.key, a); render(); };
+    render();
+    return wrap;
+  }
+
+  // Rebuild every ext card from state.ext (controls read live state, so a fresh build = apply).
+  function renderExtCards() {
+    const host = document.getElementById('extCards');
+    if (!host) return;
+    host.innerHTML = '';
+    for (const [id, spec] of Object.entries(extSchema)) {
+      const label = document.createElement('div'); label.className = 'label';
+      label.textContent = spec.title || title(id);
+      const card = document.createElement('div'); card.className = 'card';
+      for (const f of spec.fields || []) card.appendChild(makeControl(id, f));
+      host.append(label, card);
+    }
+  }
+
   // ─── GitHub integration (Contents API + token in localStorage) ───
   const LKEY = 'noterpiper_token';
   const token = () => localStorage.getItem(LKEY) || '';
@@ -483,7 +583,7 @@
     g('ramEnabled').classList.toggle('off', !state.ramadanEnabled);
     g('suhoorVal').textContent = state.ramadanSuhoorLead;
     g('iftarVal').textContent = state.ramadanIftarLead;
-    updateNudgeNow(); updateRamOpts();
+    updateNudgeNow(); updateRamOpts(); renderExtCards();
   }
   // Cache the private location on this device so the NEXT load paints it instantly,
   // instead of flashing the config.json placeholder while the Variables API responds.
@@ -509,10 +609,11 @@
   }
   async function loadConfig() {
     const cached = readLocCache();
+    await loadExtSchema();                           // ext plugin schema → generic cards (best-effort)
     try {
       const d = await ghGet('/contents/config.json?ref=main');   // public read — no token needed
       loaded = JSON.parse(decodeB64(d.content));
-      state = fromConfig(loaded);
+      state = fromConfig(loaded, extSchema);
       if (cached) {                                   // instant: paint last-known real location, reveal now
         Object.assign(state, cached);
         renderPrayers(); applyState(); checkCity();

@@ -118,12 +118,18 @@ export function encodeContent(obj) {
 // config.json object → flat form state the controls bind to.
 // Reads the keyed shape ({habitica,prayer,ramadan}); falls back to the legacy shape
 // (a `nudge` section, top-level `reminders`) so an un-migrated file still loads.
-export function fromConfig(o = {}) {
+// `extSchema` is the generated plugins.schema.json minus the custom-card plugins; each of
+// its plugins gets a generic slice in `ext` (its schema defaults overlaid by config[id]).
+export function fromConfig(o = {}, extSchema = {}) {
   const sec = (k) => (o && typeof o[k] === 'object' && o[k]) || {};
   const nudge = { ...sec('nudge'), ...sec('habitica') };   // 'habitica' (new) wins over legacy 'nudge'
   const prayer = sec('prayer');
   const ram = sec('ramadan');
   const _lead = (v, d) => (Number.isFinite(+v) && +v >= 0 ? +v : d);
+  const ext = {};
+  for (const id of Object.keys(extSchema)) {
+    ext[id] = { ...(extSchema[id].defaults || {}), ...sec(id) };   // defaults ← saved config[id]
+  }
   return {
     city: o.city ?? '',
     country: o.country ?? '',
@@ -136,6 +142,7 @@ export function fromConfig(o = {}) {
     ramadanEnabled: ram.enabled !== false,           // default on; silent outside Ramadan anyway
     ramadanSuhoorLead: _lead(ram.suhoor_lead, 45),
     ramadanIftarLead: _lead(ram.iftar_lead, 0),
+    ext,
   };
 }
 
@@ -158,6 +165,9 @@ export function toConfig(s, base = {}) {
       suhoor_lead: Number(s.ramadanSuhoorLead), iftar_lead: Number(s.ramadanIftarLead),
     },
   };
+  for (const [id, vals] of Object.entries(s.ext || {})) {   // schema-driven plugins
+    next[id] = { ...(base[id] || {}), ...vals };
+  }
   delete next.nudge;        // migrate away from the legacy section…
   delete next.reminders;    // …and top-level reminders (now under prayer)
   return next;
