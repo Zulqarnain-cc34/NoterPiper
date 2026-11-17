@@ -28,7 +28,7 @@
     "streak_risk": 40,
     "notify_dailies": true,
     "notify_habits": false,
-    "notify_todos": true,
+    "notify_todos": false,
     "tag_whitelist": null
   },
   "ramadan": {
