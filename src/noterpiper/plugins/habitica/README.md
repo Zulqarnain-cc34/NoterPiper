@@ -29,8 +29,9 @@ with `+N more`. Tasks tagged **`Archived`** and `####`/`-----` dividers are skip
 nudge, never a stream.
 
 > **Works out of the box; two optional tweaks make it nicer** (tags for named sections, an
-> `Archived` tag to hide things) — see **[HABITICA-SETUP.md](HABITICA-SETUP.md)** (and the
-> exact data shape in **[HABITICA-SCHEMA.md](HABITICA-SCHEMA.md)**).
+> `Archived` tag to hide things) — see **[HABITICA-SETUP.md](HABITICA-SETUP.md)**. Something
+> off? **[HABITICA-TROUBLESHOOTING.md](HABITICA-TROUBLESHOOTING.md)**. Field shapes (for
+> maintainers): **[HABITICA-SCHEMA.md](HABITICA-SCHEMA.md)**.
 
 ## What lands on your phone
 
@@ -69,8 +70,8 @@ The engine is set up once in the main **[SETUP](../../../../SETUP.md)**. This pl
    { "nudge": { "time": "21:30", "enabled": true } }
    ```
 
-Then **tag your tasks** in Habitica (see the data standard above). If the secrets aren't
-set, the plugin simply does nothing — nothing breaks.
+Tagging is **optional** (see the setup guide above) — it just gives you named sections. If
+the secrets aren't set, the plugin simply does nothing — nothing breaks.
 
 ## Settings reference
 
@@ -100,10 +101,11 @@ Habitica and a new section appears in the nudge, no config change.
 ## How it works
 
 At the set time (once per day) it fetches your tasks (`GET /tasks/user`) and tags
-(`GET /tags`), keeps what's **owed today** per Habitica's structured fields
-(`isDue`/`completed`/`streak`, `date`, habit `frequency`/`counter`), groups them by tag,
-and builds one message: **at-risk streaks first**, then your tag sections, then the
-type fallbacks — each a capped comma-list. A stable title gives robust **once-per-day**
-delivery under the frequent engine runs; the "send now" button forces it immediately.
+(`GET /tags`), keeps what's **owed tonight** per Habitica's structured fields
+(`isDue`/`completed`/`streak`, due `date`, habit `frequency`/`counter`, `priority`), groups
+them by tag, and builds one **urgency-ordered** message: at-risk streaks → overdue → your
+sections (hardest first) → a backlog count of to-dos not due tonight — each a capped
+comma-list. A stable title gives robust **once-per-day** delivery under the frequent engine
+runs; the "Send now" button forces it immediately.
 Code: [`__init__.py`](__init__.py) — the `HabiticaSource` class satisfies NoterPiper's
 `Source` contract (`id = "habitica"`, `check(now, config) → [Notification]`).
