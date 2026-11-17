@@ -313,16 +313,25 @@ function previewPhase2() {
 }
 
 function previewPhase3Morning() {
+  // Mirrors summarize_morning() in the plugin: per-type counts, no names, at-risk flag.
   const { dailies, habits, todos } = getFilteredTasks();
-  const total = dailies.length + habits.length + todos.length;
-  const hasAtRisk = dailies.some(d => d.streak > 7);
+  const atRisk = dailies.filter(d => d.streak > 7).length;
 
   let html = '<div class="notif morning">';
   html += '<div class="title">🌅 Habitica morning briefing</div>';
   html += '<div class="body">';
-  html += `${dailies.length} dailies · ${habits.length} habits · ${todos.length} to-dos`;
-  if (hasAtRisk) html += ' · at risk 🔥';
-  html += '\n\nGet ready for today!';
+  const total = dailies.length + habits.length + todos.length;
+  if (total === 0) {
+    html += 'Nothing owed today — great start! 🌅';
+  } else {
+    const parts = [];
+    if (dailies.length) parts.push(`${dailies.length} ${dailies.length === 1 ? 'daily' : 'dailies'}`);
+    if (habits.length) parts.push(`${habits.length} habit${habits.length === 1 ? '' : 's'}`);
+    if (todos.length) parts.push(`${todos.length} to-do${todos.length === 1 ? '' : 's'}`);
+    let line = parts.join(' · ');
+    if (atRisk) line += ` · ${atRisk} at risk 🔥`;
+    html += line + '\n\nGet ready for today! 🌅';
+  }
   html += '</div></div>';
 
   document.getElementById('phase3Result').innerHTML = html;
