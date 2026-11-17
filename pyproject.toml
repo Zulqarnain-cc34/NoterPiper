@@ -33,6 +33,9 @@ where = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+# Don't touch Python snippets inside Markdown docs — they're hand-aligned for teaching
+# (aligned inline comments), not real source, and ruff would expand them.
+extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "W"]   # pycodestyle, pyflakes, isort, pyupgrade, bugbear, warnings
