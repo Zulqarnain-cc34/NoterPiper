@@ -60,3 +60,10 @@ def fetch_tasks_by_type() -> dict[str, list]:
         if g:
             groups[g].append(t)
     return groups
+
+
+def fetch_tags() -> dict[str, str]:
+    """GET /tags → {tag_id: tag_name}. Tasks reference tags by UUID; this resolves
+    them to the user's section labels (see HABITICA-SCHEMA.md)."""
+    return {t["id"]: (t.get("name") or "").strip()
+            for t in _get("/tags") if t.get("id")}

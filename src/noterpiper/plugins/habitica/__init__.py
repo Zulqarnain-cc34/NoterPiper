@@ -1,13 +1,18 @@
-"""Habitica nightly-nudge source — the second plugin.
+"""Habitica nightly-nudge source — tag-driven.
 
-One calm end-of-day summary of everything still open: unlogged prayer habits, due
-dailies (streaks at risk flagged first), and every open to-do (overdue flagged first).
-Gated to fire only
-when Habitica is configured, the nudge is enabled, and it's the set time. A stable
-title ("Nightly check-in") gives it robust once-per-day dedup under the ~2-min engine.
+One calm end-of-day summary of what you still owe today, grouped by *your own tags*
+(see HABITICA-DATA-STANDARD.md). It reads only Habitica's structured fields, never the
+wording of a title:
 
-The message leads with urgency (at-risk streaks, overdue to-dos) and caps each group
-to a few names with "+N more", so it stays readable whether you have 3 items or 30.
+  • Dailies  — `isDue and not completed`; a long `streak` is flagged 🔥 at-risk.
+  • To-dos   — `not completed`; past its `date` → "(overdue)".
+  • Habits   — opt-in: shown only if *tagged* (and daily-reset & untapped).
+  • Anything tagged `Archived` is skipped.
+
+Each task's section is its first (non-Archived) tag; untagged dailies/to-dos fall back
+to a "Dailies" / "To-dos" section, so it works with zero setup and gets better as you
+tag. At-risk streaks are a cross-cutting block shown first. A stable title
+("Nightly check-in") gives robust once-per-day dedup under the ~2-min engine.
 """
 from __future__ import annotations
 
@@ -16,11 +21,11 @@ from datetime import date, datetime
 from ... import api
 from ...engine import Notification
 
-PRAYERS = ("Fajr", "Zohar", "Asr", "Maghrib", "Isha")
 STREAK_RISK = 7          # a daily with a streak this long is "at risk" if still unticked
 WINDOW_MIN = 5           # fire within this many minutes after the set time
 NUDGE_TITLE = "Nightly check-in"
 CAP = 5                  # max names listed per group before "+N more"
+ARCHIVED = "archived"    # tasks carrying a tag named this (any case) are hidden
 
 
 def _due_now(now: datetime, target_hhmm: str, window: int = WINDOW_MIN) -> bool:
@@ -40,32 +45,64 @@ def _todo_date(todo: dict) -> date | None:
         return None
 
 
-def collect(tasks: dict, now: datetime, streak_risk: int = STREAK_RISK) -> dict:
-    """Group everything still open tonight. `streak_risk` is the streak length at or
-    above which an unticked daily is flagged "at risk" and pushed to the top."""
+def _tag_names(task: dict, tags: dict) -> list[str]:
+    """The task's non-Archived tag names, in order."""
+    return [tags[t] for t in task.get("tags", [])
+            if tags.get(t) and tags[t].lower() != ARCHIVED]
+
+
+def _archived(task: dict, tags: dict) -> bool:
+    return any(tags.get(t, "").lower() == ARCHIVED for t in task.get("tags", []))
+
+
+def _section(task: dict, tags: dict, fallback: str) -> str:
+    """Section = the first non-Archived tag (capitalised), else the type fallback."""
+    names = _tag_names(task, tags)
+    return names[0].capitalize() if names else fallback
+
+
+def collect(tasks: dict, tags: dict, now: datetime, streak_risk: int = STREAK_RISK) -> dict:
+    """Group everything still owed today by section. `tags` maps tag-id → name."""
     today = now.date()
-    prayers = [h["text"].strip() for h in tasks.get("habits", [])
-               if any(p in h.get("text", "") for p in PRAYERS)
-               and (h.get("counterUp", 0) + h.get("counterDown", 0)) == 0]
+    at_risk: list[tuple[str, int]] = []          # dailies over the streak threshold (cross-cut)
+    sections: dict[str, list[str]] = {}          # section name → display names
+    overdue: list[str] = []
 
-    due_dailies = [(d["text"].strip(), int(d.get("streak", 0))) for d in tasks.get("dailys", [])
-                   if d.get("isDue") and not d.get("completed")]
-    at_risk = sorted((t for t in due_dailies if t[1] >= streak_risk),
-                     key=lambda t: t[1], reverse=True)
-    dailies = [name for name, streak in due_dailies if streak < streak_risk]
+    def add(section: str, display: str) -> None:
+        sections.setdefault(section, []).append(display)
 
-    todos_overdue, todos_open = [], []
-    for t in tasks.get("todos", []):
-        if t.get("completed"):
-            continue                                 # only completed to-dos are excluded
-        d = _todo_date(t)
-        if d is not None and d < today:
-            todos_overdue.append(t["text"].strip())  # past its due date → flagged, shown first
+    for d in tasks.get("dailys", []):
+        if not d.get("isDue") or d.get("completed") or _archived(d, tags):
+            continue
+        name, streak = d["text"].strip(), int(d.get("streak", 0))
+        if streak >= streak_risk:
+            at_risk.append((name, streak))       # urgency trumps category
         else:
-            todos_open.append(t["text"].strip())     # due today, future, or undated — all still open
+            add(_section(d, tags, "Dailies"), name)
 
-    return {"prayers": prayers, "at_risk": at_risk, "dailies": dailies,
-            "todos_overdue": todos_overdue, "todos_due": todos_open}
+    for t in tasks.get("todos", []):
+        if t.get("completed") or _archived(t, tags):
+            continue
+        name = t["text"].strip()
+        dd = _todo_date(t)
+        if dd is not None and dd < today:
+            overdue.append(name)
+            add(_section(t, tags, "To-dos"), f"{name} (overdue)")
+        else:
+            add(_section(t, tags, "To-dos"), name)
+
+    for h in tasks.get("habits", []):
+        if _archived(h, tags) or h.get("frequency") != "daily" or not h.get("up"):
+            continue
+        if (h.get("counterUp", 0) + h.get("counterDown", 0)) != 0:
+            continue                              # already tapped today
+        names = _tag_names(h, tags)
+        if not names:
+            continue                              # habits are opt-in: untagged → ignored
+        add(names[0].capitalize(), h["text"].strip())
+
+    at_risk.sort(key=lambda t: t[1], reverse=True)
+    return {"at_risk": at_risk, "sections": sections, "overdue": overdue}
 
 
 def _cap(names: list[str]) -> str:
@@ -74,23 +111,24 @@ def _cap(names: list[str]) -> str:
     return ", ".join(names[:CAP]) + f", +{len(names) - CAP} more"
 
 
+# Sections that come from the type fallback (shown after the user's tag sections).
+_FALLBACK = ("Dailies", "To-dos")
+
+
 def summarize(c: dict) -> tuple[str, str, str]:
     """One grouped, scalable message. Returns (body, priority, tags-as-one)."""
-    at_risk, overdue, due = c["at_risk"], c["todos_overdue"], c["todos_due"]
-    todos = [f"{t} (overdue)" for t in overdue] + due
-    total = len(at_risk) + len(todos) + len(c["dailies"]) + len(c["prayers"])
+    at_risk, sections, overdue = c["at_risk"], c["sections"], c["overdue"]
+    total = len(at_risk) + sum(len(v) for v in sections.values())
     if total == 0:
         return "All done today — everything is logged. 🌙", "low", "white_check_mark"
 
     blocks = []
     if at_risk:
         blocks.append(f"At risk · {len(at_risk)}\n" + _cap([f"{n} · {s}" for n, s in at_risk]))
-    if todos:
-        blocks.append(f"To-dos · {len(todos)}\n" + _cap(todos))
-    if c["dailies"]:
-        blocks.append(f"Dailies · {len(c['dailies'])}\n" + _cap(c["dailies"]))
-    if c["prayers"]:
-        blocks.append(f"Prayers · {len(c['prayers'])}\n" + _cap(c["prayers"]))
+    tag_sections = sorted((s for s in sections if s not in _FALLBACK),
+                          key=lambda s: len(sections[s]), reverse=True)
+    for s in list(tag_sections) + [s for s in _FALLBACK if s in sections]:
+        blocks.append(f"{s} · {len(sections[s])}\n" + _cap(sections[s]))
 
     headline = f"{total} left before midnight"
     if at_risk:
@@ -105,11 +143,6 @@ class HabiticaSource:
     def check(self, now: datetime, config: dict) -> list[Notification]:
         if not api.configured():
             return []                                       # Habitica is optional
-        show_todos = config.get("show_todos", True)
-        show_dailies = config.get("show_dailies", True)
-        show_prayers = config.get("show_prayers", True)
-        if not (show_todos or show_dailies or show_prayers):
-            return []                                       # every group hidden → nothing to ever show
         forced = bool(config.get("force"))                  # on-demand 'send now' button
         if not forced:
             if not config.get("enabled", True):
@@ -119,15 +152,10 @@ class HabiticaSource:
                 return []
         try:
             tasks = api.fetch_tasks_by_type()
+            tags = api.fetch_tags()
         except Exception:
             return []                                       # Habitica down → skip tonight, don't crash
-        c = collect(tasks, now, int(config.get("streak_risk", STREAK_RISK)))
-        if not show_todos:                                  # include-toggles set in the app
-            c["todos_overdue"], c["todos_due"] = [], []
-        if not show_dailies:                                # dailies off → their at-risk goes too
-            c["at_risk"], c["dailies"] = [], []
-        if not show_prayers:
-            c["prayers"] = []
+        c = collect(tasks, tags, now, int(config.get("streak_risk", STREAK_RISK)))
         body, priority, tag = summarize(c)
         dedup = None if forced else NUDGE_TITLE              # forced always delivers; scheduled dedups
         return [Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup)]
