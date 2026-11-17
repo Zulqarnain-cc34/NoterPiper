@@ -17,16 +17,16 @@ fields, never the wording of a title, so it works for anyone.*
 Once a night, at the time you set, it reads your Habitica tasks + tags and sends **one
 grouped message** of what's still owed today:
 
-- **Dailies** that are due and not done.
-- **To-dos** that aren't done (past their date → `(overdue)`).
-- **Habits** — *opt-in*: shown only if you've **tagged** them (and they're daily-reset &
-  untapped). An untagged habit is just a casual tracker and stays out.
+- **Dailies** due today and not done — any schedule (daily / weekly / monthly / yearly).
+- **To-dos** due today or overdue; ones not due tonight become a backlog count.
+- **Habits** — daily-reset "good" (+) habits you haven't tapped today.
 
-Each item appears under its **tag** as a section (`Prayer`, `Quran`, `Work`, …);
-untagged tasks fall back to `Dailies` / `To-dos` / `Habits`, so it works with zero setup
-for any layout and gets sharper as you tag. It leads with **at-risk streaks** 🔥 and caps
-long lists with `+N more`. Tasks tagged **`Archived`** and `####`/`-----` dividers are
-skipped. One nudge, never a stream.
+Each item appears under its **tag** as a section (`Work`, `Health`, `Study`, … — your own
+words); untagged tasks fall back to `Dailies` / `To-dos` / `Habits`, so it works with zero
+setup for any layout and gets sharper as you tag. The one message is ordered by urgency —
+at-risk 🔥 → overdue → your sections (hardest first) → a backlog count — and caps long lists
+with `+N more`. Tasks tagged **`Archived`** and `####`/`-----` dividers are skipped. One
+nudge, never a stream.
 
 > **Works out of the box; two optional tweaks make it nicer** (tags for named sections, an
 > `Archived` tag to hide things) — see **[HABITICA-SETUP.md](HABITICA-SETUP.md)** (and the
@@ -35,21 +35,23 @@ skipped. One nudge, never a stream.
 ## What lands on your phone
 
 > ### Nightly check-in
-> 7 left before midnight · 2 at risk 🔥
+> 6 to do before midnight · 1 at risk 🔥
 >
-> At risk · 2
-> Surah Mulk · 52, Tasbeeh · 41
+> At risk · 1
+> Meditate · 53
 >
-> Quran · 2
-> Quran Kareem, Quran Fajr
+> Overdue · 1
+> Pay rent
 >
-> Prayer · 2
-> Maghrib, Isha
+> Health · 2
+> Exercise, Drink water
 >
-> To-dos · 1
-> Submit report (overdue)
+> Dailies · 1
+> Journal
+>
+> + 3 open to-dos in your backlog
 
-On a quiet day it's just as short — e.g. `1 left before midnight` with a single line.
+On a quiet day it's just as short — e.g. `1 to do before midnight` with a single line.
 When everything's logged: `All done today — everything is logged. 🌙`
 
 ---
