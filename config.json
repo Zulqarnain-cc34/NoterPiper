@@ -3,24 +3,26 @@
   "country": "Saudi Arabia",
   "method": "4",
   "timezone": "Asia/Riyadh",
-  "reminders": {
-    "Fajr": {
-      "after_start": 5
-    },
-    "Zohar": {
-      "after_start": 5
-    },
-    "Asr": {
-      "after_start": 5
-    },
-    "Maghrib": {
-      "after_start": 5
-    },
-    "Isha": {
-      "after_start": 5
+  "prayer": {
+    "reminders": {
+      "Fajr": {
+        "after_start": 5
+      },
+      "Zohar": {
+        "after_start": 5
+      },
+      "Asr": {
+        "after_start": 5
+      },
+      "Maghrib": {
+        "after_start": 5
+      },
+      "Isha": {
+        "after_start": 5
+      }
     }
   },
-  "nudge": {
+  "habitica": {
     "time": "22:30",
     "enabled": true,
     "streak_risk": 40

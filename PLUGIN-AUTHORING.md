@@ -85,7 +85,7 @@ last manual step is on the roadmap — your `check()` won't change.)*
 Talking to an external API? Keep it **read-only**, keep credentials in **secrets / `.env`**
 (never printed or logged), and **respect the service's rate limits** (cache, back off on
 `429`). See how the Habitica client does it: [`api.py`](src/noterpiper/api.py),
-[`HABITICA-SCHEMA.md`](HABITICA-SCHEMA.md).
+[`HABITICA-SCHEMA.md`](src/noterpiper/plugins/habitica/HABITICA-SCHEMA.md).
 
 ## 6. Channels — you don't touch them
 

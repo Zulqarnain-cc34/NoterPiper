@@ -28,8 +28,8 @@ and gets sharper as you tag. It leads with **at-risk streaks** 🔥 and caps lon
 with `+N more`. Anything tagged **`Archived`** is skipped. One nudge, never a stream.
 
 > **Get the most out of it:** structure your Habitica the way the nudge reads it — see
-> **[HABITICA-DATA-STANDARD.md](../../../../HABITICA-DATA-STANDARD.md)** (and the exact
-> data shape in **[HABITICA-SCHEMA.md](../../../../HABITICA-SCHEMA.md)**).
+> **[HABITICA-DATA-STANDARD.md](HABITICA-DATA-STANDARD.md)** (and the exact
+> data shape in **[HABITICA-SCHEMA.md](HABITICA-SCHEMA.md)**).
 
 ## What lands on your phone
 

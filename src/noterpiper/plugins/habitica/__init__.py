@@ -139,6 +139,8 @@ def summarize(c: dict) -> tuple[str, str, str]:
 
 class HabiticaSource:
     id = "habitica"
+    wants_location = False
+    defaults = {"enabled": True, "time": "21:30", "window": WINDOW_MIN, "streak_risk": STREAK_RISK}
 
     def check(self, now: datetime, config: dict) -> list[Notification]:
         if not api.configured():

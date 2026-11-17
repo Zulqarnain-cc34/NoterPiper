@@ -13,7 +13,7 @@ Captured live from a real account (identifiers + personal text redacted).
 
 Auth headers: `x-api-user: <USER_ID>`, `x-api-key: <API_TOKEN>`. **Read-only (GET) only.**
 The client splits the flat array by `type` into **`habits / dailys / todos`**
-(see [`api.py`](src/noterpiper/api.py)). Habitica also returns `reward` tasks — NoterPiper
+(see [`api.py`](../../api.py)). Habitica also returns `reward` tasks — NoterPiper
 **ignores rewards**; only these three types matter.
 
 > ⚠️ A task's `tags` field is an array of **tag UUIDs**, not names. Resolve them against
