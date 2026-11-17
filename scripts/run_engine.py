@@ -23,11 +23,12 @@ from noterpiper import config, settings  # noqa: E402
 from noterpiper.channels import NtfyChannel, WebhookChannel  # noqa: E402
 from noterpiper.engine.engine import Engine  # noqa: E402
 from noterpiper import plugins  # noqa: E402
-from noterpiper.engine.registry import discover_sources  # noqa: E402
+from noterpiper.engine.registry import discover_all  # noqa: E402
 from noterpiper.engine.config import build as build_slices  # noqa: E402
 
-# Every plugin package under noterpiper/plugins/ auto-registers — no hardcoded list.
-SOURCES = discover_sources(plugins)
+# Plugins auto-register — no hardcoded list. In-repo ones (under noterpiper/plugins/) plus
+# any pip-installed plugin that declares a `noterpiper.plugins` entry point.
+SOURCES = discover_all(plugins)
 
 
 def build_config(sources, s, raw: dict, force_source: str | None = None) -> dict:
