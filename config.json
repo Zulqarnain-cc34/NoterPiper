@@ -27,7 +27,7 @@
     "enabled": true,
     "streak_risk": 40,
     "notify_dailies": true,
-    "notify_habits": true,
+    "notify_habits": false,
     "notify_todos": true,
     "tag_whitelist": null
   },
