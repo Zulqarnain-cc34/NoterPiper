@@ -18,15 +18,16 @@ from __future__ import annotations
 
 import re
 import urllib.error
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
-from ... import api
+from ... import api, state
 from ...engine import Notification
 
 STREAK_RISK = 7  # a daily with a streak this long is "at risk" if still unticked
 WINDOW_MIN = 5  # fire within this many minutes after the set time
 NUDGE_TITLE = "Nightly check-in"
 MORNING_TITLE = "Habitica morning briefing"
+WEEKLY_TITLE = "Habitica weekly digest"
 # ASCII title == dedup_key so the once/day dedup matches (see HABITICA notes / ntfy channel).
 AUTH_FAIL_TITLE = "Habitica sign-in failed"
 CAP = 5  # max names listed per group before "+N more"
@@ -224,6 +225,34 @@ def summarize_morning(c: dict) -> tuple[str, str, str]:
     return " ".join(parts) + "\n\nGet ready! 🌅", priority, tag
 
 
+def summarize_weekly(stats: dict, week_start: date, week_end: date) -> tuple[str, str, str]:
+    """Weekly aggregated summary. Returns (body, priority, tag)."""
+    total = stats["total_items"]
+    best_name, best_streak = stats["best_streak"]
+    any_at_risk = stats["any_at_risk"]
+    at_risk_sample = stats["at_risk_sample"]
+
+    week_str = f"{week_start.strftime('%b %d')}–{week_end.strftime('%d')}"
+    headline = f"Weekly Summary · {week_str}"
+
+    blocks = []
+    if total > 0:
+        blocks.append(f"{total} item{_plural(total)} due this week")
+
+    if best_name and best_streak > 0:
+        blocks.append(f"Best streak · {best_name} ({best_streak})")
+
+    if any_at_risk:
+        blocks.append(f"At risk · {at_risk_sample}")
+
+    if not blocks:
+        blocks.append("All clear — nice week!")
+
+    priority = "high" if any_at_risk else "default"
+    tag = "warning" if any_at_risk else "white_check_mark"
+    return f"{headline}\n\n" + "\n\n".join(blocks), priority, tag
+
+
 def summarize(c: dict) -> tuple[str, str, str]:
     """One ruthlessly-ordered message — at-risk → overdue → due-today → backlog count — so
     the single nightly notification leads with what hurts to miss. Returns (body, priority, tag)."""
@@ -275,6 +304,7 @@ class HabiticaSource:
         "tag_whitelist": None,
         "morning": {"enabled": False, "time": "06:00"},
         "evening": {"enabled": True, "time": "21:00"},
+        "weekly": {"enabled": False, "day": "Sunday", "time": "19:00"},
     }
     # No config_schema: the config page hand-builds this card (docs/index.html), so the
     # generator must not auto-emit competing controls. See PLUGIN-AUTHORING "config UI".
@@ -315,6 +345,7 @@ class HabiticaSource:
             config.get("tag_whitelist"),
         )
         notifications = []
+        window = int(config.get("window", WINDOW_MIN))
 
         # Support both old format (time/enabled at top level) and new format (morning/evening nested)
         # If new format is present, use it; otherwise fall back to old format for evening only
@@ -323,11 +354,11 @@ class HabiticaSource:
             evening_cfg = config.get("evening", {})
             due_morning = forced or (
                 morning_cfg.get("enabled")
-                and _due_now(now, str(morning_cfg.get("time", "06:00")), int(config.get("window", WINDOW_MIN)))
+                and _due_now(now, str(morning_cfg.get("time", "06:00")), window)
             )
             due_evening = forced or (
                 evening_cfg.get("enabled")
-                and _due_now(now, str(evening_cfg.get("time", "21:00")), int(config.get("window", WINDOW_MIN)))
+                and _due_now(now, str(evening_cfg.get("time", "21:00")), window)
             )
             if due_morning:
                 body, priority, tag = summarize_morning(c)
@@ -340,10 +371,41 @@ class HabiticaSource:
         else:
             # Old format: single nudge with time/enabled at top level
             nudge_time = str(config.get("nudge_time") or config.get("time") or "21:30")
-            if not forced and not _due_now(now, nudge_time, int(config.get("window", WINDOW_MIN))):
-                return []
-            body, priority, tag = summarize(c)
-            dedup = None if forced else NUDGE_TITLE
-            notifications.append(Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup))
+            if not forced and not _due_now(now, nudge_time, window):
+                # Don't return yet — weekly digest might still fire
+                pass
+            else:
+                body, priority, tag = summarize(c)
+                dedup = None if forced else NUDGE_TITLE
+                notifications.append(Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup))
+
+        # Weekly digest (Phase 4) — check regardless of old/new format
+        weekly_cfg = config.get("weekly", {})
+        if weekly_cfg.get("enabled"):
+            ws = state.load_weekly_state()
+            ws = state.append_daily_run(ws, c, now)
+            state.save_weekly_state(ws)
+
+            # Check if it's time to send the weekly digest
+            target_day = weekly_cfg.get("day", "Sunday")
+            target_time = str(weekly_cfg.get("time", "19:00"))
+            day_num = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].index(target_day)
+            is_target_day = now.weekday() == day_num
+
+            if forced or (is_target_day and _due_now(now, target_time, window)):
+                stats = state.compute_weekly_stats(ws["day_runs"], now)
+                week_start, week_end = state.get_weekly_bounds(now)
+                body, priority, tag = summarize_weekly(stats, week_start, week_end)
+                dedup = None if forced else WEEKLY_TITLE
+                notifications.append(Notification(WEEKLY_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup))
+                # Reset state after sending
+                ws["day_runs"] = []
+                ws["last_digest_sent"] = now.isoformat()
+                state.save_weekly_state(ws)
+
+        # Only return empty if old format, not due, AND weekly is not enabled
+        if not notifications and "morning" not in config and "evening" not in config:
+            # Old format and no weekly → stick with original behavior
+            pass
 
         return notifications

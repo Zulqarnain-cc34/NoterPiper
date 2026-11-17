@@ -6,9 +6,13 @@ wording. Habitica (tasks + tags) is mocked; `now` is engine-supplied."""
 
 import urllib.error
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+import shutil
+
+import pytest
 
 from noterpiper.engine import Source
-from noterpiper.plugins.habitica import AUTH_FAIL_TITLE, NUDGE_TITLE, HabiticaSource
+from noterpiper.plugins.habitica import AUTH_FAIL_TITLE, NUDGE_TITLE, WEEKLY_TITLE, HabiticaSource
 
 TZ = timezone(timedelta(hours=5))
 AT_NUDGE = datetime(2026, 11, 16, 21, 34, tzinfo=TZ)  # within the default window of 21:30
@@ -587,3 +591,114 @@ def test_morning_respects_all_filters(monkeypatch):
     body = notes[0].body
     # Only 1 task should be visible (Prayer), so "1 thing to do"
     assert "1 thing" in body
+
+
+# ─── weekly digest (Phase 4) ───
+
+
+@pytest.fixture(autouse=True)
+def cleanup_state():
+    """Clean up .noterpiper_state/ before and after each test."""
+    state_dir = Path(".noterpiper_state")
+    if state_dir.exists():
+        shutil.rmtree(state_dir)
+    yield
+    if state_dir.exists():
+        shutil.rmtree(state_dir)
+
+
+def test_weekly_digest_enabled_sends_at_time(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    # Sunday 7:03 PM (within window of 7:00 PM)
+    sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)  # Nov 22 is a Sunday
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    notes = HabiticaSource().check(sunday, config)
+    assert any(n.title == WEEKLY_TITLE for n in notes)
+
+
+def test_weekly_digest_disabled_sends_nothing(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": False, "day": "Sunday", "time": "19:00"}}
+    notes = HabiticaSource().check(sunday, config)
+    assert not any(n.title == WEEKLY_TITLE for n in notes)
+
+
+def test_weekly_state_appends_daily_runs(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    # First run on Monday
+    monday = datetime(2026, 11, 17, 21, 34, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    HabiticaSource().check(monday, config)
+    # Second run same day (should not duplicate)
+    HabiticaSource().check(monday, config)
+    # Verify state has one entry for today
+    from noterpiper import state as state_module
+    ws = state_module.load_weekly_state()
+    assert len(ws["day_runs"]) == 1 and ws["day_runs"][0]["date"] == monday.date().isoformat()
+
+
+def test_weekly_digest_dedup_key(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    notes = HabiticaSource().check(sunday, config)
+    weekly_notes = [n for n in notes if n.title == WEEKLY_TITLE]
+    assert len(weekly_notes) == 1 and weekly_notes[0].dedup_key == WEEKLY_TITLE
+
+
+def test_weekly_summary_format(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[
+                _daily("Task 1", streak=10),
+                _daily("Task 2", streak=50),  # best streak
+            ]
+        ),
+    )
+    sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    notes = HabiticaSource().check(sunday, config)
+    weekly_notes = [n for n in notes if n.title == WEEKLY_TITLE]
+    body = weekly_notes[0].body
+    # Should mention the best streak
+    assert "Best streak" in body or "2 item" in body  # either best streak or count
+
+
+def test_weekly_state_reset_after_send(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    # First run on Monday (accumulate state)
+    monday = datetime(2026, 11, 17, 21, 34, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    HabiticaSource().check(monday, config)
+    # Verify Monday was added
+    from noterpiper import state as state_module
+    ws = state_module.load_weekly_state()
+    assert len(ws["day_runs"]) == 1
+    # Second run on Sunday at digest time
+    sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)
+    HabiticaSource().check(sunday, config)
+    # Verify state was reset after digest
+    ws = state_module.load_weekly_state()
+    assert len(ws["day_runs"]) == 0  # state cleared after sending digest
+    assert ws["last_digest_sent"] is not None
+
+
+def test_weekly_state_missing_handles_gracefully(monkeypatch):
+    # State file doesn't exist yet — should not crash
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    notes = HabiticaSource().check(sunday, config)
+    # Should complete without error
+    assert len(notes) >= 1
+
+
+def test_weekly_digest_wrong_day_no_send(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    # Monday, but expecting Sunday
+    monday = datetime(2026, 11, 17, 19, 3, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    notes = HabiticaSource().check(monday, config)
+    assert not any(n.title == WEEKLY_TITLE for n in notes)
