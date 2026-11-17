@@ -5,13 +5,13 @@ and complex scenarios (many filters, multiple notifications, state persistence)
 work as expected.
 """
 
+import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-import shutil
 
 import pytest
 
-from noterpiper.plugins.habitica import HabiticaSource, MORNING_TITLE, NUDGE_TITLE, WEEKLY_TITLE
+from noterpiper.plugins.habitica import MORNING_TITLE, NUDGE_TITLE, WEEKLY_TITLE, HabiticaSource
 
 TZ = timezone(timedelta(hours=5))
 AT_NUDGE = datetime(2026, 11, 16, 21, 34, tzinfo=TZ)
@@ -215,6 +215,7 @@ def test_phase4_weekly_accumulates_across_multiple_runs(monkeypatch):
     HabiticaSource().check(tuesday, config)
     # Verify 2 runs in state
     from noterpiper import state as state_module
+
     ws = state_module.load_weekly_state()
     assert len(ws["day_runs"]) == 2
 
@@ -233,6 +234,7 @@ def test_phase4_weekly_does_not_duplicate_same_day(monkeypatch):
     HabiticaSource().check(monday, config)
     # Should have only 1 day
     from noterpiper import state as state_module
+
     ws = state_module.load_weekly_state()
     assert len(ws["day_runs"]) == 1
 
@@ -291,7 +293,7 @@ def test_all_phases_complex_scenario(monkeypatch):
     # Should have morning nudge
     assert any(n.title == MORNING_TITLE for n in notes)
     # Morning shows count + at-risk flag
-    morning_note = [n for n in notes if n.title == MORNING_TITLE][0]
+    morning_note = next(n for n in notes if n.title == MORNING_TITLE)
     # Should show at risk (Prayer daily has streak 50 > threshold 7)
     assert "at risk" in morning_note.body or "🔥" in morning_note.body
 
@@ -301,7 +303,7 @@ def test_all_phases_complex_scenario(monkeypatch):
     # Should have evening nudge
     assert any(n.title == NUDGE_TITLE for n in notes)
     # Only "Prayer" tasks
-    evening_note = [n for n in notes if n.title == NUDGE_TITLE][0]
+    evening_note = next(n for n in notes if n.title == NUDGE_TITLE)
     assert "Prayer" in evening_note.body
 
     # Sunday weekly digest (7:03 PM)

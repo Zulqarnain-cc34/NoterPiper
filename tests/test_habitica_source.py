@@ -4,10 +4,10 @@ Same gating as before (configured + enabled + at the set time), but categorisati
 now by the user's tags, reading only Habitica's structured fields — never a title's
 wording. Habitica (tasks + tags) is mocked; `now` is engine-supplied."""
 
+import shutil
 import urllib.error
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-import shutil
 
 import pytest
 
@@ -527,7 +527,11 @@ def test_todos_respect_phase1_whitelist_filter(monkeypatch):
 def test_morning_enabled_sends_at_time(monkeypatch):
     _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
     morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)  # 6:03 AM (within 5-min window of 6:00)
-    config = {**CONFIG, "morning": {"enabled": True, "time": "06:00"}, "evening": {"enabled": False}}
+    config = {
+        **CONFIG,
+        "morning": {"enabled": True, "time": "06:00"},
+        "evening": {"enabled": False},
+    }
     notes = HabiticaSource().check(morning_time, config)
     assert len(notes) == 1 and notes[0].title == "Habitica morning briefing"
 
@@ -535,34 +539,48 @@ def test_morning_enabled_sends_at_time(monkeypatch):
 def test_morning_disabled_sends_nothing(monkeypatch):
     _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
     morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
-    config = {**CONFIG, "morning": {"enabled": False, "time": "06:00"}, "evening": {"enabled": False}}
+    config = {
+        **CONFIG,
+        "morning": {"enabled": False, "time": "06:00"},
+        "evening": {"enabled": False},
+    }
     assert HabiticaSource().check(morning_time, config) == []
 
 
 def test_both_morning_and_evening_send_when_both_enabled(monkeypatch):
     _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
     morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
-    config = {**CONFIG, "morning": {"enabled": True, "time": "06:00"}, "evening": {"enabled": True, "time": "06:00"}}
+    config = {
+        **CONFIG,
+        "morning": {"enabled": True, "time": "06:00"},
+        "evening": {"enabled": True, "time": "06:00"},
+    }
     notes = HabiticaSource().check(morning_time, config)
-    assert len(notes) == 2
-    assert notes[0].title == "Habitica morning briefing"
-    assert notes[1].title == "Nightly check-in"
+    assert {n.title for n in notes} == {"Habitica morning briefing", "Nightly check-in"}
 
 
 def test_morning_summary_is_brief(monkeypatch):
     _ready(monkeypatch, _tasks(dailys=[_daily("Task 1"), _daily("Task 2")]))
     morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
-    config = {**CONFIG, "morning": {"enabled": True, "time": "06:00"}, "evening": {"enabled": False}}
+    config = {
+        **CONFIG,
+        "morning": {"enabled": True, "time": "06:00"},
+        "evening": {"enabled": False},
+    }
     notes = HabiticaSource().check(morning_time, config)
     body = notes[0].body
-    # Morning should have counts, not names
-    assert "2 things" in body and "Task 1" not in body and "Task 2" not in body
+    # Morning shows per-type counts, never task names
+    assert "2 dailies" in body and "Task 1" not in body and "Task 2" not in body
 
 
 def test_morning_dedup_separate_from_evening(monkeypatch):
     _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
     morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
-    config = {**CONFIG, "morning": {"enabled": True, "time": "06:00"}, "evening": {"enabled": True, "time": "06:00"}}
+    config = {
+        **CONFIG,
+        "morning": {"enabled": True, "time": "06:00"},
+        "evening": {"enabled": True, "time": "06:00"},
+    }
     notes = HabiticaSource().check(morning_time, config)
     dedup_keys = [n.dedup_key for n in notes]
     assert "Habitica morning briefing" in dedup_keys
@@ -589,8 +607,8 @@ def test_morning_respects_all_filters(monkeypatch):
     }
     notes = HabiticaSource().check(morning_time, config)
     body = notes[0].body
-    # Only 1 task should be visible (Prayer), so "1 thing to do"
-    assert "1 thing" in body
+    # Only 1 task should be visible (Prayer), so "1 daily"
+    assert "1 daily" in body
 
 
 # ─── weekly digest (Phase 4) ───
@@ -634,6 +652,7 @@ def test_weekly_state_appends_daily_runs(monkeypatch):
     HabiticaSource().check(monday, config)
     # Verify state has one entry for today
     from noterpiper import state as state_module
+
     ws = state_module.load_weekly_state()
     assert len(ws["day_runs"]) == 1 and ws["day_runs"][0]["date"] == monday.date().isoformat()
 
@@ -674,6 +693,7 @@ def test_weekly_state_reset_after_send(monkeypatch):
     HabiticaSource().check(monday, config)
     # Verify Monday was added
     from noterpiper import state as state_module
+
     ws = state_module.load_weekly_state()
     assert len(ws["day_runs"]) == 1
     # Second run on Sunday at digest time
@@ -702,3 +722,64 @@ def test_weekly_digest_wrong_day_no_send(monkeypatch):
     config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
     notes = HabiticaSource().check(monday, config)
     assert not any(n.title == WEEKLY_TITLE for n in notes)
+
+
+# ─── regressions: the production bugs the first rewrite shipped ───
+
+
+def test_user_configured_time_still_drives_the_nudge_with_new_defaults(monkeypatch):
+    """The defaults now carry `morning`/`weekly` sections. Merged over a real config
+    (top-level time/enabled from the phone page), the user's time must still win —
+    the first rewrite ignored it and fired at a hardcoded nested default."""
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    merged = {**HabiticaSource.defaults, "time": "21:00", "enabled": True, "streak_risk": 40}
+    at_users_time = datetime(2026, 11, 16, 21, 3, tzinfo=TZ)
+    notes = HabiticaSource().check(at_users_time, merged)
+    assert [n.title for n in notes] == [NUDGE_TITLE]
+    at_default_time = datetime(2026, 11, 16, 21, 34, tzinfo=TZ)  # defaults' 21:30, not the user's
+    assert HabiticaSource().check(at_default_time, merged) == []
+
+
+def test_forced_sends_exactly_one_full_nudge(monkeypatch):
+    """'Send now' is one button → one push (the full summary), even with morning and
+    weekly enabled — the first rewrite sent several and tripped ntfy's rate limit."""
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    config = {
+        **HabiticaSource.defaults,
+        "force": True,
+        "morning": {"enabled": True, "time": "06:00"},
+        "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"},
+    }
+    notes = HabiticaSource().check(datetime(2026, 11, 22, 19, 3, tzinfo=TZ), config)
+    assert len(notes) == 1 and notes[0].title == NUDGE_TITLE and notes[0].dedup_key is None
+
+
+def test_weekly_invalid_day_never_kills_the_nudge(monkeypatch):
+    """A typo'd weekly day must not raise out of check() — that would silence the
+    nightly nudge entirely."""
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Funday", "time": "19:00"}}
+    notes = HabiticaSource().check(AT_NUDGE, config)
+    assert [n.title for n in notes] == [NUDGE_TITLE]  # evening fine, weekly skipped
+
+
+def test_tag_whitelist_is_case_insensitive(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Prayer task", tags=["tP"])]))
+    notes = HabiticaSource().check(AT_NUDGE, {**CONFIG, "tag_whitelist": ["PRAYER"]})
+    assert "Prayer task" in notes[0].body
+
+
+def test_tag_whitelist_accepts_a_comma_string(monkeypatch):
+    """A config text field stores 'prayer, quran' — accept it, not just a list."""
+    _ready(
+        monkeypatch,
+        _tasks(dailys=[_daily("Prayer task", tags=["tP"]), _daily("Quran task", tags=["tQ"])]),
+    )
+    notes = HabiticaSource().check(AT_NUDGE, {**CONFIG, "tag_whitelist": "prayer, quran"})
+    body = notes[0].body
+    assert "Prayer task" in body and "Quran task" in body
+
+
+def test_malformed_time_never_crashes(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    assert HabiticaSource().check(AT_NUDGE, {"time": "not-a-time", "enabled": True}) == []
