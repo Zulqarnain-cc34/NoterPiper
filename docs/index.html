@@ -116,6 +116,8 @@
   .sendnow{background:var(--card2);color:var(--gold);border:1px solid var(--goldEdge);border-radius:12px;padding:10px 18px;
     font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;transition:transform .1s,background .15s}
   .sendnow:active{transform:translateY(1px);background:var(--goldSoft)} .sendnow:disabled{opacity:.5;cursor:not-allowed}
+  .sendrow{display:flex;gap:7px}
+  .sendrow .sendnow{padding:9px 12px;font-size:16px;line-height:1}
 
   /* list editor: each item is a bordered block, one sub-field per row so it never overflows */
   .litem{border:1px solid var(--edge);border-radius:12px;background:var(--card2);padding:0 12px;margin:10px 0}
@@ -202,8 +204,22 @@
           <div class="toggle" id="nudgeTodos"><div class="knob"></div></div></div>
         <div class="row"><span class="rname">Tag whitelist<span class="hint">only these tags · empty = all</span></span><span class="spacer"></span>
           <input class="text" id="nudgeWhitelist" placeholder="all tags" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
-        <div class="row" id="nudgeNowRow"><span class="rname">Send now<span class="hint">push my summary immediately</span></span><span class="spacer"></span>
-          <button class="sendnow" id="nudgeNow">Send</button></div>
+        <div class="row"><span class="rname">Morning briefing<span class="hint">counts-only heads-up</span></span>
+          <div class="toggle" id="morningEnabled"><div class="knob"></div></div></div>
+        <div class="row" id="morningTimeRow"><span class="rname">Morning time</span><span class="spacer"></span>
+          <select id="morningTime"></select></div>
+        <div class="row"><span class="rname">Weekly digest<span class="hint">stats once a week</span></span>
+          <div class="toggle" id="weeklyEnabled"><div class="knob"></div></div></div>
+        <div class="row" id="weeklyDayRow"><span class="rname">Weekly day</span><span class="spacer"></span>
+          <select id="weeklyDay"></select></div>
+        <div class="row" id="weeklyTimeRow"><span class="rname">Weekly time</span><span class="spacer"></span>
+          <select id="weeklyTime"></select></div>
+        <div class="row" id="nudgeNowRow"><span class="rname">Send now<span class="hint">🌙 evening · 🌅 morning · 📊 weekly</span></span><span class="spacer"></span>
+          <div class="sendrow">
+            <button class="sendnow" id="sendEvening" title="Send the evening summary" aria-label="Send evening summary">🌙</button>
+            <button class="sendnow" id="sendMorning" title="Send the morning briefing" aria-label="Send morning briefing">🌅</button>
+            <button class="sendnow" id="sendWeekly" title="Send the weekly digest" aria-label="Send weekly digest">📊</button>
+          </div></div>
       </div>
     </div>
 
@@ -285,10 +301,18 @@
       METHODS.map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
     document.getElementById('country').innerHTML =
       COUNTRIES.map(c => `<option value="${c}">${c}</option>`).join('');
-    let times = '';
-    for (let h = 18; h <= 23; h++) for (const m of ['00', '30'])   // 18:00 … 23:30, the window the job sweeps
-      times += `<option value="${String(h).padStart(2,'0')}:${m}">${String(h).padStart(2,'0')}:${m}</option>`;
-    document.getElementById('nudgeTime').innerHTML = times;
+    const slots = (from, to) => {                      // half-hour <option>s in [from, to]
+      let out = '';
+      for (let h = from; h <= to; h++) for (const m of ['00', '30'])
+        out += `<option value="${String(h).padStart(2,'0')}:${m}">${String(h).padStart(2,'0')}:${m}</option>`;
+      return out;
+    };
+    document.getElementById('nudgeTime').innerHTML = slots(18, 23);   // evening sweep window
+    document.getElementById('morningTime').innerHTML = slots(4, 11);  // a sane morning range
+    document.getElementById('weeklyTime').innerHTML = slots(8, 22);   // any waking hour
+    document.getElementById('weeklyDay').innerHTML =
+      ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+        .map(d => `<option value="${d}">${d}</option>`).join('');
   }
 
   // ─── live city validation against Aladhan (the real "can't save a bad city" check) ───
@@ -403,6 +427,11 @@
     wireToggle('nudgeTodos', 'nudgeTodos');
     g('nudgeWhitelist').value = state.nudgeWhitelist;
     g('nudgeWhitelist').oninput = () => { state.nudgeWhitelist = g('nudgeWhitelist').value; onEdit(); };
+    wireToggle('morningEnabled', 'morningEnabled', updateMorningWeeklyRows);
+    wireToggle('weeklyEnabled', 'weeklyEnabled', updateMorningWeeklyRows);
+    g('morningTime').onchange = () => { state.morningTime = g('morningTime').value; onEdit(); };
+    g('weeklyDay').onchange = () => { state.weeklyDay = g('weeklyDay').value; onEdit(); };
+    g('weeklyTime').onchange = () => { state.weeklyTime = g('weeklyTime').value; onEdit(); };
     wireToggle('ramEnabled', 'ramadanEnabled', updateRamOpts);
     wireStepper('streakStepper', 'streakVal', 'nudgeStreakRisk', 1, 60);
     wireStepper('suhoorStepper', 'suhoorVal', 'ramadanSuhoorLead', 0, 120);
@@ -454,6 +483,9 @@
     state.method = g('method').value;
     state.nudgeTime = g('nudgeTime').value.trim();
     state.nudgeWhitelist = g('nudgeWhitelist').value;
+    state.morningTime = g('morningTime').value;
+    state.weeklyDay = g('weeklyDay').value;
+    state.weeklyTime = g('weeklyTime').value;
     return state;
   };
 
@@ -690,6 +722,21 @@
     g('nudgeTodos').classList.toggle('off', !state.nudgeTodos);
     if (document.activeElement !== g('nudgeWhitelist'))   // never clobber mid-typing
       g('nudgeWhitelist').value = state.nudgeWhitelist;
+    g('morningEnabled').classList.toggle('off', !state.morningEnabled);
+    g('weeklyEnabled').classList.toggle('off', !state.weeklyEnabled);
+    // Keep an out-of-range saved time/day selectable, like nudgeTime above.
+    const setSel = (id, val) => {
+      const sel = g(id);
+      if (![...sel.options].some(o => o.value === val)) {
+        const o = document.createElement('option');
+        o.value = val; o.textContent = val; sel.appendChild(o);
+      }
+      sel.value = val;
+    };
+    setSel('morningTime', state.morningTime);
+    setSel('weeklyDay', state.weeklyDay);
+    setSel('weeklyTime', state.weeklyTime);
+    updateMorningWeeklyRows();
     g('ramEnabled').classList.toggle('off', !state.ramadanEnabled);
     g('suhoorVal').textContent = state.ramadanSuhoorLead;
     g('iftarVal').textContent = state.ramadanIftarLead;
@@ -797,18 +844,24 @@
   }
 
   // On-demand nudge: trigger the notify workflow now (it bypasses the time gate).
-  async function doNudge() {
+  // `kind` picks the format — evening (full), morning (counts), weekly (digest).
+  async function doNudge(kind, btnId) {
     if (!token()) { openSettings(); document.getElementById('connect').open = true; toast('Add your GitHub token first', true); return; }
-    const b = document.getElementById('nudgeNow'); b.disabled = true;
+    const b = document.getElementById(btnId); b.disabled = true;
     try {
       const r = await fetch(API() + '/actions/workflows/notify.yml/dispatches',
-        { method: 'POST', headers: { ...ghHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ ref: 'main' }) });
+        { method: 'POST', headers: { ...ghHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ ref: 'main', inputs: { kind } }) });
       if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
-      toast('Sent — arrives in ~30s');
+      toast('Sent ✓');
     } catch (e) { toast('Send failed — ' + ghHint(e), true); }
     b.disabled = false;
   }
   function updateNudgeNow() { document.getElementById('nudgeOpts').style.display = state.nudgeEnabled ? 'block' : 'none'; }
+  function updateMorningWeeklyRows() {   // the time/day pickers only matter when their nudge is on
+    document.getElementById('morningTimeRow').style.display = state.morningEnabled ? '' : 'none';
+    document.getElementById('weeklyDayRow').style.display = state.weeklyEnabled ? '' : 'none';
+    document.getElementById('weeklyTimeRow').style.display = state.weeklyEnabled ? '' : 'none';
+  }
   function updateRamOpts() { document.getElementById('ramOpts').style.display = state.ramadanEnabled ? 'block' : 'none'; }
 
   // Ramadan test: force the ramadan source now (previews today's Fajr/Maghrib, any day).
@@ -848,7 +901,9 @@
     toast('Token saved on this device'); loadConfig();
   };
   document.getElementById('save').onclick = doSave;
-  document.getElementById('nudgeNow').onclick = doNudge;
+  document.getElementById('sendEvening').onclick = () => doNudge('evening', 'sendEvening');
+  document.getElementById('sendMorning').onclick = () => doNudge('morning', 'sendMorning');
+  document.getElementById('sendWeekly').onclick = () => doNudge('weekly', 'sendWeekly');
 
   renderMethods(); renderPrayers(); bind(); updateNudgeNow(); updateRamOpts(); checkCity(); syncGear(); loadConfig();
   setTimeout(() => document.body.classList.remove('loading'), 6000);   // safety: never leave the skeleton stuck

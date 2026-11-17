@@ -242,3 +242,27 @@ test('an empty whitelist field saves as null — filtering off', () => {
   assert.equal(s.nudgeWhitelist, '');
   assert.equal(toConfig(s).habitica.tag_whitelist, null);
 });
+
+test('morning + weekly schedules round-trip; opt-in means only explicit true is on', () => {
+  // Absent sections → defaults: both off, sane times.
+  const d = fromConfig({});
+  assert.equal(d.morningEnabled, false);
+  assert.equal(d.morningTime, '06:00');
+  assert.equal(d.weeklyEnabled, false);
+  assert.equal(d.weeklyDay, 'Sunday');
+  assert.equal(d.weeklyTime, '19:00');
+  // A configured file round-trips exactly.
+  const file = {
+    habitica: {
+      morning: { enabled: true, time: '05:30' },
+      weekly: { enabled: true, day: 'Friday', time: '20:00' },
+    },
+  };
+  const s = fromConfig(file);
+  assert.equal(s.morningEnabled, true);
+  assert.equal(s.morningTime, '05:30');
+  assert.equal(s.weeklyDay, 'Friday');
+  const back = toConfig(s, file);
+  assert.deepEqual(back.habitica.morning, { enabled: true, time: '05:30' });
+  assert.deepEqual(back.habitica.weekly, { enabled: true, day: 'Friday', time: '20:00' });
+});
