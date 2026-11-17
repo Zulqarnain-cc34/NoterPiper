@@ -1,4 +1,5 @@
-"""Locks the settings loader: env → config.json → defaults, crash-proof (offline)."""
+"""Shared-location settings: env → config.json → defaults (crash-proof), plus keyed_config.
+Per-plugin config lives with the plugins now; this only resolves the shared location."""
 import json
 import sys
 from pathlib import Path
@@ -11,8 +12,7 @@ from noterpiper import config, settings  # noqa: E402
 
 @pytest.fixture(autouse=True)
 def _isolate_env(monkeypatch, tmp_path):
-    """Keep the real .env / shell vars out of these tests; env-override is tested
-    explicitly in test_env_overrides_config."""
+    """Keep the real .env / shell vars out of these tests; env-override is tested explicitly."""
     monkeypatch.setattr(config, "ENV_FILE", tmp_path / "absent.env")
     for k in ("PRAYER_CITY", "PRAYER_COUNTRY", "PRAYER_METHOD", "PRAYER_TIMEZONE"):
         monkeypatch.delenv(k, raising=False)
@@ -24,11 +24,11 @@ def _write(tmp_path, obj):
     return p
 
 
+# ─── shared location resolution ───
+
 def test_missing_file_returns_defaults(tmp_path):
     s = settings.load_settings(tmp_path / "nope.json")
-    assert s.city == "Makkah"
-    assert s.nudge_time == "21:30"
-    assert s.nudge_enabled is True
+    assert (s.city, s.country, s.method, s.timezone) == ("Makkah", "Saudi Arabia", "4", "Asia/Riyadh")
 
 
 def test_malformed_file_returns_defaults(tmp_path):
@@ -37,26 +37,14 @@ def test_malformed_file_returns_defaults(tmp_path):
     assert settings.load_settings(bad).city == "Makkah"
 
 
-def test_values_load_and_coerce(tmp_path):
-    f = _write(tmp_path, {
-        "city": "Istanbul", "country": "Turkey", "method": 3,   # method as int
-        "nudge": {"time": "22:00"},                              # no "enabled" key
-    })
+def test_location_loads_and_coerces_method_to_str(tmp_path):
+    f = _write(tmp_path, {"city": "Istanbul", "country": "Turkey", "method": 3})   # method as int
     s = settings.load_settings(f)
-    assert s.city == "Istanbul" and s.country == "Turkey"
-    assert s.method == "3"                                       # coerced to str
-    assert s.nudge_time == "22:00"
-    assert s.nudge_enabled is True                               # defaults True when absent
+    assert s.city == "Istanbul" and s.country == "Turkey" and s.method == "3"
 
 
-def test_disabled_nudge_is_read(tmp_path):
-    f = _write(tmp_path, {"nudge": {"time": "20:00", "enabled": False}})
-    assert settings.load_settings(f).nudge_enabled is False
-
-
-def test_enabled_string_false_is_off(tmp_path):
-    f = _write(tmp_path, {"nudge": {"enabled": "false"}})    # hand-edited JSON string
-    assert settings.load_settings(f).nudge_enabled is False
+def test_method_zero_is_preserved(tmp_path):
+    assert settings.load_settings(_write(tmp_path, {"method": 0})).method == "0"   # 0 = Jafari, real
 
 
 def test_env_overrides_config(tmp_path, monkeypatch):
@@ -71,55 +59,12 @@ def test_timezone_env_overrides_config(tmp_path, monkeypatch):
     assert settings.load_settings(f).timezone == "Asia/Dubai"
 
 
-def test_invalid_time_falls_back_to_default(tmp_path):
-    f = _write(tmp_path, {"nudge": {"time": "9pm"}})       # hand-edited junk
-    assert settings.load_settings(f).nudge_time == "21:30"
-
-
-def test_out_of_range_time_falls_back(tmp_path):
-    f = _write(tmp_path, {"nudge": {"time": "99:99"}})
-    assert settings.load_settings(f).nudge_time == "21:30"
-
-
-def test_method_zero_is_preserved(tmp_path):
-    f = _write(tmp_path, {"method": 0})                     # 0 = Jafari, a real method
-    assert settings.load_settings(f).method == "0"
-
-
 def test_invalid_timezone_falls_back_to_default(tmp_path):
     f = _write(tmp_path, {"timezone": "Not/AZone"})
     assert settings.load_settings(f).timezone == "Asia/Riyadh"
 
 
-def test_windows_default_when_absent(tmp_path):
-    s = settings.load_settings(tmp_path / "nope.json")
-    assert s.prayer_window == 5 and s.nudge_window == 5
-
-
-def test_windows_are_read_from_config(tmp_path):
-    f = _write(tmp_path, {"window": 10, "nudge": {"window": 45}})
-    s = settings.load_settings(f)
-    assert s.prayer_window == 10 and s.nudge_window == 45
-
-
-def test_junk_window_falls_back_to_default(tmp_path):
-    f = _write(tmp_path, {"window": "soon"})
-    assert settings.load_settings(f).prayer_window == 5
-
-
-def test_streak_risk_defaults_when_absent(tmp_path):
-    assert settings.load_settings(tmp_path / "nope.json").nudge_streak_risk == 7
-
-
-def test_streak_risk_is_read_from_config(tmp_path):
-    f = _write(tmp_path, {"nudge": {"streak_risk": 14}})
-    assert settings.load_settings(f).nudge_streak_risk == 14
-
-
-def test_junk_streak_risk_falls_back_to_default(tmp_path):
-    f = _write(tmp_path, {"nudge": {"streak_risk": "lots"}})    # hand-edited junk
-    assert settings.load_settings(f).nudge_streak_risk == 7
-
+# ─── config.json → per-plugin sections ───
 
 def test_keyed_config_normalizes_the_legacy_shape(tmp_path):
     f = _write(tmp_path, {
@@ -141,25 +86,3 @@ def test_keyed_config_passes_through_the_new_keyed_shape(tmp_path):
     })
     raw = settings.keyed_config(f)
     assert raw["habitica"] == {"time": "21:00"} and raw["ramadan"]["enabled"] is True
-
-
-def test_zero_or_negative_streak_risk_falls_back(tmp_path):
-    for bad in (0, -5):                                          # out-of-range → default, never flag-everything
-        f = _write(tmp_path, {"nudge": {"streak_risk": bad}})
-        assert settings.load_settings(f).nudge_streak_risk == 7
-
-
-def test_ramadan_defaults_when_absent(tmp_path):
-    s = settings.load_settings(tmp_path / "nope.json")
-    assert s.ramadan_enabled is True
-    assert s.ramadan_suhoor_lead == 45
-    assert s.ramadan_iftar_lead == 0
-    assert s.ramadan_window == 10
-
-
-def test_ramadan_values_are_read_from_config(tmp_path):
-    f = _write(tmp_path, {"ramadan": {"enabled": False, "suhoor_lead": 30, "iftar_lead": 10}})
-    s = settings.load_settings(f)
-    assert s.ramadan_enabled is False
-    assert s.ramadan_suhoor_lead == 30
-    assert s.ramadan_iftar_lead == 10
