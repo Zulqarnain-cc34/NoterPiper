@@ -125,3 +125,26 @@ def load_settings(path: Path | None = None) -> Settings:
         ramadan_iftar_lead=_as_int(ramadan.get("iftar_lead"), DEFAULTS.ramadan_iftar_lead),
         ramadan_window=_pos_int(ramadan.get("window"), DEFAULTS.ramadan_window),
     )
+
+
+_LEGACY_SECTIONS = {"nudge": "habitica"}   # old config.json section name -> plugin id
+
+
+def keyed_config(path: Path | None = None) -> dict:
+    """The raw config.json as per-plugin sections keyed by plugin id.
+
+    Accepts both the new shape (`{"habitica": {...}, "prayer": {...}}`) and the legacy
+    one (a `nudge` section, top-level `reminders`/`window`), so an un-migrated config.json
+    keeps working. The shared location (city/country/method/timezone) is resolved
+    separately by `load_settings` and stays out of here."""
+    raw = _read(path or config.PROJECT_ROOT / "config.json")
+    out: dict = {}
+    for key, val in raw.items():
+        if key == "reminders" or not isinstance(val, dict):
+            continue                                       # location strings + legacy reminders: handled below
+        out[_LEGACY_SECTIONS.get(key, key)] = dict(val)    # a plugin section (renaming any legacy key)
+    if isinstance(raw.get("reminders"), dict):             # legacy top-level prayer config
+        out.setdefault("prayer", {}).setdefault("reminders", raw["reminders"])
+    if "window" in raw and not isinstance(raw.get("window"), dict):
+        out.setdefault("prayer", {}).setdefault("window", raw["window"])
+    return out

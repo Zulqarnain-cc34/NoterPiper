@@ -24,30 +24,17 @@ from noterpiper.channels import NtfyChannel, WebhookChannel  # noqa: E402
 from noterpiper.engine.engine import Engine  # noqa: E402
 from noterpiper import plugins  # noqa: E402
 from noterpiper.engine.registry import discover_sources  # noqa: E402
+from noterpiper.engine.config import build as build_slices  # noqa: E402
 
 # Every plugin package under noterpiper/plugins/ auto-registers — no hardcoded list.
 SOURCES = discover_sources(plugins)
 
 
-def build_config(s, force_source: str | None = None) -> dict:
-    """Map flat settings into per-plugin config slices (keyed by each source's id)."""
-    return {
-        "prayer": {
-            "city": s.city, "country": s.country, "method": s.method,
-            "reminders": s.reminders, "window": s.prayer_window,
-        },
-        "habitica": {
-            "time": s.nudge_time, "enabled": s.nudge_enabled,
-            "window": s.nudge_window, "force": force_source == "habitica",
-            "streak_risk": s.nudge_streak_risk,
-        },
-        "ramadan": {
-            "city": s.city, "country": s.country, "method": s.method,   # reuses the prayer location
-            "enabled": s.ramadan_enabled, "suhoor_lead": s.ramadan_suhoor_lead,
-            "iftar_lead": s.ramadan_iftar_lead, "window": s.ramadan_window,
-            "force": force_source == "ramadan",
-        },
-    }
+def build_config(sources, s, raw: dict, force_source: str | None = None) -> dict:
+    """Assemble each plugin's config generically: the plugin's own defaults <- the shared
+    location (if it wants it) <- the user's overrides in config[id]. No per-plugin wiring."""
+    location = {"city": s.city, "country": s.country, "method": s.method, "timezone": s.timezone}
+    return build_slices(sources, raw, location, force_source)
 
 
 def select_sources(force_source: str | None = None) -> list:
@@ -70,7 +57,8 @@ def main() -> int:
     webhook_url = config.env("WEBHOOK_URL")
     if webhook_url:
         channels.append(WebhookChannel(webhook_url))
-    sent = Engine(channels, select_sources(force)).run(now, build_config(s, force))
+    cfg = build_config(SOURCES, s, settings.keyed_config(), force)
+    sent = Engine(channels, select_sources(force)).run(now, cfg)
     print(f"{sent} sent this run")
     return 0
 

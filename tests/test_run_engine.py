@@ -1,7 +1,7 @@
-"""Phase 6 — the entry point's config mapping.
+"""The entry point's config assembly.
 
-run_engine keeps config.json flat (so the phone page is unaffected) and maps it into
-each plugin's own slice. That mapping is the testable core."""
+build_config is now generic: for every discovered source it merges the plugin's own
+defaults <- shared location (if wanted) <- the user's config[id]. No per-plugin wiring."""
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -9,49 +9,34 @@ from types import SimpleNamespace
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import run_engine  # noqa: E402
 
-S = SimpleNamespace(city="Lahore", country="Pakistan", method="1",
-                    reminders={"Fajr": {"after_start": 5}}, nudge_time="21:30",
-                    nudge_enabled=True, timezone="Asia/Karachi",
-                    prayer_window=20, nudge_window=30, nudge_streak_risk=7,
-                    ramadan_enabled=True, ramadan_suhoor_lead=45,
-                    ramadan_iftar_lead=0, ramadan_window=10)
+# Settings now only carries the shared location.
+S = SimpleNamespace(city="Lahore", country="Pakistan", method="1", timezone="Asia/Karachi")
 
 
-def test_build_config_passes_each_plugins_window():
-    cfg = run_engine.build_config(S)
-    assert cfg["prayer"]["window"] == 20
-    assert cfg["habitica"]["window"] == 30
+def test_location_is_injected_only_into_plugins_that_want_it():
+    cfg = run_engine.build_config(run_engine.SOURCES, S, {})
+    assert cfg["prayer"]["city"] == "Lahore"            # prayer.wants_location
+    assert cfg["ramadan"]["method"] == "1"              # ramadan.wants_location (for Aladhan)
+    assert "city" not in cfg["habitica"]                # habitica doesn't
 
 
-def test_build_config_splits_settings_into_plugin_slices():
-    cfg = run_engine.build_config(S)
-    assert cfg["prayer"] == {"city": "Lahore", "country": "Pakistan", "method": "1",
-                             "reminders": {"Fajr": {"after_start": 5}}, "window": 20}
-    assert cfg["habitica"]["time"] == "21:30"
-    assert cfg["habitica"]["enabled"] is True
-    assert cfg["habitica"]["force"] is False
+def test_plugin_defaults_fill_in_when_the_user_sets_nothing():
+    cfg = run_engine.build_config(run_engine.SOURCES, S, {})
+    assert cfg["habitica"]["streak_risk"] == 7 and cfg["habitica"]["enabled"] is True
+    assert cfg["ramadan"]["suhoor_lead"] == 45
+    assert cfg["prayer"]["window"] == 5
 
 
-def test_build_config_passes_the_streak_risk():
-    s = SimpleNamespace(**{**vars(S), "nudge_streak_risk": 10})
-    assert run_engine.build_config(s)["habitica"]["streak_risk"] == 10
+def test_user_config_overrides_the_defaults():
+    cfg = run_engine.build_config(run_engine.SOURCES, S, {"habitica": {"streak_risk": 20}})
+    assert cfg["habitica"]["streak_risk"] == 20          # override wins
+    assert cfg["habitica"]["enabled"] is True            # untouched default kept
 
 
 def test_build_config_marks_the_forced_source():
-    cfg = run_engine.build_config(S, force_source="habitica")
-    assert cfg["habitica"]["force"] is True
-    cfg2 = run_engine.build_config(S, force_source="something-else")
-    assert cfg2["habitica"]["force"] is False
-
-
-def test_build_config_passes_the_ramadan_slice():
-    s = SimpleNamespace(**{**vars(S), "ramadan_enabled": False, "ramadan_suhoor_lead": 30,
-                           "ramadan_iftar_lead": 10})
-    r = run_engine.build_config(s)["ramadan"]
-    assert r["city"] == "Lahore" and r["method"] == "1"          # reuses the prayer location
-    assert r["enabled"] is False and r["suhoor_lead"] == 30 and r["iftar_lead"] == 10
-    assert r["force"] is False
-    assert run_engine.build_config(s, force_source="ramadan")["ramadan"]["force"] is True
+    cfg = run_engine.build_config(run_engine.SOURCES, S, {}, force_source="ramadan")
+    assert cfg["ramadan"]["force"] is True
+    assert cfg["habitica"]["force"] is False
 
 
 def test_select_sources_runs_all_by_default():

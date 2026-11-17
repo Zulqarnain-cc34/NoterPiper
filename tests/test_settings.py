@@ -121,6 +121,28 @@ def test_junk_streak_risk_falls_back_to_default(tmp_path):
     assert settings.load_settings(f).nudge_streak_risk == 7
 
 
+def test_keyed_config_normalizes_the_legacy_shape(tmp_path):
+    f = _write(tmp_path, {
+        "city": "Lahore", "reminders": {"Fajr": {"before_end": 10}},
+        "nudge": {"time": "20:00", "streak_risk": 5},
+        "ramadan": {"enabled": False},
+    })
+    raw = settings.keyed_config(f)
+    assert raw["habitica"] == {"time": "20:00", "streak_risk": 5}     # nudge -> habitica
+    assert raw["prayer"]["reminders"]["Fajr"]["before_end"] == 10     # top-level reminders -> prayer
+    assert raw["ramadan"]["enabled"] is False
+    assert "city" not in raw and "nudge" not in raw                  # location/legacy keys stay out
+
+
+def test_keyed_config_passes_through_the_new_keyed_shape(tmp_path):
+    f = _write(tmp_path, {
+        "city": "X",
+        "habitica": {"time": "21:00"}, "prayer": {"reminders": {}}, "ramadan": {"enabled": True},
+    })
+    raw = settings.keyed_config(f)
+    assert raw["habitica"] == {"time": "21:00"} and raw["ramadan"]["enabled"] is True
+
+
 def test_zero_or_negative_streak_risk_falls_back(tmp_path):
     for bad in (0, -5):                                          # out-of-range → default, never flag-everything
         f = _write(tmp_path, {"nudge": {"streak_risk": bad}})
