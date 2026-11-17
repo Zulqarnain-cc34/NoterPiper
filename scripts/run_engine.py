@@ -10,6 +10,7 @@ delivered exactly once via ntfy.
   FORCE_SOURCE    set to a source id (e.g. "habitica") to force it now — this is how
                   the on-demand "send now" button works (workflow_dispatch).
 """
+
 from __future__ import annotations
 
 import os
@@ -19,12 +20,15 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from noterpiper import config, settings  # noqa: E402
+from noterpiper import (  # noqa: E402
+    config,
+    plugins,  # noqa: E402
+    settings,
+)
 from noterpiper.channels import NtfyChannel, WebhookChannel  # noqa: E402
-from noterpiper.engine.engine import Engine  # noqa: E402
-from noterpiper import plugins  # noqa: E402
-from noterpiper.engine.registry import discover_all  # noqa: E402
 from noterpiper.engine.config import build as build_slices  # noqa: E402
+from noterpiper.engine.engine import Engine  # noqa: E402
+from noterpiper.engine.registry import discover_all  # noqa: E402
 
 # Plugins auto-register — no hardcoded list. In-repo ones (under noterpiper/plugins/) plus
 # any pip-installed plugin that declares a `noterpiper.plugins` entry point.
@@ -54,7 +58,7 @@ def main() -> int:
         return 0
     force = os.environ.get("FORCE_SOURCE")
     now = datetime.now(ZoneInfo(s.timezone))
-    channels = [NtfyChannel(topic)]      # the enabled delivery channels
+    channels = [NtfyChannel(topic)]  # the enabled delivery channels
     webhook_url = config.env("WEBHOOK_URL")
     if webhook_url:
         channels.append(WebhookChannel(webhook_url))

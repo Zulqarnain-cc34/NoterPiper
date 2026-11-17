@@ -12,6 +12,7 @@ things:
 Precedence: environment variable → config.json → default. A missing or malformed
 config.json falls back to defaults — a bad file never crashes a run.
 """
+
 from __future__ import annotations
 
 import json
@@ -27,7 +28,7 @@ class Settings:
     city: str
     country: str
     method: str
-    timezone: str        # IANA name — the clock the engine runs the plugins on
+    timezone: str  # IANA name — the clock the engine runs the plugins on
 
 
 DEFAULTS = Settings(city="Makkah", country="Saudi Arabia", method="4", timezone="Asia/Riyadh")
@@ -37,7 +38,7 @@ def _read(path: Path) -> dict:
     try:
         data = json.loads(path.read_text())
         return data if isinstance(data, dict) else {}
-    except Exception:          # missing / malformed → defaults, never a crash
+    except Exception:  # missing / malformed → defaults, never a crash
         return {}
 
 
@@ -53,12 +54,13 @@ def load_settings(path: Path | None = None) -> Settings:
     """Resolve the shared location: env var → config.json → default, crash-proof."""
     raw = _read(path or config.PROJECT_ROOT / "config.json")
 
-    raw_method = raw.get("method")                       # 0 (Jafari) is valid → don't lose it
+    raw_method = raw.get("method")  # 0 (Jafari) is valid → don't lose it
     method = config.env("PRAYER_METHOD") or (
-        str(raw_method) if raw_method not in (None, "") else DEFAULTS.method)
+        str(raw_method) if raw_method not in (None, "") else DEFAULTS.method
+    )
 
     tz = config.env("PRAYER_TIMEZONE") or raw.get("timezone") or DEFAULTS.timezone
-    if not _valid_tz(tz):                                # bad IANA name → default, engine still runs
+    if not _valid_tz(tz):  # bad IANA name → default, engine still runs
         tz = DEFAULTS.timezone
 
     return Settings(
@@ -69,7 +71,7 @@ def load_settings(path: Path | None = None) -> Settings:
     )
 
 
-_LEGACY_SECTIONS = {"nudge": "habitica"}   # old config.json section name -> plugin id
+_LEGACY_SECTIONS = {"nudge": "habitica"}  # old config.json section name -> plugin id
 
 
 def keyed_config(path: Path | None = None) -> dict:
@@ -82,9 +84,11 @@ def keyed_config(path: Path | None = None) -> dict:
     out: dict = {}
     for key, val in raw.items():
         if key == "reminders" or not isinstance(val, dict):
-            continue                                       # location strings + legacy reminders: below
-        out[_LEGACY_SECTIONS.get(key, key)] = dict(val)    # a plugin section (renaming any legacy key)
-    if isinstance(raw.get("reminders"), dict):             # legacy top-level prayer config
+            continue  # location strings + legacy reminders: below
+        out[_LEGACY_SECTIONS.get(key, key)] = dict(
+            val
+        )  # a plugin section (renaming any legacy key)
+    if isinstance(raw.get("reminders"), dict):  # legacy top-level prayer config
         out.setdefault("prayer", {}).setdefault("reminders", raw["reminders"])
     if "window" in raw and not isinstance(raw.get("window"), dict):
         out.setdefault("prayer", {}).setdefault("window", raw["window"])

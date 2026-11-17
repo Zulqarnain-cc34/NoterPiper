@@ -50,7 +50,9 @@ A channel is one small class:
 ```python
 class MyChannel:
     def send(self, notification) -> None: ...
-    def already_sent(self, dedup_key, now) -> bool: ...   # best-effort; return False if you can't check
+    def already_sent(
+        self, dedup_key, now
+    ) -> bool: ...  # best-effort; return False if you can't check
 ```
 
 Add it to the enabled list in `scripts/run_engine.py` (usually gated on a config/secret

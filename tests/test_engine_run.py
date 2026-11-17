@@ -2,6 +2,7 @@
 
 The engine knows nothing about prayers or Habitica — only the Source and Channel
 contracts. Driven here with fakes so the loop's behavior is pinned exactly."""
+
 from datetime import datetime, timedelta, timezone
 
 from noterpiper.engine import Notification
@@ -40,8 +41,10 @@ class StubSource:
 
 def test_engine_delivers_every_sources_notifications():
     ch = FakeChannel()
-    sources = [StubSource("a", [Notification("A1", "x")]),
-               StubSource("b", [Notification("B1", "y"), Notification("B2", "z")])]
+    sources = [
+        StubSource("a", [Notification("A1", "x")]),
+        StubSource("b", [Notification("B1", "y"), Notification("B2", "z")]),
+    ]
     sent = Engine([ch], sources).run(NOW, {})
     assert sent == 3
     assert [n.title for n in ch.sent] == ["A1", "B1", "B2"]
@@ -57,7 +60,7 @@ def test_engine_skips_a_dedup_key_already_sent_today():
 
 def test_engine_always_sends_when_there_is_no_dedup_key():
     ch = FakeChannel(already={"anything"})
-    src = StubSource("x", [Notification("Hi", "there")])     # dedup_key is None
+    src = StubSource("x", [Notification("Hi", "there")])  # dedup_key is None
     sent = Engine([ch], [src]).run(NOW, {})
     assert sent == 1
 
@@ -67,14 +70,13 @@ def test_engine_hands_each_source_its_own_config_slice():
     src = StubSource("prayer", [], seen_config=seen)
     config = {"prayer": {"city": "Makkah"}, "habitica": {"nudge_time": "21:30"}}
     Engine([FakeChannel()], [src]).run(NOW, config)
-    assert seen == [{"city": "Makkah"}]        # only prayer's slice, not the whole thing
+    assert seen == [{"city": "Makkah"}]  # only prayer's slice, not the whole thing
 
 
 def test_engine_isolates_a_failing_source():
     ch = FakeChannel()
-    sources = [StubSource("bad", [], boom=True),
-               StubSource("good", [Notification("G", "ok")])]
-    sent = Engine([ch], sources).run(NOW, {})     # bad source must not stop good source
+    sources = [StubSource("bad", [], boom=True), StubSource("good", [Notification("G", "ok")])]
+    sent = Engine([ch], sources).run(NOW, {})  # bad source must not stop good source
     assert sent == 1
     assert [n.title for n in ch.sent] == ["G"]
 
@@ -83,15 +85,15 @@ def test_engine_fans_out_to_every_channel():
     a, b = FakeChannel(), FakeChannel()
     src = StubSource("x", [Notification("Hi", "there")])
     sent = Engine([a, b], [src]).run(NOW, {})
-    assert sent == 2                              # delivered to both channels
+    assert sent == 2  # delivered to both channels
     assert [n.title for n in a.sent] == ["Hi"]
     assert [n.title for n in b.sent] == ["Hi"]
 
 
 def test_engine_dedup_is_per_channel():
-    a = FakeChannel(already={"k"})                # a already sent it today
-    b = FakeChannel()                             # b hasn't
+    a = FakeChannel(already={"k"})  # a already sent it today
+    b = FakeChannel()  # b hasn't
     src = StubSource("x", [Notification("Hi", "there", dedup_key="k")])
     sent = Engine([a, b], [src]).run(NOW, {})
-    assert sent == 1                              # skipped a, delivered to b
+    assert sent == 1  # skipped a, delivered to b
     assert a.sent == [] and [n.title for n in b.sent] == ["Hi"]

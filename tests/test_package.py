@@ -1,4 +1,5 @@
 """The package exposes a version + a plugin-API major, so plugins can pin a stable contract."""
+
 import sys
 from pathlib import Path
 

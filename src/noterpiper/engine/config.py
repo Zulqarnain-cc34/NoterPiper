@@ -10,16 +10,17 @@ This is the pydantic-settings / VS Code `contributes.configuration` pattern. Add
 plugin needs **zero wiring** here: it declares `defaults`, and reads its slice in
 `check()`. `config.json` is keyed by plugin id, so `config[id]` is the user's overrides.
 """
+
 from __future__ import annotations
 
 
 def slice_for(source, raw: dict, location: dict, force_id: str | None = None) -> dict:
     """Build one plugin's resolved config slice."""
-    cfg = dict(getattr(source, "defaults", {}))                 # 1. plugin defaults
+    cfg = dict(getattr(source, "defaults", {}))  # 1. plugin defaults
     if getattr(source, "wants_location", False):
-        cfg.update(location)                                    # 2. shared location (opt-in)
-    cfg.update(raw.get(source.id, {}) or {})                    # 3. user overrides (config.json[id])
-    cfg["force"] = force_id == source.id                        # on-demand 'send now'
+        cfg.update(location)  # 2. shared location (opt-in)
+    cfg.update(raw.get(source.id, {}) or {})  # 3. user overrides (config.json[id])
+    cfg["force"] = force_id == source.id  # on-demand 'send now'
     return cfg
 
 

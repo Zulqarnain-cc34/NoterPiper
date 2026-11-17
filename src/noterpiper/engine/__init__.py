@@ -7,6 +7,7 @@
 The engine orchestrates Sources and a Channel; it depends on these abstractions,
 never on a concrete plugin — which is what lets new sources plug in untouched.
 """
+
 from .channel import Channel
 from .plugin import Source
 from .types import Notification

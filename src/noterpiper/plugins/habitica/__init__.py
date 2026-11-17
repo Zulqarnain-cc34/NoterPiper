@@ -14,6 +14,7 @@ to a "Dailies" / "To-dos" section, so it works with zero setup and gets better a
 tag. At-risk streaks are a cross-cutting block shown first. A stable title
 ("Nightly check-in") gives robust once-per-day dedup under the ~2-min engine.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -21,11 +22,11 @@ from datetime import date, datetime
 from ... import api
 from ...engine import Notification
 
-STREAK_RISK = 7          # a daily with a streak this long is "at risk" if still unticked
-WINDOW_MIN = 5           # fire within this many minutes after the set time
+STREAK_RISK = 7  # a daily with a streak this long is "at risk" if still unticked
+WINDOW_MIN = 5  # fire within this many minutes after the set time
 NUDGE_TITLE = "Nightly check-in"
-CAP = 5                  # max names listed per group before "+N more"
-ARCHIVED = "archived"    # tasks carrying a tag named this (any case) are hidden
+CAP = 5  # max names listed per group before "+N more"
+ARCHIVED = "archived"  # tasks carrying a tag named this (any case) are hidden
 
 
 def _due_now(now: datetime, target_hhmm: str, window: int = WINDOW_MIN) -> bool:
@@ -47,8 +48,7 @@ def _todo_date(todo: dict) -> date | None:
 
 def _tag_names(task: dict, tags: dict) -> list[str]:
     """The task's non-Archived tag names, in order."""
-    return [tags[t] for t in task.get("tags", [])
-            if tags.get(t) and tags[t].lower() != ARCHIVED]
+    return [tags[t] for t in task.get("tags", []) if tags.get(t) and tags[t].lower() != ARCHIVED]
 
 
 def _archived(task: dict, tags: dict) -> bool:
@@ -64,8 +64,8 @@ def _section(task: dict, tags: dict, fallback: str) -> str:
 def collect(tasks: dict, tags: dict, now: datetime, streak_risk: int = STREAK_RISK) -> dict:
     """Group everything still owed today by section. `tags` maps tag-id → name."""
     today = now.date()
-    at_risk: list[tuple[str, int]] = []          # dailies over the streak threshold (cross-cut)
-    sections: dict[str, list[str]] = {}          # section name → display names
+    at_risk: list[tuple[str, int]] = []  # dailies over the streak threshold (cross-cut)
+    sections: dict[str, list[str]] = {}  # section name → display names
     overdue: list[str] = []
 
     def add(section: str, display: str) -> None:
@@ -76,7 +76,7 @@ def collect(tasks: dict, tags: dict, now: datetime, streak_risk: int = STREAK_RI
             continue
         name, streak = d["text"].strip(), int(d.get("streak", 0))
         if streak >= streak_risk:
-            at_risk.append((name, streak))       # urgency trumps category
+            at_risk.append((name, streak))  # urgency trumps category
         else:
             add(_section(d, tags, "Dailies"), name)
 
@@ -95,10 +95,10 @@ def collect(tasks: dict, tags: dict, now: datetime, streak_risk: int = STREAK_RI
         if _archived(h, tags) or h.get("frequency") != "daily" or not h.get("up"):
             continue
         if (h.get("counterUp", 0) + h.get("counterDown", 0)) != 0:
-            continue                              # already tapped today
+            continue  # already tapped today
         names = _tag_names(h, tags)
         if not names:
-            continue                              # habits are opt-in: untagged → ignored
+            continue  # habits are opt-in: untagged → ignored
         add(names[0].capitalize(), h["text"].strip())
 
     at_risk.sort(key=lambda t: t[1], reverse=True)
@@ -125,8 +125,9 @@ def summarize(c: dict) -> tuple[str, str, str]:
     blocks = []
     if at_risk:
         blocks.append(f"At risk · {len(at_risk)}\n" + _cap([f"{n} · {s}" for n, s in at_risk]))
-    tag_sections = sorted((s for s in sections if s not in _FALLBACK),
-                          key=lambda s: len(sections[s]), reverse=True)
+    tag_sections = sorted(
+        (s for s in sections if s not in _FALLBACK), key=lambda s: len(sections[s]), reverse=True
+    )
     for s in list(tag_sections) + [s for s in _FALLBACK if s in sections]:
         blocks.append(f"{s} · {len(sections[s])}\n" + _cap(sections[s]))
 
@@ -148,8 +149,8 @@ class HabiticaSource:
 
     def check(self, now: datetime, config: dict) -> list[Notification]:
         if not api.configured():
-            return []                                       # Habitica is optional
-        forced = bool(config.get("force"))                  # on-demand 'send now' button
+            return []  # Habitica is optional
+        forced = bool(config.get("force"))  # on-demand 'send now' button
         if not forced:
             if not config.get("enabled", True):
                 return []
@@ -160,8 +161,8 @@ class HabiticaSource:
             tasks = api.fetch_tasks_by_type()
             tags = api.fetch_tags()
         except Exception:
-            return []                                       # Habitica down → skip tonight, don't crash
+            return []  # Habitica down → skip tonight, don't crash
         c = collect(tasks, tags, now, int(config.get("streak_risk", STREAK_RISK)))
         body, priority, tag = summarize(c)
-        dedup = None if forced else NUDGE_TITLE              # forced always delivers; scheduled dedups
+        dedup = None if forced else NUDGE_TITLE  # forced always delivers; scheduled dedups
         return [Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup)]

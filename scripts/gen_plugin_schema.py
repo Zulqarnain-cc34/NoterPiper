@@ -9,6 +9,7 @@ Run it whenever a plugin's config UI changes:
 
     python scripts/gen_plugin_schema.py
 """
+
 from __future__ import annotations
 
 import json

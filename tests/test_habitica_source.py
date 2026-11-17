@@ -3,16 +3,17 @@
 Same gating as before (configured + enabled + at the set time), but categorisation is
 now by the user's tags, reading only Habitica's structured fields — never a title's
 wording. Habitica (tasks + tags) is mocked; `now` is engine-supplied."""
+
 from datetime import datetime, timedelta, timezone
 
 from noterpiper.engine import Source
-from noterpiper.plugins.habitica import HabiticaSource, NUDGE_TITLE
+from noterpiper.plugins.habitica import NUDGE_TITLE, HabiticaSource
 
 TZ = timezone(timedelta(hours=5))
-AT_NUDGE = datetime(2026, 11, 16, 21, 34, tzinfo=TZ)      # within the default window of 21:30
+AT_NUDGE = datetime(2026, 11, 16, 21, 34, tzinfo=TZ)  # within the default window of 21:30
 BEFORE = datetime(2026, 11, 16, 20, 0, tzinfo=TZ)
 CONFIG = {"time": "21:30", "enabled": True}
-TAGS = {"tP": "prayer", "tQ": "quran", "tA": "Archived"}   # tag-id → name
+TAGS = {"tP": "prayer", "tQ": "quran", "tA": "Archived"}  # tag-id → name
 
 
 def _tasks(habits=(), dailys=(), todos=()):
@@ -26,12 +27,24 @@ def _ready(monkeypatch, tasks, tags=TAGS):
 
 
 def _daily(text, streak=1, tags=(), isDue=True, completed=False):
-    return {"text": text, "isDue": isDue, "completed": completed, "streak": streak, "tags": list(tags)}
+    return {
+        "text": text,
+        "isDue": isDue,
+        "completed": completed,
+        "streak": streak,
+        "tags": list(tags),
+    }
 
 
 def _habit(text, tags=(), frequency="daily", up=True, counterUp=0):
-    return {"text": text, "frequency": frequency, "up": up, "counterUp": counterUp,
-            "counterDown": 0, "tags": list(tags)}
+    return {
+        "text": text,
+        "frequency": frequency,
+        "up": up,
+        "counterUp": counterUp,
+        "counterDown": 0,
+        "tags": list(tags),
+    }
 
 
 def _todo(text, tags=(), completed=False, date=None):
@@ -39,6 +52,7 @@ def _todo(text, tags=(), completed=False, date=None):
 
 
 # ─── gating (unchanged behaviour) ───
+
 
 def test_satisfies_the_Source_contract():
     assert isinstance(HabiticaSource(), Source)
@@ -76,8 +90,10 @@ def test_force_sends_even_when_off_and_out_of_time(monkeypatch):
 def test_fetch_failure_sends_nothing(monkeypatch):
     monkeypatch.setattr("noterpiper.plugins.habitica.api.configured", lambda: True)
     monkeypatch.setattr("noterpiper.plugins.habitica.api.fetch_tags", lambda: {})
+
     def boom():
         raise RuntimeError("habitica down")
+
     monkeypatch.setattr("noterpiper.plugins.habitica.api.fetch_tasks_by_type", boom)
     assert HabiticaSource().check(AT_NUDGE, CONFIG) == []
 
@@ -95,9 +111,11 @@ def test_all_logged_is_a_calm_all_done(monkeypatch):
 
 # ─── tag-driven categorisation ───
 
+
 def test_dailies_group_under_their_tag(monkeypatch):
-    _ready(monkeypatch, _tasks(dailys=[_daily("Surah Mulk", tags=["tQ"]),
-                                       _daily("Fajr", tags=["tP"])]))
+    _ready(
+        monkeypatch, _tasks(dailys=[_daily("Surah Mulk", tags=["tQ"]), _daily("Fajr", tags=["tP"])])
+    )
     body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
     assert "Quran · 1" in body and "Surah Mulk" in body
     assert "Prayer · 1" in body and "Fajr" in body
@@ -116,8 +134,15 @@ def test_untagged_todo_falls_back_to_type(monkeypatch):
 
 
 def test_habit_shows_only_when_tagged(monkeypatch):
-    _ready(monkeypatch, _tasks(habits=[_habit("Quran Fajr", tags=["tQ"]),   # opted in
-                                       _habit("Drink water")]))             # untagged → ignored
+    _ready(
+        monkeypatch,
+        _tasks(
+            habits=[
+                _habit("Quran Fajr", tags=["tQ"]),  # opted in
+                _habit("Drink water"),
+            ]
+        ),
+    )  # untagged → ignored
     body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
     assert "Quran" in body and "Quran Fajr" in body
     assert "Drink water" not in body
@@ -145,13 +170,16 @@ def test_completed_daily_is_not_shown(monkeypatch):
 
 # ─── urgency, overdue, scaling ───
 
+
 def test_at_risk_streak_is_cross_cut_and_first(monkeypatch):
-    _ready(monkeypatch, _tasks(dailys=[_daily("Surah Mulk", streak=52, tags=["tQ"]),
-                                       _daily("Walk", streak=2)]))
+    _ready(
+        monkeypatch,
+        _tasks(dailys=[_daily("Surah Mulk", streak=52, tags=["tQ"]), _daily("Walk", streak=2)]),
+    )
     n = HabiticaSource().check(AT_NUDGE, CONFIG)[0]
     assert "at risk 🔥" in n.body.splitlines()[0]
     assert "At risk · 1" in n.body and "Surah Mulk · 52" in n.body
-    assert "Quran" not in n.body                      # pulled out of its section into At risk
+    assert "Quran" not in n.body  # pulled out of its section into At risk
     assert n.priority == "high"
     assert n.body.index("Surah Mulk") < n.body.index("Walk")
 
@@ -169,8 +197,10 @@ def test_overdue_todo_is_flagged_and_urgent(monkeypatch):
 
 
 def test_future_and_undated_todos_show_without_overdue(monkeypatch):
-    _ready(monkeypatch, _tasks(todos=[_todo("Future", date="2026-11-20T00:00:00.000Z"),
-                                      _todo("Someday")]))
+    _ready(
+        monkeypatch,
+        _tasks(todos=[_todo("Future", date="2026-11-20T00:00:00.000Z"), _todo("Someday")]),
+    )
     body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
     assert "To-dos · 2" in body and "overdue" not in body
 
@@ -184,4 +214,4 @@ def test_long_lists_are_capped_but_count_stays_true(monkeypatch):
 
 def test_titles_are_header_safe(monkeypatch):
     _ready(monkeypatch, _tasks(dailys=[_daily("X")]))
-    HabiticaSource().check(AT_NUDGE, CONFIG)[0].title.encode("latin-1")   # must not raise
+    HabiticaSource().check(AT_NUDGE, CONFIG)[0].title.encode("latin-1")  # must not raise

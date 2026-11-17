@@ -3,6 +3,7 @@
 Covers every "POST to a webhook" service at once (Discord, Slack, Teams, Home
 Assistant, IFTTT, Zapier, a custom endpoint). The payload carries both a human
 text/content line and the structured fields, so chat services render it directly."""
+
 import json
 from datetime import datetime, timedelta, timezone
 
@@ -18,13 +19,16 @@ def test_webhookchannel_satisfies_the_Channel_contract():
 
 def test_send_posts_the_notification_as_json(monkeypatch):
     seen = {}
+
     def fake(url, *, data=None, headers=None, **kw):
         seen.update(url=url, data=data, headers=headers)
         return b""
+
     monkeypatch.setattr("noterpiper.channels.webhook.net.request", fake)
 
     WebhookChannel("https://hook.test/x").send(
-        Notification("Maghrib", "Time to pray", priority="max", tags=("mosque",)))
+        Notification("Maghrib", "Time to pray", priority="max", tags=("mosque",))
+    )
 
     assert seen["url"] == "https://hook.test/x"
     assert seen["headers"]["Content-Type"] == "application/json"

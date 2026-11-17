@@ -3,6 +3,7 @@
 Reads credentials from the environment / `.env` and never logs them. Every call
 here is GET (read-only). Habitica is optional — see `configured()`.
 """
+
 from __future__ import annotations
 
 import json
@@ -18,7 +19,7 @@ def _creds() -> tuple[str, str]:
     user_id = config.env("HABITICA_USER_ID") or config.env("USER_ID")
     if not user_id:  # fallback: read the id from a saved snapshot, if present
         try:
-            user_id = (json.loads(config.RAW_JSON.read_text()).get("id"))
+            user_id = json.loads(config.RAW_JSON.read_text()).get("id")
         except Exception:
             pass
     if not token or not user_id:
@@ -65,5 +66,4 @@ def fetch_tasks_by_type() -> dict[str, list]:
 def fetch_tags() -> dict[str, str]:
     """GET /tags → {tag_id: tag_name}. Tasks reference tags by UUID; this resolves
     them to the user's section labels (see HABITICA-SCHEMA.md)."""
-    return {t["id"]: (t.get("name") or "").strip()
-            for t in _get("/tags") if t.get("id")}
+    return {t["id"]: (t.get("name") or "").strip() for t in _get("/tags") if t.get("id")}

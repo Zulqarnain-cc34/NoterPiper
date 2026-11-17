@@ -2,6 +2,7 @@
 
 build_config is now generic: for every discovered source it merges the plugin's own
 defaults <- shared location (if wanted) <- the user's config[id]. No per-plugin wiring."""
+
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -15,9 +16,9 @@ S = SimpleNamespace(city="Lahore", country="Pakistan", method="1", timezone="Asi
 
 def test_location_is_injected_only_into_plugins_that_want_it():
     cfg = run_engine.build_config(run_engine.SOURCES, S, {})
-    assert cfg["prayer"]["city"] == "Lahore"            # prayer.wants_location
-    assert cfg["ramadan"]["method"] == "1"              # ramadan.wants_location (for Aladhan)
-    assert "city" not in cfg["habitica"]                # habitica doesn't
+    assert cfg["prayer"]["city"] == "Lahore"  # prayer.wants_location
+    assert cfg["ramadan"]["method"] == "1"  # ramadan.wants_location (for Aladhan)
+    assert "city" not in cfg["habitica"]  # habitica doesn't
 
 
 def test_plugin_defaults_fill_in_when_the_user_sets_nothing():
@@ -29,8 +30,8 @@ def test_plugin_defaults_fill_in_when_the_user_sets_nothing():
 
 def test_user_config_overrides_the_defaults():
     cfg = run_engine.build_config(run_engine.SOURCES, S, {"habitica": {"streak_risk": 20}})
-    assert cfg["habitica"]["streak_risk"] == 20          # override wins
-    assert cfg["habitica"]["enabled"] is True            # untouched default kept
+    assert cfg["habitica"]["streak_risk"] == 20  # override wins
+    assert cfg["habitica"]["enabled"] is True  # untouched default kept
 
 
 def test_build_config_marks_the_forced_source():
