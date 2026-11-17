@@ -30,8 +30,9 @@ nudge, never a stream.
 
 > **Works out of the box; two optional tweaks make it nicer** (tags for named sections, an
 > `Archived` tag to hide things) — see **[HABITICA-SETUP.md](HABITICA-SETUP.md)**. Something
-> off? **[HABITICA-TROUBLESHOOTING.md](HABITICA-TROUBLESHOOTING.md)**. Field shapes (for
-> maintainers): **[HABITICA-SCHEMA.md](HABITICA-SCHEMA.md)**.
+> off? **[HABITICA-TROUBLESHOOTING.md](HABITICA-TROUBLESHOOTING.md)**. Why it behaves this
+> way: **[HABITICA-DECISIONS.md](HABITICA-DECISIONS.md)**. Field shapes (for maintainers):
+> **[HABITICA-SCHEMA.md](HABITICA-SCHEMA.md)**.
 
 ## What lands on your phone
 
