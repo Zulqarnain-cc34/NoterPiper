@@ -190,6 +190,11 @@ deployment, a deployer lists their plugins in **`plugins-requirements.txt`** at 
 the workflows `pip install -r` it before each run (skipped if the file is absent). So shipping
 a plugin to a deployment is: add one line to that file.
 
+Editing that file also triggers the **`Regenerate plugin config schema`** workflow
+([`schema.yml`](.github/workflows/schema.yml)): it installs the listed plugins, runs the
+generator, and commits `docs/plugins.schema.json` — so a pip plugin's controls reach the
+phone config page with no local step. (You can also run it by hand from the Actions tab.)
+
 ---
 
 That's the whole model: **one class, one contract, auto-discovered, delivered everywhere.**

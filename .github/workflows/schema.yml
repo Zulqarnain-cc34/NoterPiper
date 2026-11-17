@@ -1,0 +1,41 @@
+name: Regenerate plugin config schema
+
+# Rebuilds docs/plugins.schema.json from the installed plugins, so a pip-installed
+# third-party plugin's controls appear on the phone config page without hand-editing.
+#
+# In-repo plugins are covered by the CI drift-guard (you regenerate locally and commit).
+# This workflow closes the loop for *pip-installed* plugins, which aren't importable at
+# dev time: it installs plugins-requirements.txt, runs the generator, and commits the
+# result. Run it after you add or remove a plugin in plugins-requirements.txt.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - plugins-requirements.txt      # regenerate automatically when the plugin list changes
+
+permissions:
+  contents: write                     # needs to commit the regenerated schema back
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Make the pip-installed plugins importable so the generator sees their config_schema.
+      - run: '[ -f plugins-requirements.txt ] && pip install -r plugins-requirements.txt || echo "no third-party plugins"'
+      - run: python scripts/gen_plugin_schema.py
+      - name: Commit the schema if it changed
+        run: |
+          if git diff --quiet docs/plugins.schema.json; then
+            echo "schema already up to date"
+          else
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add docs/plugins.schema.json
+            git commit -m "Regenerate plugins.schema.json from installed plugins"
+            git push
+          fi
