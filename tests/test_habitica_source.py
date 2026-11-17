@@ -840,3 +840,37 @@ def test_corrupt_weekly_state_entries_never_kill_the_nudge(monkeypatch, tmp_path
     sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)
     notes = HabiticaSource().check(sunday, config)  # must not raise
     assert not any(n.title == WEEKLY_TITLE for n in notes) or notes
+
+
+# ─── per-phase "send now" (force_kind) ───
+
+
+def test_forced_kind_morning_sends_the_brief(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    notes = HabiticaSource().check(BEFORE, {**CONFIG, "force": True, "force_kind": "morning"})
+    assert len(notes) == 1
+    n = notes[0]
+    assert n.title == "Habitica morning briefing" and n.dedup_key is None
+    assert "1 daily" in n.body and "Task" not in n.body
+
+
+def test_forced_kind_weekly_previews_without_resetting_state(monkeypatch, tmp_path):
+    from noterpiper import state as state_module
+
+    monkeypatch.setattr(state_module, "STATE_DIR", tmp_path / ".noterpiper_state")
+    _ready(monkeypatch, _tasks(dailys=[_daily("Risk", streak=50)]))
+    notes = HabiticaSource().check(BEFORE, {**CONFIG, "force": True, "force_kind": "weekly"})
+    assert len(notes) == 1
+    n = notes[0]
+    assert n.title == WEEKLY_TITLE and n.dedup_key is None
+    assert "Weekly Summary" in n.body and "Risk (50)" in n.body
+    # Preview only — nothing persisted, so the real week is untouched
+    assert state_module.load_weekly_state()["day_runs"] == []
+
+
+def test_forced_kind_unknown_falls_back_to_full_summary(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    for kind in ("evening", "", "garbage", None):
+        notes = HabiticaSource().check(BEFORE, {**CONFIG, "force": True, "force_kind": kind})
+        assert len(notes) == 1 and notes[0].title == NUDGE_TITLE
+        assert "Task" in notes[0].body

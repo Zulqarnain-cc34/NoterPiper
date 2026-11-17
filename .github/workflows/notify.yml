@@ -10,6 +10,12 @@ name: Habitica Notifications
 
 on:
   workflow_dispatch:         # the on-demand "send nudge now" button
+    inputs:
+      kind:                  # which nudge format to send — the test page's per-phase buttons
+        description: "Which nudge to send"
+        type: choice
+        options: [evening, morning, weekly]
+        default: evening
   # The *scheduled* nightly nudge is handled by the engine (prayers.yml runs every
   # plugin on its ~2-min trigger). This workflow is just the manual button.
 
@@ -22,6 +28,7 @@ jobs:
       NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
       PRAYER_TIMEZONE: ${{ vars.PRAYER_TIMEZONE }}   # the nudge's local-time clock
       FORCE_SOURCE: habitica                         # force just the nudge, now, bypassing its time gate
+      FORCE_KIND: ${{ inputs.kind || 'evening' }}    # evening | morning | weekly (choice-restricted input)
       WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}         # optional 2nd channel, if configured
     steps:
       - uses: actions/checkout@v4

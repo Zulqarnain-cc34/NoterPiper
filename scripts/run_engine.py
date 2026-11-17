@@ -63,6 +63,9 @@ def main() -> int:
     if webhook_url:
         channels.append(WebhookChannel(webhook_url))
     cfg = build_config(SOURCES, s, settings.keyed_config(), force)
+    kind = os.environ.get("FORCE_KIND")
+    if force and kind and force in cfg:
+        cfg[force]["force_kind"] = kind  # which format the forced send uses (plugin-defined)
     sent = Engine(channels, select_sources(force)).run(now, cfg)
     print(f"{sent} sent this run")
     return 0
