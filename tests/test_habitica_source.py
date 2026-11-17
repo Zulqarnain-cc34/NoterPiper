@@ -783,3 +783,60 @@ def test_tag_whitelist_accepts_a_comma_string(monkeypatch):
 def test_malformed_time_never_crashes(monkeypatch):
     _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
     assert HabiticaSource().check(AT_NUDGE, {"time": "not-a-time", "enabled": True}) == []
+
+
+def test_tag_whitelist_garbage_value_never_crashes(monkeypatch):
+    """A malformed config value (number, dict) means no filtering — not a dead source."""
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    for garbage in (5, {"a": 1}, 3.14, True):
+        notes = HabiticaSource().check(AT_NUDGE, {**CONFIG, "tag_whitelist": garbage})
+        assert notes and "Task" in notes[0].body
+
+
+def test_window_edge_minutes(monkeypatch):
+    """Due at delta 0 and window-1; not at window or -1."""
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    t = lambda h, m: datetime(2026, 11, 16, h, m, tzinfo=TZ)  # noqa: E731
+    assert HabiticaSource().check(t(21, 30), CONFIG) != []
+    assert HabiticaSource().check(t(21, 34), CONFIG) != []
+    assert HabiticaSource().check(t(21, 35), CONFIG) == []
+    assert HabiticaSource().check(t(21, 29), CONFIG) == []
+
+
+def test_morning_counts_are_exact_across_types(monkeypatch):
+    """3 dailies (one at-risk) · 1 habit · 2 to-dos (one overdue) — counts, no names."""
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[_daily("D1"), _daily("D2"), _daily("Risk", streak=50)],
+            habits=[_habit("H1")],
+            todos=[_todo("T1", date="2026-11-16"), _todo("Late", date="2026-11-01")],
+        ),
+    )
+    config = {
+        **CONFIG,
+        "morning": {"enabled": True, "time": "21:30"},
+        "evening": {"enabled": False},
+    }
+    body = HabiticaSource().check(AT_NUDGE, config)[0].body
+    assert "3 dailies" in body and "1 habit" in body and "2 to-dos" in body
+    assert "1 at risk 🔥" in body
+    assert "D1" not in body and "Risk" not in body and "Late" not in body
+
+
+def test_corrupt_weekly_state_entries_never_kill_the_nudge(monkeypatch, tmp_path, capsys):
+    """day_runs holding non-dict garbage must warn and skip the digest, not raise."""
+    import json
+
+    from noterpiper import state as state_module
+
+    monkeypatch.setattr(state_module, "STATE_DIR", tmp_path / ".noterpiper_state")
+    state_module.STATE_DIR.mkdir()
+    (state_module.STATE_DIR / "habitica_weekly.json").write_text(
+        json.dumps({"day_runs": [42, {"date": 9}]})
+    )
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)
+    notes = HabiticaSource().check(sunday, config)  # must not raise
+    assert not any(n.title == WEEKLY_TITLE for n in notes) or notes
