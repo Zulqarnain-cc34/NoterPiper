@@ -166,13 +166,18 @@ async function liveSend(kind, btn) {
 // ─── Phase 1 live filters: read + write the real config.json habitica section ───
 let configSha = null, configDoc = null;
 
+async function fetchConfig() {
+  // Pull config.json + sha WITHOUT touching the toggle UI (saves depend on that).
+  const r = await fetch(API() + '/contents/config.json?ref=main', { headers: ghHeaders(), cache: 'no-store' });
+  if (!r.ok) throw new Error('GitHub ' + r.status);
+  const d = await r.json();
+  configSha = d.sha;
+  configDoc = JSON.parse(atob(d.content.replace(/\n/g, '')));
+}
+
 async function loadFilters() {
   try {
-    const r = await fetch(API() + '/contents/config.json?ref=main', { headers: ghHeaders(), cache: 'no-store' });
-    if (!r.ok) throw new Error('GitHub ' + r.status);
-    const d = await r.json();
-    configSha = d.sha;
-    configDoc = JSON.parse(atob(d.content.replace(/\n/g, '')));
+    await fetchConfig();
     const h = configDoc.habitica || {};
     document.getElementById('fDailies').checked = h.notify_dailies !== false;
     document.getElementById('fHabits').checked = h.notify_habits !== false;
@@ -189,14 +194,19 @@ async function saveFilters() {
   const btn = document.getElementById('saveFilters'); btn.disabled = true;
   show('filterStatus', 'Saving…');
   try {
-    // Re-read for a fresh sha so we never clobber a save made elsewhere.
-    await loadFilters();
+    // Read what the user chose FIRST — then refresh the sha (never the UI).
+    const desired = {
+      notify_dailies: document.getElementById('fDailies').checked,
+      notify_habits: document.getElementById('fHabits').checked,
+      notify_todos: document.getElementById('fTodos').checked,
+      wl: document.getElementById('fWhitelist').value.split(',').map(s => s.trim()).filter(Boolean),
+    };
+    await fetchConfig();   // fresh sha so we never clobber a save made elsewhere
     const h = { ...(configDoc.habitica || {}) };
-    h.notify_dailies = document.getElementById('fDailies').checked;
-    h.notify_habits = document.getElementById('fHabits').checked;
-    h.notify_todos = document.getElementById('fTodos').checked;
-    const wl = document.getElementById('fWhitelist').value.split(',').map(s => s.trim()).filter(Boolean);
-    h.tag_whitelist = wl.length ? wl : null;
+    h.notify_dailies = desired.notify_dailies;
+    h.notify_habits = desired.notify_habits;
+    h.notify_todos = desired.notify_todos;
+    h.tag_whitelist = desired.wl.length ? desired.wl : null;
     const next = { ...configDoc, habitica: h };
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(next, null, 2) + '\n')));
     const r = await fetch(API() + '/contents/config.json', {
