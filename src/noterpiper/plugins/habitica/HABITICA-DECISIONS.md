@@ -56,6 +56,35 @@ no *nightly* deadline, so nudging for them every night would be strictly noise. 
 
 **Rewards are never shown.** They aren't "owed".
 
+## Quiet mode, extra pushes, send-now
+
+**Quiet mode filters at collection, with two deliberate exceptions.** Type switches and
+the tag whitelist drop tasks before any summary sees them — so every push (evening,
+morning counts, weekly totals) agrees. The exceptions: **untagged tasks always pass the
+whitelist** (a whitelist narrows topics; silently orphaning unlabeled tasks would look
+like data loss) and **overdue to-dos always show** (being late outranks being quiet).
+*Rejected:* letting the filters mute the backlog counter only partially — "notify_todos
+off" must mean the nudge never mentions to-dos at all, except the urgent overdue block.
+
+**Morning is counts-only, never names.** `3 dailies · 2 habits · 1 at risk 🔥` is a
+glance, not a list — the detail belongs to the evening. *Rejected:* a shortened task list
+— it duplicated the evening nudge at the wrong time of day.
+
+**Each push has its own title → its own once-a-day dedup.** Evening, morning, and weekly
+use distinct stable titles as dedup keys, so each fires independently at most once a day
+under the ~2-min engine.
+
+**A forced send ("Send now") is exactly one push.** `force_kind` picks the format
+(evening / morning / weekly); dedup is bypassed; a corrupt weekly state falls back to the
+full summary rather than eating the button press. *Rejected:* forcing everything that's
+enabled — the doubled traffic tripped ntfy's rate limit and a button tap delivered
+nothing (observed in production, 2026-11-17).
+
+**The weekly digest can never cost the nightly nudge.** Its whole code path is guarded;
+a bad day name or corrupt state file logs a warning and skips the digest. Its week state
+is plugin-owned (`weekly.py`, `.noterpiper_state/`) and honestly shallow on ephemeral CI
+runners — the docs say so rather than pretending.
+
 ## Hiding, grouping, delivery
 
 **Two things stay the user's choice: which tag is a section, and what to hide.** Everything
