@@ -30,7 +30,8 @@
     "notify_habits": false,
     "notify_todos": false,
     "tag_whitelist": [
-      "other"
+      "other",
+      "deen"
     ]
   },
   "ramadan": {
