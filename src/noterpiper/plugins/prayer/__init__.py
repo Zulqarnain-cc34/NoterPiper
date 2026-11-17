@@ -19,6 +19,10 @@ STARTS_AT = {"Fajr": "Fajr", "Zohar": "Dhuhr", "Asr": "Asr", "Maghrib": "Maghrib
 ENDS_AT = {"Fajr": "Sunrise", "Zohar": "Asr", "Asr": "Maghrib", "Maghrib": "Isha", "Isha": "Midnight"}
 DEFAULT_RULE = {"before_end": 30}
 WINDOW_MIN = 5    # fire if a run lands within this many minutes after the reminder time
+DEFAULT_REMINDERS = {
+    "Fajr": {"before_end": 30}, "Zohar": {"before_end": 30}, "Asr": {"before_end": 30},
+    "Maghrib": {"before_end": 30}, "Isha": {"after_start": 60},
+}
 
 
 def _fmt(t: datetime) -> str:
@@ -63,6 +67,8 @@ def fetch_timings(city: str, country: str, method: str) -> dict:
 
 class PrayerSource:
     id = "prayer"
+    wants_location = True        # city/country/method/timezone come from the shared location
+    defaults = {"window": WINDOW_MIN, "reminders": DEFAULT_REMINDERS}
 
     def check(self, now: datetime, config: dict) -> list[Notification]:
         timings = fetch_timings(config.get("city"), config.get("country"), config.get("method"))

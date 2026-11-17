@@ -61,6 +61,8 @@ def fetch_day(city: str, country: str, method: str) -> dict:
 
 class RamadanSource:
     id = "ramadan"
+    wants_location = True        # needs city/country/method for Aladhan times
+    defaults = {"enabled": True, "suhoor_lead": SUHOOR_LEAD, "iftar_lead": IFTAR_LEAD, "window": WINDOW_MIN}
 
     def check(self, now: datetime, config: dict) -> list[Notification]:
         forced = bool(config.get("force"))                  # config page's 'send now' test
