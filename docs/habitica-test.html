@@ -87,37 +87,25 @@
   </div>
   <div class="status" id="sendStatus"></div>
 
-  <!-- ═══ PHASE 1 — live filters (writes the real config.json) ═══ -->
-  <div class="label">Phase 1 · Quiet mode — live filters</div>
-  <div class="cap">These edit the <b>real</b> config.json the engine reads. Change a filter, save,
-    then press a send button above to see its effect on your phone.</div>
-  <div class="card">
-    <div class="row"><div class="rname">Notify dailies</div><div class="spacer"></div>
-      <div class="toggle"><input type="checkbox" id="fDailies" checked></div></div>
-    <div class="row"><div class="rname">Notify habits</div><div class="spacer"></div>
-      <div class="toggle"><input type="checkbox" id="fHabits" checked></div></div>
-    <div class="row"><div class="rname">Notify to-dos</div><div class="spacer"></div>
-      <div class="toggle"><input type="checkbox" id="fTodos" checked></div></div>
-    <div class="row"><div class="rname">Tag whitelist<span class="hint">comma-separated · empty = show all</span></div>
-      <div class="spacer"></div>
-      <input type="text" id="fWhitelist" placeholder="e.g. prayer, quran" style="width:clamp(130px,42vw,190px)"></div>
-  </div>
-  <button id="saveFilters" onclick="saveFilters()">Save filters to config.json</button>
-  <div class="status" id="filterStatus"></div>
+  <!-- ═══ REMAINING TESTS — Phase 2 and Weekly ═══ -->
+  <div class="cap" style="margin-top:14px">✅ Already verified: quiet-mode filters, tag whitelist,
+    morning brief, evening summary, save flow. Left to test: the two below.</div>
 
-  <!-- ═══ HOW TO TEST EACH PHASE ═══ -->
-  <div class="label">What each button proves</div>
+  <div class="label">Phase 2 · To-dos — test steps</div>
   <div class="card">
-    <div class="row"><div class="rname">Phase 1 · Quiet mode<span class="hint">Toggle a filter above, save, press 🌙 — the hidden type/tags disappear from the push. Overdue to-dos always stay.</span></div></div>
-    <div class="row"><div class="rname">Phase 2 · To-dos<span class="hint">Give a Habitica to-do today's due date, press 🌙 — it appears as its own section (not just overdue).</span></div></div>
-    <div class="row"><div class="rname">Phase 3 · Morning brief<span class="hint">Press 🌅 — counts only ("3 dailies · 2 habits"), no task names. Compare with 🌙's full list.</span></div></div>
-    <div class="row"><div class="rname">Phase 4 · Weekly digest<span class="hint">Press 📊 — real format (totals · best streak · at-risk), but see the caveat below.</span></div></div>
+    <div class="row"><div class="rname">1 · Due today<span class="hint">In Habitica, set a to-do's due date to today → press 🌙. It appears as its own "To-dos" section (or under its tag).</span></div></div>
+    <div class="row"><div class="rname">2 · Due yesterday<span class="hint">Change the date to yesterday → 🌙. It moves to the "Overdue" block near the top.</span></div></div>
+    <div class="row"><div class="rname">3 · Due tomorrow<span class="hint">Change it to tomorrow → 🌙. Gone from the list; only "+1 open to-do in your backlog" remains.</span></div></div>
+    <div class="row"><div class="rname">Extra · Capping<span class="hint">6 to-dos due today → 🌙 lists the 5 hardest + "+1 more".</span></div></div>
+  </div>
+
+  <div class="label">Phase 4 · Weekly digest — test steps</div>
+  <div class="card">
+    <div class="row"><div class="rname">Press 📊<span class="hint">Expect: "Weekly Summary · <week range>" with items due, best streak, and an at-risk callout.</span></div></div>
   </div>
   <div class="cap" style="margin-top:10px">⚠️ <b>Weekly caveat:</b> GitHub's runners are wiped between runs,
     so the 📊 button's digest aggregates <b>today's snapshot only</b> — the format and stats logic are real,
-    the "whole week" accumulation isn't testable from this button. Scheduled morning/evening timing
-    (firing at the configured clock time) also can't be button-tested — that's what the nightly schedule
-    itself proves.</div>
+    the "whole week" accumulation isn't testable from this button.</div>
 
   <div style="height:40px"></div>
 </div>
@@ -163,67 +151,8 @@ async function liveSend(kind, btn) {
   btn.disabled = false;
 }
 
-// ─── Phase 1 live filters: read + write the real config.json habitica section ───
-let configSha = null, configDoc = null;
-
-async function fetchConfig() {
-  // Pull config.json + sha WITHOUT touching the toggle UI (saves depend on that).
-  const r = await fetch(API() + '/contents/config.json?ref=main', { headers: ghHeaders(), cache: 'no-store' });
-  if (!r.ok) throw new Error('GitHub ' + r.status);
-  const d = await r.json();
-  configSha = d.sha;
-  configDoc = JSON.parse(atob(d.content.replace(/\n/g, '')));
-}
-
-async function loadFilters() {
-  try {
-    await fetchConfig();
-    const h = configDoc.habitica || {};
-    document.getElementById('fDailies').checked = h.notify_dailies !== false;
-    document.getElementById('fHabits').checked = h.notify_habits !== false;
-    document.getElementById('fTodos').checked = h.notify_todos !== false;
-    const wl = h.tag_whitelist;
-    document.getElementById('fWhitelist').value = Array.isArray(wl) ? wl.join(', ') : (wl || '');
-  } catch (e) {
-    show('filterStatus', 'Could not load config.json — ' + e.message, 'bad');
-  }
-}
-
-async function saveFilters() {
-  if (!token()) { show('filterStatus', 'Saving needs the GitHub token from the Config page (⚙ → Connect).', 'bad'); return; }
-  const btn = document.getElementById('saveFilters'); btn.disabled = true;
-  show('filterStatus', 'Saving…');
-  try {
-    // Read what the user chose FIRST — then refresh the sha (never the UI).
-    const desired = {
-      notify_dailies: document.getElementById('fDailies').checked,
-      notify_habits: document.getElementById('fHabits').checked,
-      notify_todos: document.getElementById('fTodos').checked,
-      wl: document.getElementById('fWhitelist').value.split(',').map(s => s.trim()).filter(Boolean),
-    };
-    await fetchConfig();   // fresh sha so we never clobber a save made elsewhere
-    const h = { ...(configDoc.habitica || {}) };
-    h.notify_dailies = desired.notify_dailies;
-    h.notify_habits = desired.notify_habits;
-    h.notify_todos = desired.notify_todos;
-    h.tag_whitelist = desired.wl.length ? desired.wl : null;
-    const next = { ...configDoc, habitica: h };
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(next, null, 2) + '\n')));
-    const r = await fetch(API() + '/contents/config.json', {
-      method: 'PUT',
-      headers: { ...ghHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: 'Habitica test page: update quiet-mode filters', content, sha: configSha, branch: 'main' }),
-    });
-    if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
-    const d = await r.json(); configSha = d.content.sha; configDoc = next;
-    show('filterStatus', '✓ Saved. Now press a send button above to see the filtered push.', 'good');
-  } catch (e) {
-    show('filterStatus', 'Save failed — ' + e.message, 'bad');
-  }
-  btn.disabled = false;
-}
-
-window.addEventListener('load', loadFilters);
+// Phase 1 was verified and its live filter editor removed — quiet-mode settings
+// now live only in config.json (editable from the Config page or the repo).
 </script>
 </body>
 </html>
