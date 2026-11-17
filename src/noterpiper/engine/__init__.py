@@ -12,4 +12,4 @@ from .channel import Channel
 from .plugin import Source
 from .types import Notification
 
-__all__ = ["Notification", "Source", "Channel"]
+__all__ = ["Channel", "Notification", "Source"]

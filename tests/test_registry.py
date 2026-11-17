@@ -9,9 +9,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from noterpiper import plugins  # noqa: E402
-from noterpiper.engine import Source  # noqa: E402
-from noterpiper.engine.registry import discover_all, discover_entry_points, discover_sources  # noqa: E402
+from noterpiper import plugins
+from noterpiper.engine import Source
+from noterpiper.engine.registry import discover_all, discover_entry_points, discover_sources
 
 
 class _Weather:  # a stand-in third-party plugin

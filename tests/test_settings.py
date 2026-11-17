@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from noterpiper import config, settings  # noqa: E402
+from noterpiper import config, settings
 
 
 @pytest.fixture(autouse=True)

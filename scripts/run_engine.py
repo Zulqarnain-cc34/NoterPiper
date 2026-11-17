@@ -20,15 +20,15 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from noterpiper import (  # noqa: E402
+from noterpiper import (
     config,
-    plugins,  # noqa: E402
+    plugins,
     settings,
 )
-from noterpiper.channels import NtfyChannel, WebhookChannel  # noqa: E402
-from noterpiper.engine.config import build as build_slices  # noqa: E402
-from noterpiper.engine.engine import Engine  # noqa: E402
-from noterpiper.engine.registry import discover_all  # noqa: E402
+from noterpiper.channels import NtfyChannel, WebhookChannel
+from noterpiper.engine.config import build as build_slices
+from noterpiper.engine.engine import Engine
+from noterpiper.engine.registry import discover_all
 
 # Plugins auto-register — no hardcoded list. In-repo ones (under noterpiper/plugins/) plus
 # any pip-installed plugin that declares a `noterpiper.plugins` entry point.

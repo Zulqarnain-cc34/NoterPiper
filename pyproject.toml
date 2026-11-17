@@ -38,7 +38,25 @@ target-version = "py310"
 extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "W"]   # pycodestyle, pyflakes, isort, pyupgrade, bugbear, warnings
-# `ruff format` manages structural line width; don't hard-fail on the occasional long
-# string / comment / test assertion it can't (and shouldn't) rewrap.
-ignore = ["E501"]
+# Built on the community "recommended" tier (E/W/F/I/B/C4/UP/SIM/RUF) plus three
+# zero-noise guards (PIE, PGH, FLY). Chosen against this codebase — each either fires
+# clean today or only guards future code.
+#   E,W  pycodestyle      F   pyflakes        I   isort           UP  pyupgrade
+#   B    bugbear          C4  comprehensions  SIM simplify        RUF ruff-specific
+#   PIE  misc lints       PGH blanket-noqa/eval guards            FLY  f-string
+#
+# Deliberately OFF (would fight this project's design, not catch bugs):
+#   ANN/D  — light annotations & prose docstrings are a style choice here, not a gap
+#   S      — asserts in tests and stdlib urllib are intended, not "insecure"
+#   ARG    — the Source.check(self, now, config) protocol has intentionally-unused args
+#   TRY/BLE/EM — the crash-proof `except Exception` design is deliberate
+#   PLR/N/FBT  — magic-value / naming / bool-arg churn with no safety payoff
+#   COM/Q/ISC001 — the formatter already owns these
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "PIE", "RUF", "PGH", "FLY"]
+ignore = [
+    "E501",    # line width is the formatter's job — don't hard-fail long strings/comments
+    "RUF012",  # plugin `defaults`/`config_schema` are read-only config; ClassVar is ceremony, not safety
+    "RUF001",  # "—", "→", "·" etc. in strings are intentional typography, not homoglyph bugs
+    "RUF002",  # …same, in docstrings
+    "RUF003",  # …same, in comments
+]

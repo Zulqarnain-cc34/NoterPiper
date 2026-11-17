@@ -9,7 +9,7 @@ api      — read-only Habitica client (optional)
 from importlib.metadata import PackageNotFoundError  # stdlib (Python >= 3.10)
 from importlib.metadata import version as _version
 
-from . import api, config, net, settings  # noqa: F401
+from . import api, config, net, settings
 
 try:  # the installed package version, if pip-installed
     __version__ = _version("noterpiper")
@@ -21,4 +21,4 @@ except PackageNotFoundError:  # running from a source checkout
 # bumps the major. Plugin authors can pin `noterpiper>=1,<2`. See PLUGIN-AUTHORING.md.
 PLUGIN_API_MAJOR = int(__version__.split(".")[0])
 
-__all__ = ["config", "net", "api", "settings", "__version__", "PLUGIN_API_MAJOR"]
+__all__ = ["PLUGIN_API_MAJOR", "__version__", "api", "config", "net", "settings"]
