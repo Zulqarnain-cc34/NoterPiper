@@ -14,7 +14,7 @@
 <style>
   :root{
     --bg:#0b1018; --card:#141b26; --card2:#0e1420; --edge:#26303f;
-    --text:#eceef2; --muted:#8795a8;
+    --text:#eceef2; --muted:#8795a8; --ink:#2a1e02;
     --gold:#f0b429; --goldSoft:rgba(240,180,41,.13); --goldEdge:rgba(240,180,41,.32);
     --good:#5bbf7a; --goodSoft:rgba(91,191,122,.11); --goodEdge:rgba(91,191,122,.3);
     --warn:#e5804a; --warnSoft:rgba(229,128,74,.12); --warnEdge:rgba(229,128,74,.36);
@@ -35,37 +35,37 @@
 
   .label{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin:24px 6px 10px;font-weight:700;display:flex;align-items:center;gap:8px}
   .label::before{content:"";width:13px;height:2px;border-radius:2px;background:var(--gold)}
+  .cap{font-size:12px;color:var(--muted);margin:-5px 6px 10px;line-height:1.5}
+  .cap b{color:var(--text);font-weight:600}
 
   .card{background:var(--card);border:1px solid var(--edge);border-radius:var(--r);padding:0 clamp(13px,3.5vw,17px)}
   .row{display:flex;align-items:center;gap:12px;padding:15px 0;border-bottom:1px solid var(--edge);min-height:56px}
   .row:last-child{border-bottom:none}
   .rname{font-size:16px;font-weight:500;min-width:0}
+  .rname .hint{display:block;font-size:11.5px;color:var(--muted);font-weight:400;margin-top:2px}
   .spacer{flex:1}
 
-  input,select{background:var(--card2);color:var(--text);border:1px solid var(--edge);border-radius:11px;
-    padding:11px 12px;font-size:15px;font-family:inherit;outline:none;max-width:100%;transition:border-color .15s;appearance:none}
-  input:focus,select:focus{border-color:var(--goldEdge)}
-  .row > input,.row > select{width:clamp(100px,36vw,160px)}
-
-  button{background:var(--gold);color:var(--ink);border:none;border-radius:11px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s;width:100%;margin-top:12px}
-  button:active{opacity:.8}
-
-  .toggle{display:flex;align-items:center;gap:10px}
+  input[type="text"]{background:var(--card2);color:var(--text);border:1px solid var(--edge);border-radius:11px;
+    padding:11px 12px;font-size:15px;font-family:inherit;outline:none;max-width:100%}
+  input[type="text"]:focus{border-color:var(--goldEdge)}
   .toggle input[type="checkbox"]{width:44px;height:28px;cursor:pointer;accent-color:var(--gold)}
+
+  button{background:var(--gold);color:var(--ink);border:none;border-radius:11px;padding:13px 18px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:10px}
+  button:active{opacity:.8}
+  button:disabled{opacity:.45}
+  button.ghost{background:var(--card2);color:var(--text);border:1px solid var(--edge);font-weight:600}
+  .btnrow{display:flex;gap:8px}
+  .btnrow button{flex:1}
+
+  .status{font-size:13px;line-height:1.5;margin:10px 6px 0;padding:11px 13px;border-radius:12px;display:none;
+    background:var(--card2);border:1px solid var(--edge);color:var(--muted)}
+  .status.show{display:block}
+  .status.good{background:var(--goodSoft);border-color:var(--goodEdge);color:var(--good)}
+  .status.bad{background:var(--warnSoft);border-color:var(--warnEdge);color:var(--warn)}
 
   .notif{background:var(--card2);border:1px solid var(--edge);border-radius:var(--r);padding:16px;margin:12px 0;font-size:14px;line-height:1.6}
   .notif .title{font-size:15px;font-weight:600;color:var(--gold);margin-bottom:8px}
-  .notif .body{color:var(--muted);white-space:pre-line}
-  .notif.morning{border-left:3px solid var(--gold)}
-  .notif.evening{border-left:3px solid var(--good)}
-  .notif.weekly{border-left:3px solid var(--warn)}
-
-  .section{margin-top:16px;padding:12px;background:var(--card2);border-radius:11px;border:1px solid var(--edge)}
-  .section .head{font-size:13px;font-weight:600;color:var(--gold);margin-bottom:8px}
-  .item{font-size:14px;color:var(--text);padding:4px 0;margin-left:8px}
-  .item::before{content:"•";margin-right:8px;color:var(--muted)}
-
-  .toggle-group{display:flex;flex-direction:column;gap:12px;margin:16px 0}
+  .notif .body{color:var(--text);white-space:pre-line}
 </style>
 </head>
 <body>
@@ -76,316 +76,144 @@
     <a class="link" href="index.html">← Config</a>
   </div>
 
-  <!-- PHASE 1: Quiet Mode -->
-  <div class="label">Phase 1 · Quiet Mode (Filtering)</div>
-  <div class="card">
-    <div class="row">
-      <div class="rname">Notify Dailies</div>
-      <div class="spacer"></div>
-      <div class="toggle">
-        <input type="checkbox" id="notifyDailies" checked>
-      </div>
-    </div>
-    <div class="row">
-      <div class="rname">Notify Habits</div>
-      <div class="spacer"></div>
-      <div class="toggle">
-        <input type="checkbox" id="notifyHabits" checked>
-      </div>
-    </div>
-    <div class="row">
-      <div class="rname">Notify To-Dos</div>
-      <div class="spacer"></div>
-      <div class="toggle">
-        <input type="checkbox" id="notifyTodos" checked>
-      </div>
-    </div>
-    <div class="row">
-      <div class="rname">Tag Whitelist</div>
-      <div class="spacer"></div>
-      <input type="text" id="tagWhitelist" placeholder="e.g., prayer,health" style="width:clamp(140px,46vw,200px)">
-    </div>
+  <!-- ═══ LIVE SENDS — real pushes to your phone ═══ -->
+  <div class="label">Live · send to my phone now</div>
+  <div class="cap">Each button runs the real engine with <b>your Habitica data</b> and pushes one
+    notification via ntfy — arrives in ~30s. Uses the GitHub token saved on the Config page.</div>
+  <div class="btnrow">
+    <button id="sendEvening" onclick="liveSend('evening', this)">🌙 Evening</button>
+    <button id="sendMorning" onclick="liveSend('morning', this)">🌅 Morning</button>
+    <button id="sendWeekly" onclick="liveSend('weekly', this)">📊 Weekly</button>
   </div>
-  <button onclick="previewPhase1()">Preview Phase 1</button>
-  <div id="phase1Result"></div>
+  <div class="status" id="sendStatus"></div>
 
-  <!-- PHASE 2: To-Dos in Sections -->
-  <div class="label">Phase 2 · To-Dos in Sections</div>
+  <!-- ═══ PHASE 1 — live filters (writes the real config.json) ═══ -->
+  <div class="label">Phase 1 · Quiet mode — live filters</div>
+  <div class="cap">These edit the <b>real</b> config.json the engine reads. Change a filter, save,
+    then press a send button above to see its effect on your phone.</div>
   <div class="card">
-    <div class="row">
-      <div class="rname">Today's To-Dos</div>
-    </div>
+    <div class="row"><div class="rname">Notify dailies</div><div class="spacer"></div>
+      <div class="toggle"><input type="checkbox" id="fDailies" checked></div></div>
+    <div class="row"><div class="rname">Notify habits</div><div class="spacer"></div>
+      <div class="toggle"><input type="checkbox" id="fHabits" checked></div></div>
+    <div class="row"><div class="rname">Notify to-dos</div><div class="spacer"></div>
+      <div class="toggle"><input type="checkbox" id="fTodos" checked></div></div>
+    <div class="row"><div class="rname">Tag whitelist<span class="hint">comma-separated · empty = show all</span></div>
+      <div class="spacer"></div>
+      <input type="text" id="fWhitelist" placeholder="e.g. prayer, quran" style="width:clamp(130px,42vw,190px)"></div>
   </div>
-  <button onclick="previewPhase2()">Preview Phase 2</button>
-  <div id="phase2Result"></div>
+  <button id="saveFilters" onclick="saveFilters()">Save filters to config.json</button>
+  <div class="status" id="filterStatus"></div>
 
-  <!-- PHASE 3: Morning + Evening Nudges -->
-  <div class="label">Phase 3 · Morning + Evening Nudges</div>
+  <!-- ═══ HOW TO TEST EACH PHASE ═══ -->
+  <div class="label">What each button proves</div>
   <div class="card">
-    <div class="row">
-      <div class="rname">Morning Time</div>
-      <div class="spacer"></div>
-      <input type="time" id="morningTime" value="06:00">
-    </div>
-    <div class="row">
-      <div class="rname">Evening Time</div>
-      <div class="spacer"></div>
-      <input type="time" id="eveningTime" value="21:30">
-    </div>
+    <div class="row"><div class="rname">Phase 1 · Quiet mode<span class="hint">Toggle a filter above, save, press 🌙 — the hidden type/tags disappear from the push. Overdue to-dos always stay.</span></div></div>
+    <div class="row"><div class="rname">Phase 2 · To-dos<span class="hint">Give a Habitica to-do today's due date, press 🌙 — it appears as its own section (not just overdue).</span></div></div>
+    <div class="row"><div class="rname">Phase 3 · Morning brief<span class="hint">Press 🌅 — counts only ("3 dailies · 2 habits"), no task names. Compare with 🌙's full list.</span></div></div>
+    <div class="row"><div class="rname">Phase 4 · Weekly digest<span class="hint">Press 📊 — real format (totals · best streak · at-risk), but see the caveat below.</span></div></div>
   </div>
-  <button onclick="previewPhase3Morning()">Preview Morning Brief</button>
-  <button onclick="previewPhase3Evening()">Preview Evening Full</button>
-  <div id="phase3Result"></div>
-
-  <!-- PHASE 4: Weekly Digest -->
-  <div class="label">Phase 4 · Weekly Digest</div>
-  <div class="card">
-    <div class="row">
-      <div class="rname">Day of Week</div>
-      <div class="spacer"></div>
-      <select id="weeklyDay">
-        <option>Sunday</option>
-        <option>Monday</option>
-        <option>Tuesday</option>
-        <option>Wednesday</option>
-        <option>Thursday</option>
-        <option>Friday</option>
-        <option>Saturday</option>
-      </select>
-    </div>
-    <div class="row">
-      <div class="rname">Time</div>
-      <div class="spacer"></div>
-      <input type="time" id="weeklyTime" value="19:00">
-    </div>
-  </div>
-  <button onclick="previewPhase4()">Preview Weekly Digest</button>
-  <div id="phase4Result"></div>
-
-  <!-- Test Data -->
-  <div class="label">Test Data Manager</div>
-  <div class="card">
-    <button onclick="loadSampleData()" style="margin-top:12px;background:var(--card2);color:var(--text);border:1px solid var(--edge)">Load Sample Tasks</button>
-    <button onclick="clearAllData()" style="margin-top:6px;background:var(--warn);color:var(--text)">Clear Test Data</button>
-  </div>
+  <div class="cap" style="margin-top:10px">⚠️ <b>Weekly caveat:</b> GitHub's runners are wiped between runs,
+    so the 📊 button's digest aggregates <b>today's snapshot only</b> — the format and stats logic are real,
+    the "whole week" accumulation isn't testable from this button. Scheduled morning/evening timing
+    (firing at the configured clock time) also can't be button-tested — that's what the nightly schedule
+    itself proves.</div>
 
   <div style="height:40px"></div>
 </div>
 
 <script>
-const SAMPLE_DATA = {
-  dailies: [
-    { text: 'Prayer', tags: ['prayer'], streak: 50, isDue: true },
-    { text: 'Exercise', tags: ['health'], streak: 3, isDue: true },
-    { text: 'Read', tags: [], streak: 1, isDue: true },
-  ],
-  habits: [
-    { text: 'Drink water', tags: ['health'], up: true },
-    { text: 'Read Quran', tags: ['prayer'], up: true },
-  ],
-  todos: [
-    { text: 'Call mom', tags: ['personal'], date: new Date().toISOString().split('T')[0] },
-    { text: 'Grocery', tags: [], date: new Date(Date.now() - 86400000).toISOString().split('T')[0] }, // yesterday
-    { text: 'Plan trip', tags: [], date: new Date(Date.now() + 86400000).toISOString().split('T')[0] }, // tomorrow
-  ],
+// Same GitHub plumbing as the Config page — shared token, shared repo detection.
+const LKEY = 'noterpiper_token';
+const token = () => localStorage.getItem(LKEY) || '';
+function repoSlug() {
+  const h = location.hostname, p = location.pathname.split('/').filter(Boolean);
+  if (h.endsWith('github.io')) return `${h.split('.')[0]}/${p[0] || ''}`;
+  return 'Zulqarnain-cc34/noterpiper';   // local dev / custom-domain fallback
+}
+const API = () => 'https://api.github.com/repos/' + repoSlug();
+const ghHeaders = () => {
+  const h = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+  if (token()) h.Authorization = 'Bearer ' + token();
+  return h;
 };
 
-function saveData(key, data) {
-  localStorage.setItem(`habitica_${key}`, JSON.stringify(data));
+function show(id, msg, cls) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'status show ' + (cls || '');
 }
 
-function getData(key) {
-  const data = localStorage.getItem(`habitica_${key}`);
-  return data ? JSON.parse(data) : null;
+// ─── Live sends: dispatch the notify workflow with the chosen kind ───
+async function liveSend(kind, btn) {
+  if (!token()) { show('sendStatus', 'No GitHub token — open ← Config, tap ⚙ → Connect, paste your token, then come back.', 'bad'); return; }
+  btn.disabled = true;
+  show('sendStatus', `Sending ${kind} nudge…`);
+  try {
+    const r = await fetch(API() + '/actions/workflows/notify.yml/dispatches', {
+      method: 'POST',
+      headers: { ...ghHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref: 'main', inputs: { kind } }),
+    });
+    if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
+    show('sendStatus', `✓ ${kind} nudge dispatched — check your phone in ~30s (ntfy can add a minute when rate-limited).`, 'good');
+  } catch (e) {
+    show('sendStatus', 'Send failed — ' + e.message, 'bad');
+  }
+  btn.disabled = false;
 }
 
-function loadSampleData() {
-  saveData('dailies', SAMPLE_DATA.dailies);
-  saveData('habits', SAMPLE_DATA.habits);
-  saveData('todos', SAMPLE_DATA.todos);
-  alert('Sample data loaded!');
+// ─── Phase 1 live filters: read + write the real config.json habitica section ───
+let configSha = null, configDoc = null;
+
+async function loadFilters() {
+  try {
+    const r = await fetch(API() + '/contents/config.json?ref=main', { headers: ghHeaders(), cache: 'no-store' });
+    if (!r.ok) throw new Error('GitHub ' + r.status);
+    const d = await r.json();
+    configSha = d.sha;
+    configDoc = JSON.parse(atob(d.content.replace(/\n/g, '')));
+    const h = configDoc.habitica || {};
+    document.getElementById('fDailies').checked = h.notify_dailies !== false;
+    document.getElementById('fHabits').checked = h.notify_habits !== false;
+    document.getElementById('fTodos').checked = h.notify_todos !== false;
+    const wl = h.tag_whitelist;
+    document.getElementById('fWhitelist').value = Array.isArray(wl) ? wl.join(', ') : (wl || '');
+  } catch (e) {
+    show('filterStatus', 'Could not load config.json — ' + e.message, 'bad');
+  }
 }
 
-function clearAllData() {
-  localStorage.removeItem('habitica_dailies');
-  localStorage.removeItem('habitica_habits');
-  localStorage.removeItem('habitica_todos');
-  document.querySelectorAll('[id*="Result"]').forEach(el => el.innerHTML = '');
-  alert('Test data cleared!');
+async function saveFilters() {
+  if (!token()) { show('filterStatus', 'Saving needs the GitHub token from the Config page (⚙ → Connect).', 'bad'); return; }
+  const btn = document.getElementById('saveFilters'); btn.disabled = true;
+  show('filterStatus', 'Saving…');
+  try {
+    // Re-read for a fresh sha so we never clobber a save made elsewhere.
+    await loadFilters();
+    const h = { ...(configDoc.habitica || {}) };
+    h.notify_dailies = document.getElementById('fDailies').checked;
+    h.notify_habits = document.getElementById('fHabits').checked;
+    h.notify_todos = document.getElementById('fTodos').checked;
+    const wl = document.getElementById('fWhitelist').value.split(',').map(s => s.trim()).filter(Boolean);
+    h.tag_whitelist = wl.length ? wl : null;
+    const next = { ...configDoc, habitica: h };
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(next, null, 2) + '\n')));
+    const r = await fetch(API() + '/contents/config.json', {
+      method: 'PUT',
+      headers: { ...ghHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'Habitica test page: update quiet-mode filters', content, sha: configSha, branch: 'main' }),
+    });
+    if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
+    const d = await r.json(); configSha = d.content.sha; configDoc = next;
+    show('filterStatus', '✓ Saved. Now press a send button above to see the filtered push.', 'good');
+  } catch (e) {
+    show('filterStatus', 'Save failed — ' + e.message, 'bad');
+  }
+  btn.disabled = false;
 }
 
-function getFilteredTasks() {
-  const dailies = getData('dailies') || SAMPLE_DATA.dailies;
-  const habits = getData('habits') || SAMPLE_DATA.habits;
-  const todos = getData('todos') || SAMPLE_DATA.todos;
-
-  const notifyDailies = document.getElementById('notifyDailies').checked;
-  const notifyHabits = document.getElementById('notifyHabits').checked;
-  const notifyTodos = document.getElementById('notifyTodos').checked;
-  const tagWhitelist = document.getElementById('tagWhitelist').value
-    .split(',')
-    .map(t => t.trim())
-    .filter(t => t);
-
-  const allowedByTag = (task) => {
-    if (!tagWhitelist.length) return true;
-    if (!task.tags || !task.tags.length) return true;
-    return tagWhitelist.includes(task.tags[0]);
-  };
-
-  return {
-    dailies: (notifyDailies ? dailies : []).filter(allowedByTag),
-    habits: (notifyHabits ? habits : []).filter(allowedByTag),
-    todos: (notifyTodos ? todos : []).filter(allowedByTag),
-  };
-}
-
-function previewPhase1() {
-  const { dailies, habits, todos } = getFilteredTasks();
-
-  let html = '<div class="notif">';
-  html += '<div class="title">Phase 1: Quiet Mode (Filtered)</div>';
-  html += '<div class="body">';
-
-  if (!dailies.length && !habits.length && !todos.length) {
-    html += 'All done! 🎉';
-  } else {
-    html += `Dailies: ${dailies.length} · Habits: ${habits.length} · To-dos: ${todos.length}\n\n`;
-
-    if (dailies.length) {
-      html += '<b>Dailies:</b>\n';
-      dailies.forEach(d => html += `  • ${d.text} (${d.tags.join(', ') || 'untagged'})\n`);
-    }
-
-    if (habits.length) {
-      html += '\n<b>Habits:</b>\n';
-      habits.forEach(h => html += `  • ${h.text} (${h.tags.join(', ') || 'untagged'})\n`);
-    }
-
-    if (todos.length) {
-      html += '\n<b>To-dos:</b>\n';
-      todos.forEach(t => html += `  • ${t.text} (${t.tags.join(', ') || 'untagged'})\n`);
-    }
-  }
-
-  html += '</div></div>';
-  document.getElementById('phase1Result').innerHTML = html;
-}
-
-function previewPhase2() {
-  const todos = getData('todos') || SAMPLE_DATA.todos;
-  const today = new Date().toISOString().split('T')[0];
-
-  const overdue = todos.filter(t => t.date < today);
-  const dueToday = todos.filter(t => t.date === today);
-  const future = todos.filter(t => t.date > today);
-
-  let html = '<div class="notif">';
-  html += '<div class="title">Phase 2: To-Dos in Sections</div>';
-  html += '<div class="body">';
-
-  if (overdue.length) {
-    html += '<div class="section"><div class="head">🔥 Overdue</div>';
-    overdue.slice(0, 5).forEach(t => html += `<div class="item">${t.text}</div>`);
-    if (overdue.length > 5) html += `<div class="item" style="color:var(--warn)">+${overdue.length - 5} more</div>`;
-    html += '</div>';
-  }
-
-  if (dueToday.length) {
-    html += '<div class="section"><div class="head">📋 To-Dos (Today)</div>';
-    dueToday.slice(0, 5).forEach(t => html += `<div class="item">${t.text}</div>`);
-    if (dueToday.length > 5) html += `<div class="item" style="color:var(--warn)">+${dueToday.length - 5} more</div>`;
-    html += '</div>';
-  }
-
-  if (future.length) {
-    html += '<div class="section"><div class="head">📅 Backlog</div>';
-    html += `<div class="item">${future.length} items waiting</div>`;
-    html += '</div>';
-  }
-
-  if (!overdue.length && !dueToday.length && !future.length) {
-    html += 'No to-dos!';
-  }
-
-  html += '</div></div>';
-  document.getElementById('phase2Result').innerHTML = html;
-}
-
-function previewPhase3Morning() {
-  // Mirrors summarize_morning() in the plugin: per-type counts, no names, at-risk flag.
-  const { dailies, habits, todos } = getFilteredTasks();
-  const atRisk = dailies.filter(d => d.streak > 7).length;
-
-  let html = '<div class="notif morning">';
-  html += '<div class="title">🌅 Habitica morning briefing</div>';
-  html += '<div class="body">';
-  const total = dailies.length + habits.length + todos.length;
-  if (total === 0) {
-    html += 'Nothing owed today — great start! 🌅';
-  } else {
-    const parts = [];
-    if (dailies.length) parts.push(`${dailies.length} ${dailies.length === 1 ? 'daily' : 'dailies'}`);
-    if (habits.length) parts.push(`${habits.length} habit${habits.length === 1 ? '' : 's'}`);
-    if (todos.length) parts.push(`${todos.length} to-do${todos.length === 1 ? '' : 's'}`);
-    let line = parts.join(' · ');
-    if (atRisk) line += ` · ${atRisk} at risk 🔥`;
-    html += line + '\n\nGet ready for today! 🌅';
-  }
-  html += '</div></div>';
-
-  document.getElementById('phase3Result').innerHTML = html;
-}
-
-function previewPhase3Evening() {
-  const { dailies, habits, todos } = getFilteredTasks();
-  const dailyAtRisk = dailies.filter(d => d.streak > 7);
-
-  let html = '<div class="notif evening">';
-  html += '<div class="title">🌙 Nightly check-in</div>';
-  html += '<div class="body">';
-
-  if (dailyAtRisk.length) {
-    html += '<div class="section"><div class="head">🔥 At Risk</div>';
-    dailyAtRisk.forEach(d => html += `<div class="item">${d.text} (${d.streak}d)</div>`);
-    html += '</div>';
-  }
-
-  if (todos.length) {
-    html += '<div class="section"><div class="head">📋 To-Dos</div>';
-    todos.slice(0, 5).forEach(t => html += `<div class="item">${t.text}</div>`);
-    if (todos.length > 5) html += `<div class="item">+${todos.length - 5} more</div>`;
-    html += '</div>';
-  }
-
-  html += '</div></div>';
-  document.getElementById('phase3Result').innerHTML = html;
-}
-
-function previewPhase4() {
-  const dailies = getData('dailies') || SAMPLE_DATA.dailies;
-  const bestStreak = dailies.reduce((best, d) => d.streak > best.streak ? d : best, dailies[0] || {});
-  const anyAtRisk = dailies.some(d => d.streak > 7);
-
-  let html = '<div class="notif weekly">';
-  html += '<div class="title">📊 Habitica weekly digest</div>';
-  html += '<div class="body">';
-  html += `Weekly Summary · Nov 17–23\n\n`;
-  html += `Completed this week · 42\n`;
-  html += `Dailies: 23 · Habits: 12 · To-dos: 7\n\n`;
-  if (bestStreak.text) {
-    html += `Best streak · ${bestStreak.text} (${bestStreak.streak}d)\n`;
-  }
-  if (anyAtRisk) {
-    html += `\nAt risk now · Prayer (${bestStreak.streak} 🔥)`;
-  }
-  html += '</div></div>';
-
-  document.getElementById('phase4Result').innerHTML = html;
-}
-
-// Auto-load sample data on page load
-window.addEventListener('load', loadSampleData);
+window.addEventListener('load', loadFilters);
 </script>
 </body>
 </html>

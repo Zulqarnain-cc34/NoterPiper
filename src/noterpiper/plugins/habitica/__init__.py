@@ -421,9 +421,26 @@ class HabiticaSource:
             config.get("notify_todos", True),
             config.get("tag_whitelist"),
         )
-        if forced:  # "send now" = exactly one push: the full summary, every gate bypassed
-            body, priority, tag = summarize(c)
-            return [Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=None)]
+        if forced:
+            # "Send now" = exactly one push, every gate and dedup bypassed. `force_kind`
+            # picks the format (the test page's per-phase buttons); default is the classic
+            # full summary. A forced weekly is a preview — it never resets the week's state.
+            kind = str(config.get("force_kind") or "evening").strip().lower()
+            title, (body, priority, tag) = NUDGE_TITLE, (None, None, None)
+            if kind == "morning":
+                title, (body, priority, tag) = MORNING_TITLE, summarize_morning(c)
+            elif kind == "weekly":
+                try:
+                    ws = state.append_daily_run(state.load_weekly_state(), c, now)
+                    stats = state.compute_weekly_stats(ws["day_runs"])
+                    week_start, week_end = state.get_weekly_bounds(now)
+                    title = WEEKLY_TITLE
+                    body, priority, tag = summarize_weekly(stats, week_start, week_end)
+                except Exception as e:  # corrupt state must not eat a button press
+                    print(f"[warn] forced weekly preview failed ({e}); sending the full summary")
+            if body is None:
+                body, priority, tag = summarize(c)
+            return [Notification(title, body, priority=priority, tags=(tag,), dedup_key=None)]
 
         notifications = []
         window = int(config.get("window", WINDOW_MIN))
