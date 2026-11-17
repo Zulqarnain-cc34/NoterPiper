@@ -22,11 +22,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from noterpiper import config, settings  # noqa: E402
 from noterpiper.channels import NtfyChannel, WebhookChannel  # noqa: E402
 from noterpiper.engine.engine import Engine  # noqa: E402
-from noterpiper.plugins.habitica import HabiticaSource  # noqa: E402
-from noterpiper.plugins.prayer import PrayerSource  # noqa: E402
-from noterpiper.plugins.ramadan import RamadanSource  # noqa: E402
+from noterpiper import plugins  # noqa: E402
+from noterpiper.engine.registry import discover_sources  # noqa: E402
 
-SOURCES = [PrayerSource(), HabiticaSource(), RamadanSource()]
+# Every plugin package under noterpiper/plugins/ auto-registers — no hardcoded list.
+SOURCES = discover_sources(plugins)
 
 
 def build_config(s, force_source: str | None = None) -> dict:
