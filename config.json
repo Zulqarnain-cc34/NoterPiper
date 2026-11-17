@@ -30,7 +30,7 @@
     "notify_habits": true,
     "notify_todos": false,
     "tag_whitelist": [
-      "Other"
+      "other"
     ]
   },
   "ramadan": {
