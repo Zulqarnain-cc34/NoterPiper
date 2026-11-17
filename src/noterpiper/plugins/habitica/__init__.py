@@ -18,18 +18,30 @@ from __future__ import annotations
 
 import re
 import urllib.error
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
-from ... import api
+from ... import api, state
 from ...engine import Notification
 
 STREAK_RISK = 7  # a daily with a streak this long is "at risk" if still unticked
 WINDOW_MIN = 5  # fire within this many minutes after the set time
 NUDGE_TITLE = "Nightly check-in"
+MORNING_TITLE = "Habitica morning briefing"
+WEEKLY_TITLE = "Habitica weekly digest"
 # ASCII title == dedup_key so the once/day dedup matches (see HABITICA notes / ntfy channel).
 AUTH_FAIL_TITLE = "Habitica sign-in failed"
 CAP = 5  # max names listed per group before "+N more"
 ARCHIVED = "archived"  # tasks carrying a tag named this (any case) are hidden
+
+
+def _allowed_tags(task: dict, tags: dict, whitelist: list[str] | None) -> bool:
+    """Check if task's first tag is in the whitelist. None = allow all."""
+    if whitelist is None:
+        return True
+    tag_names = [tags[t] for t in task.get("tags", []) if tags.get(t) and tags[t].lower() != ARCHIVED]
+    if not tag_names:
+        return True  # untagged tasks are always allowed
+    return tag_names[0] in whitelist
 
 
 def _due_now(now: datetime, target_hhmm: str, window: int = WINDOW_MIN) -> bool:
@@ -101,8 +113,12 @@ class _Owed:
         self.sections.setdefault(section, []).append((name, prio))
 
 
-def _owe_daily(owed: _Owed, d: dict, tags: dict, streak_risk: int) -> None:
-    if not d.get("isDue") or d.get("completed") or _hidden(d, tags):
+def _owe_daily(
+    owed: _Owed, d: dict, tags: dict, streak_risk: int, notify_dailies: bool = True, tag_whitelist: list[str] | None = None
+) -> None:
+    if not notify_dailies or not d.get("isDue") or d.get("completed") or _hidden(d, tags):
+        return
+    if not _allowed_tags(d, tags, tag_whitelist):
         return
     name, streak = d["text"].strip(), int(d.get("streak", 0))
     if streak >= streak_risk:
@@ -111,40 +127,56 @@ def _owe_daily(owed: _Owed, d: dict, tags: dict, streak_risk: int) -> None:
         owed.add(_section(d, tags, "Dailies"), name, _priority(d))
 
 
-def _owe_todo(owed: _Owed, t: dict, tags: dict, today: date) -> None:
+def _owe_todo(
+    owed: _Owed, t: dict, tags: dict, today: date, notify_todos: bool = True, tag_whitelist: list[str] | None = None
+) -> None:
     if t.get("completed") or _hidden(t, tags):
         return
     name, prio = t["text"].strip(), _priority(t)
     dd = _todo_date(t)
     if dd is None or dd > today:  # undated or scheduled later → backlog, not owed tonight
         owed.later += 1
-    elif dd < today:  # overdue — you're late; gets its own urgent block
+    elif dd < today:  # overdue — you're late; gets its own urgent block (always shown)
         owed.overdue.append((name, prio))
-    else:  # due today
-        owed.add(_section(t, tags, "To-dos"), name, prio)
+    else:  # due today — respect notify_todos
+        if notify_todos and _allowed_tags(t, tags, tag_whitelist):
+            owed.add(_section(t, tags, "To-dos"), name, prio)
 
 
-def _owe_habit(owed: _Owed, h: dict, tags: dict) -> None:
+def _owe_habit(
+    owed: _Owed, h: dict, tags: dict, notify_habits: bool = True, tag_whitelist: list[str] | None = None
+) -> None:
     # Only a daily-reset "good" (+) habit has a daily "did you do it today?". Weekly/monthly
     # habits reset on their own cycle — no nightly deadline — so they're never owed tonight.
     # Untagged daily habits fall back to "Habits" (like dailies/to-dos), never vanish.
     # Defaults match Habitica's: a habit with no frequency is daily, no `up` is a good habit.
-    if _hidden(h, tags) or h.get("frequency", "daily") != "daily" or not h.get("up", True):
+    if not notify_habits or _hidden(h, tags) or h.get("frequency", "daily") != "daily" or not h.get("up", True):
+        return
+    if not _allowed_tags(h, tags, tag_whitelist):
         return
     if (h.get("counterUp", 0) + h.get("counterDown", 0)) != 0:
         return  # already tapped today
     owed.add(_section(h, tags, "Habits"), h["text"].strip(), _priority(h))
 
 
-def collect(tasks: dict, tags: dict, now: datetime, streak_risk: int = STREAK_RISK) -> dict:
+def collect(
+    tasks: dict,
+    tags: dict,
+    now: datetime,
+    streak_risk: int = STREAK_RISK,
+    notify_dailies: bool = True,
+    notify_habits: bool = True,
+    notify_todos: bool = True,
+    tag_whitelist: list[str] | None = None,
+) -> dict:
     """Tonight's work grouped by section; open to-dos not owed tonight are counted as backlog."""
     owed = _Owed()
     for d in tasks.get("dailys", []):
-        _owe_daily(owed, d, tags, streak_risk)
+        _owe_daily(owed, d, tags, streak_risk, notify_dailies, tag_whitelist)
     for t in tasks.get("todos", []):
-        _owe_todo(owed, t, tags, now.date())
+        _owe_todo(owed, t, tags, now.date(), notify_todos, tag_whitelist)
     for h in tasks.get("habits", []):
-        _owe_habit(owed, h, tags)
+        _owe_habit(owed, h, tags, notify_habits, tag_whitelist)
     return {
         "at_risk": owed.at_risk,
         "overdue": owed.overdue,
@@ -165,6 +197,60 @@ def _plural(n: int) -> str:
 
 # Sections that come from the type fallback (shown after the user's tag sections).
 _FALLBACK = ("Dailies", "To-dos", "Habits")
+
+
+def summarize_morning(c: dict) -> tuple[str, str, str]:
+    """Brief morning summary — just counts, no names. Returns (body, priority, tag)."""
+    at_risk, overdue, sections, later = c["at_risk"], c["overdue"], c["sections"], c["later"]
+    time_bound = len(at_risk) + len(overdue) + sum(len(v) for v in sections.values())
+
+    if time_bound == 0:
+        return "Nothing owed today — great start! 🌅", "low", "sunny"
+
+    parts = []
+    dailies = sum(len(v) for v in sections.values() if "Dailies" in str(sections.get("Dailies", [])))
+    habits = sum(len(v) for v in sections.values() if "Habits" in str(sections.get("Habits", [])))
+    todos = sum(len(v) for v in sections.values() if "To-dos" in str(sections.get("To-dos", [])))
+
+    if time_bound == 1:
+        parts.append("1 thing to do today")
+    else:
+        parts.append(f"{time_bound} things to do today")
+
+    if at_risk:
+        parts.append(f"· {len(at_risk)} at risk 🔥")
+
+    priority = "high" if at_risk or overdue else "default"
+    tag = "warning" if at_risk or overdue else "sunny"
+    return " ".join(parts) + "\n\nGet ready! 🌅", priority, tag
+
+
+def summarize_weekly(stats: dict, week_start: date, week_end: date) -> tuple[str, str, str]:
+    """Weekly aggregated summary. Returns (body, priority, tag)."""
+    total = stats["total_items"]
+    best_name, best_streak = stats["best_streak"]
+    any_at_risk = stats["any_at_risk"]
+    at_risk_sample = stats["at_risk_sample"]
+
+    week_str = f"{week_start.strftime('%b %d')}–{week_end.strftime('%d')}"
+    headline = f"Weekly Summary · {week_str}"
+
+    blocks = []
+    if total > 0:
+        blocks.append(f"{total} item{_plural(total)} due this week")
+
+    if best_name and best_streak > 0:
+        blocks.append(f"Best streak · {best_name} ({best_streak})")
+
+    if any_at_risk:
+        blocks.append(f"At risk · {at_risk_sample}")
+
+    if not blocks:
+        blocks.append("All clear — nice week!")
+
+    priority = "high" if any_at_risk else "default"
+    tag = "warning" if any_at_risk else "white_check_mark"
+    return f"{headline}\n\n" + "\n\n".join(blocks), priority, tag
 
 
 def summarize(c: dict) -> tuple[str, str, str]:
@@ -207,7 +293,19 @@ def summarize(c: dict) -> tuple[str, str, str]:
 class HabiticaSource:
     id = "habitica"
     wants_location = False
-    defaults = {"enabled": True, "time": "21:30", "window": WINDOW_MIN, "streak_risk": STREAK_RISK}
+    defaults = {
+        "enabled": True,
+        "time": "21:30",
+        "window": WINDOW_MIN,
+        "streak_risk": STREAK_RISK,
+        "notify_dailies": True,
+        "notify_habits": True,
+        "notify_todos": True,
+        "tag_whitelist": None,
+        "morning": {"enabled": False, "time": "06:00"},
+        "evening": {"enabled": True, "time": "21:00"},
+        "weekly": {"enabled": False, "day": "Sunday", "time": "19:00"},
+    }
     # No config_schema: the config page hand-builds this card (docs/index.html), so the
     # generator must not auto-emit competing controls. See PLUGIN-AUTHORING "config UI".
 
@@ -217,9 +315,6 @@ class HabiticaSource:
         forced = bool(config.get("force"))  # on-demand 'send now' button
         if not forced:
             if not config.get("enabled", True):
-                return []
-            nudge_time = str(config.get("nudge_time") or config.get("time") or "21:30")
-            if not _due_now(now, nudge_time, int(config.get("window", WINDOW_MIN))):
                 return []
         try:
             tasks = api.fetch_tasks_by_type()
@@ -239,7 +334,78 @@ class HabiticaSource:
             return []  # other HTTP error (5xx, etc.) → skip tonight, don't crash
         except Exception:
             return []  # Habitica down / network → skip tonight, don't crash
-        c = collect(tasks, tags, now, int(config.get("streak_risk", STREAK_RISK)))
-        body, priority, tag = summarize(c)
-        dedup = None if forced else NUDGE_TITLE  # forced always delivers; scheduled dedups
-        return [Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup)]
+        c = collect(
+            tasks,
+            tags,
+            now,
+            int(config.get("streak_risk", STREAK_RISK)),
+            config.get("notify_dailies", True),
+            config.get("notify_habits", True),
+            config.get("notify_todos", True),
+            config.get("tag_whitelist"),
+        )
+        notifications = []
+        window = int(config.get("window", WINDOW_MIN))
+
+        # Support both old format (time/enabled at top level) and new format (morning/evening nested)
+        # If new format is present, use it; otherwise fall back to old format for evening only
+        if "morning" in config or "evening" in config:
+            morning_cfg = config.get("morning", {})
+            evening_cfg = config.get("evening", {})
+            due_morning = forced or (
+                morning_cfg.get("enabled")
+                and _due_now(now, str(morning_cfg.get("time", "06:00")), window)
+            )
+            due_evening = forced or (
+                evening_cfg.get("enabled")
+                and _due_now(now, str(evening_cfg.get("time", "21:00")), window)
+            )
+            if due_morning:
+                body, priority, tag = summarize_morning(c)
+                dedup = None if forced else MORNING_TITLE
+                notifications.append(Notification(MORNING_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup))
+            if due_evening:
+                body, priority, tag = summarize(c)
+                dedup = None if forced else NUDGE_TITLE
+                notifications.append(Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup))
+        else:
+            # Old format: single nudge with time/enabled at top level
+            nudge_time = str(config.get("nudge_time") or config.get("time") or "21:30")
+            if not forced and not _due_now(now, nudge_time, window):
+                # Don't return yet — weekly digest might still fire
+                pass
+            else:
+                body, priority, tag = summarize(c)
+                dedup = None if forced else NUDGE_TITLE
+                notifications.append(Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup))
+
+        # Weekly digest (Phase 4) — check regardless of old/new format
+        weekly_cfg = config.get("weekly", {})
+        if weekly_cfg.get("enabled"):
+            ws = state.load_weekly_state()
+            ws = state.append_daily_run(ws, c, now)
+            state.save_weekly_state(ws)
+
+            # Check if it's time to send the weekly digest
+            target_day = weekly_cfg.get("day", "Sunday")
+            target_time = str(weekly_cfg.get("time", "19:00"))
+            day_num = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].index(target_day)
+            is_target_day = now.weekday() == day_num
+
+            if forced or (is_target_day and _due_now(now, target_time, window)):
+                stats = state.compute_weekly_stats(ws["day_runs"], now)
+                week_start, week_end = state.get_weekly_bounds(now)
+                body, priority, tag = summarize_weekly(stats, week_start, week_end)
+                dedup = None if forced else WEEKLY_TITLE
+                notifications.append(Notification(WEEKLY_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup))
+                # Reset state after sending
+                ws["day_runs"] = []
+                ws["last_digest_sent"] = now.isoformat()
+                state.save_weekly_state(ws)
+
+        # Only return empty if old format, not due, AND weekly is not enabled
+        if not notifications and "morning" not in config and "evening" not in config:
+            # Old format and no weekly → stick with original behavior
+            pass
+
+        return notifications

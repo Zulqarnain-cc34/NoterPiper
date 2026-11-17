@@ -5,6 +5,9 @@
 # Local data / snapshots (personal)
 data/
 
+# State files for persistent features (e.g., weekly digest)
+.noterpiper_state/
+
 # Python
 __pycache__/
 *.pyc

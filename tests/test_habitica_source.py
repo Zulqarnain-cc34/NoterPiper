@@ -6,9 +6,13 @@ wording. Habitica (tasks + tags) is mocked; `now` is engine-supplied."""
 
 import urllib.error
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+import shutil
+
+import pytest
 
 from noterpiper.engine import Source
-from noterpiper.plugins.habitica import AUTH_FAIL_TITLE, NUDGE_TITLE, HabiticaSource
+from noterpiper.plugins.habitica import AUTH_FAIL_TITLE, NUDGE_TITLE, WEEKLY_TITLE, HabiticaSource
 
 TZ = timezone(timedelta(hours=5))
 AT_NUDGE = datetime(2026, 11, 16, 21, 34, tzinfo=TZ)  # within the default window of 21:30
@@ -358,3 +362,343 @@ def test_a_habit_without_a_frequency_is_treated_as_daily(monkeypatch):
     bare = {"text": "Stretch", "up": True, "counterUp": 0, "counterDown": 0, "tags": []}
     _ready(monkeypatch, _tasks(habits=[bare]))
     assert "Stretch" in HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+
+
+# ─── filtering: type toggles & tag whitelist ───
+
+
+def test_notify_dailies_off_hides_all_dailies(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Morning prayer")]))
+    config = {**CONFIG, "notify_dailies": False}
+    assert "All done" in HabiticaSource().check(AT_NUDGE, config)[0].body
+
+
+def test_notify_habits_off_hides_all_habits(monkeypatch):
+    _ready(monkeypatch, _tasks(habits=[_habit("Meditation")]))
+    config = {**CONFIG, "notify_habits": False}
+    assert "All done" in HabiticaSource().check(AT_NUDGE, config)[0].body
+
+
+def test_notify_todos_off_hides_today_todos(monkeypatch):
+    _ready(monkeypatch, _tasks(todos=[_todo("Write email", date=TODAY_ISO)]))
+    config = {**CONFIG, "notify_todos": False}
+    body = HabiticaSource().check(AT_NUDGE, config)[0].body
+    assert "Write email" not in body
+
+
+def test_tag_whitelist_shows_only_allowed_tags(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[
+                _daily("Prayer 1", tags=["tP"]),  # prayer tag
+                _daily("Quran", tags=["tQ"]),  # quran tag
+            ]
+        ),
+    )
+    config = {**CONFIG, "tag_whitelist": ["prayer"]}  # only prayer allowed
+    body = HabiticaSource().check(AT_NUDGE, config)[0].body
+    assert "Prayer 1" in body and "Quran" not in body
+
+
+def test_tag_whitelist_null_allows_all_tags(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[
+                _daily("Prayer 1", tags=["tP"]),
+                _daily("Quran", tags=["tQ"]),
+            ]
+        ),
+    )
+    config = {**CONFIG, "tag_whitelist": None}  # explicit None = no filtering
+    body = HabiticaSource().check(AT_NUDGE, config)[0].body
+    assert "Prayer 1" in body and "Quran" in body
+
+
+def test_tag_whitelist_respects_at_risk_dailies(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[
+                _daily("At-risk prayer", streak=50, tags=["tP"]),  # prayer tag, at-risk
+                _daily("At-risk quran", streak=50, tags=["tQ"]),  # quran tag, at-risk
+            ]
+        ),
+    )
+    config = {**CONFIG, "tag_whitelist": ["prayer"]}  # only prayer allowed
+    body = HabiticaSource().check(AT_NUDGE, config)[0].body
+    assert "At-risk prayer" in body and "At-risk quran" not in body
+
+
+def test_notify_dailies_off_hides_at_risk_too(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("At-risk task", streak=50)]))
+    config = {**CONFIG, "notify_dailies": False}
+    assert "All done" in HabiticaSource().check(AT_NUDGE, config)[0].body
+
+
+# ─── to-dos due today as full sections (Phase 2) ───
+
+
+def test_todos_due_today_in_sections(monkeypatch):
+    _ready(monkeypatch, _tasks(todos=[_todo("Write email", date=TODAY_ISO)]))
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "Write email" in body and "To-dos" in body
+
+
+def test_todos_in_sections_sorted_by_priority(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            todos=[
+                _todo("Trivial task", date=TODAY_ISO, priority=0.1),
+                _todo("Hard task", date=TODAY_ISO, priority=2),
+            ]
+        ),
+    )
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert body.index("Hard task") < body.index("Trivial task")
+
+
+def test_todos_in_sections_capped(monkeypatch):
+    many_todos = [_todo(f"Task {i}", date=TODAY_ISO) for i in range(9)]
+    _ready(monkeypatch, _tasks(todos=many_todos))
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "To-dos · 9" in body and "+4 more" in body
+
+
+def test_todos_capped_shows_plus_n(monkeypatch):
+    many_todos = [_todo(f"T{i}", date=TODAY_ISO) for i in range(7)]
+    _ready(monkeypatch, _tasks(todos=many_todos))
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "+2 more" in body
+
+
+def test_todos_section_after_at_risk_and_overdue(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[_daily("At-risk daily", streak=50)],
+            todos=[
+                _todo("Overdue", date="2026-11-10"),  # past
+                _todo("Today", date=TODAY_ISO),  # today
+            ],
+        ),
+    )
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    # Order: At risk → Overdue → Sections
+    assert body.index("At-risk daily") < body.index("Overdue") < body.index("Today")
+
+
+def test_todos_with_tags_appear_under_tag_section(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(todos=[_todo("Work email", tags=["tP"], date=TODAY_ISO)]),
+    )
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    # Tag "tP" = "prayer", so section should be "Prayer"
+    assert "Work email" in body and "Prayer" in body
+
+
+def test_untagged_todos_fallback_to_todos_section(monkeypatch):
+    _ready(monkeypatch, _tasks(todos=[_todo("Untagged", date=TODAY_ISO, tags=[])]))
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "Untagged" in body and "To-dos" in body
+
+
+def test_todos_respect_phase1_whitelist_filter(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            todos=[
+                _todo("Prayer task", tags=["tP"], date=TODAY_ISO),
+                _todo("Quran task", tags=["tQ"], date=TODAY_ISO),
+            ]
+        ),
+    )
+    config = {**CONFIG, "tag_whitelist": ["prayer"]}
+    body = HabiticaSource().check(AT_NUDGE, config)[0].body
+    assert "Prayer task" in body and "Quran task" not in body
+
+
+# ─── morning & evening nudges (Phase 3) ───
+
+
+def test_morning_enabled_sends_at_time(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)  # 6:03 AM (within 5-min window of 6:00)
+    config = {**CONFIG, "morning": {"enabled": True, "time": "06:00"}, "evening": {"enabled": False}}
+    notes = HabiticaSource().check(morning_time, config)
+    assert len(notes) == 1 and notes[0].title == "Habitica morning briefing"
+
+
+def test_morning_disabled_sends_nothing(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
+    config = {**CONFIG, "morning": {"enabled": False, "time": "06:00"}, "evening": {"enabled": False}}
+    assert HabiticaSource().check(morning_time, config) == []
+
+
+def test_both_morning_and_evening_send_when_both_enabled(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
+    config = {**CONFIG, "morning": {"enabled": True, "time": "06:00"}, "evening": {"enabled": True, "time": "06:00"}}
+    notes = HabiticaSource().check(morning_time, config)
+    assert len(notes) == 2
+    assert notes[0].title == "Habitica morning briefing"
+    assert notes[1].title == "Nightly check-in"
+
+
+def test_morning_summary_is_brief(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task 1"), _daily("Task 2")]))
+    morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
+    config = {**CONFIG, "morning": {"enabled": True, "time": "06:00"}, "evening": {"enabled": False}}
+    notes = HabiticaSource().check(morning_time, config)
+    body = notes[0].body
+    # Morning should have counts, not names
+    assert "2 things" in body and "Task 1" not in body and "Task 2" not in body
+
+
+def test_morning_dedup_separate_from_evening(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
+    config = {**CONFIG, "morning": {"enabled": True, "time": "06:00"}, "evening": {"enabled": True, "time": "06:00"}}
+    notes = HabiticaSource().check(morning_time, config)
+    dedup_keys = [n.dedup_key for n in notes]
+    assert "Habitica morning briefing" in dedup_keys
+    assert "Nightly check-in" in dedup_keys
+    assert dedup_keys[0] != dedup_keys[1]  # distinct dedup keys
+
+
+def test_morning_respects_all_filters(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[
+                _daily("Prayer", tags=["tP"]),
+                _daily("Quran", tags=["tQ"]),
+            ]
+        ),
+    )
+    morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
+    config = {
+        **CONFIG,
+        "morning": {"enabled": True, "time": "06:00"},
+        "evening": {"enabled": False},
+        "tag_whitelist": ["prayer"],
+    }
+    notes = HabiticaSource().check(morning_time, config)
+    body = notes[0].body
+    # Only 1 task should be visible (Prayer), so "1 thing to do"
+    assert "1 thing" in body
+
+
+# ─── weekly digest (Phase 4) ───
+
+
+@pytest.fixture(autouse=True)
+def cleanup_state():
+    """Clean up .noterpiper_state/ before and after each test."""
+    state_dir = Path(".noterpiper_state")
+    if state_dir.exists():
+        shutil.rmtree(state_dir)
+    yield
+    if state_dir.exists():
+        shutil.rmtree(state_dir)
+
+
+def test_weekly_digest_enabled_sends_at_time(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    # Sunday 7:03 PM (within window of 7:00 PM)
+    sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)  # Nov 22 is a Sunday
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    notes = HabiticaSource().check(sunday, config)
+    assert any(n.title == WEEKLY_TITLE for n in notes)
+
+
+def test_weekly_digest_disabled_sends_nothing(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": False, "day": "Sunday", "time": "19:00"}}
+    notes = HabiticaSource().check(sunday, config)
+    assert not any(n.title == WEEKLY_TITLE for n in notes)
+
+
+def test_weekly_state_appends_daily_runs(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    # First run on Monday
+    monday = datetime(2026, 11, 17, 21, 34, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    HabiticaSource().check(monday, config)
+    # Second run same day (should not duplicate)
+    HabiticaSource().check(monday, config)
+    # Verify state has one entry for today
+    from noterpiper import state as state_module
+    ws = state_module.load_weekly_state()
+    assert len(ws["day_runs"]) == 1 and ws["day_runs"][0]["date"] == monday.date().isoformat()
+
+
+def test_weekly_digest_dedup_key(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    notes = HabiticaSource().check(sunday, config)
+    weekly_notes = [n for n in notes if n.title == WEEKLY_TITLE]
+    assert len(weekly_notes) == 1 and weekly_notes[0].dedup_key == WEEKLY_TITLE
+
+
+def test_weekly_summary_format(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[
+                _daily("Task 1", streak=10),
+                _daily("Task 2", streak=50),  # best streak
+            ]
+        ),
+    )
+    sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    notes = HabiticaSource().check(sunday, config)
+    weekly_notes = [n for n in notes if n.title == WEEKLY_TITLE]
+    body = weekly_notes[0].body
+    # Should mention the best streak
+    assert "Best streak" in body or "2 item" in body  # either best streak or count
+
+
+def test_weekly_state_reset_after_send(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    # First run on Monday (accumulate state)
+    monday = datetime(2026, 11, 17, 21, 34, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    HabiticaSource().check(monday, config)
+    # Verify Monday was added
+    from noterpiper import state as state_module
+    ws = state_module.load_weekly_state()
+    assert len(ws["day_runs"]) == 1
+    # Second run on Sunday at digest time
+    sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)
+    HabiticaSource().check(sunday, config)
+    # Verify state was reset after digest
+    ws = state_module.load_weekly_state()
+    assert len(ws["day_runs"]) == 0  # state cleared after sending digest
+    assert ws["last_digest_sent"] is not None
+
+
+def test_weekly_state_missing_handles_gracefully(monkeypatch):
+    # State file doesn't exist yet — should not crash
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    sunday = datetime(2026, 11, 22, 19, 3, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    notes = HabiticaSource().check(sunday, config)
+    # Should complete without error
+    assert len(notes) >= 1
+
+
+def test_weekly_digest_wrong_day_no_send(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    # Monday, but expecting Sunday
+    monday = datetime(2026, 11, 17, 19, 3, tzinfo=TZ)
+    config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
+    notes = HabiticaSource().check(monday, config)
+    assert not any(n.title == WEEKLY_TITLE for n in notes)
