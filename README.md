@@ -59,6 +59,15 @@ reminder, or a new app to receive on, slots in **without the engine changing at 
 Each plugin also has its own short guide:
 **[prayer](src/noterpiper/plugins/prayer/README.md)** · **[habitica](src/noterpiper/plugins/habitica/README.md)** · **[ramadan](src/noterpiper/plugins/ramadan/README.md)**.
 
+## Community plugins
+
+NoterPiper is an **engine with a plugin ecosystem** — anyone can write a plugin in their own
+repo and `pip install` it (it auto-registers). To **write one**, see
+**[PLUGIN-AUTHORING](PLUGIN-AUTHORING.md)** and copy
+**[`examples/plugin_template/`](examples/plugin_template/)**. To **find or share** one, use the
+GitHub topic **[`noterpiper-plugin`](https://github.com/topics/noterpiper-plugin)** — tag your
+plugin repo with it, and it shows up for everyone.
+
 ## The ideas it's built on
 
 A few well-worn software principles are what keep it simple — in plain words:

@@ -126,6 +126,26 @@ Pick one of three, none of which touches the engine:
 authoring — forks can't be combined and drift from the core. Target the `Source` contract,
 and the engine stays untouched.
 
+## 9. Contract & compatibility (what you can rely on)
+
+The `Source` contract — `id`, `check(now, config) → [Notification]`, plus optional `defaults`
+and `wants_location` — is **stable within a major version.** NoterPiper follows
+[SemVer](https://semver.org): a breaking change to the contract bumps the **major** version.
+
+- **Pin it** in your plugin's dependencies: `noterpiper>=1,<2`.
+- Check it at runtime if you like: `noterpiper.__version__` / `noterpiper.PLUGIN_API_MAJOR`.
+- New *optional* fields (like `defaults` was) are **minor** — they never break an existing
+  plugin, because the engine reads them with `getattr(..., default)`.
+
+So a plugin written against `1.x` keeps working across every `1.x` engine release.
+
+## 10. Make your plugin run in a serverless deployment
+
+A pip plugin still needs to be **installed** where the engine runs. On the GitHub-Actions
+deployment, a deployer lists their plugins in **`plugins-requirements.txt`** at the repo root;
+the workflows `pip install -r` it before each run (skipped if the file is absent). So shipping
+a plugin to a deployment is: add one line to that file.
+
 ---
 
 That's the whole model: **one class, one contract, auto-discovered, delivered everywhere.**
