@@ -26,7 +26,8 @@ export const SCHEMA = {
 export function validTime(t) {
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(t).trim());
   if (!m) return false;
-  const h = +m[1], mi = +m[2];
+  const h = +m[1],
+    mi = +m[2];
   return h >= 0 && h < 24 && mi >= 0 && mi < 60;
 }
 
@@ -41,6 +42,7 @@ export function resolveState(city, pending, resolved) {
 // Common cities for type-ahead suggestions (datalist). Not exhaustive — any city
 // still works via the live Aladhan check; these just speed up the common ones and
 // auto-fill the country. [city, country].
+// biome-ignore format: compact hand-packed reference table — one country per line is noise
 export const CITIES = [
   ['Lahore', 'Pakistan'], ['Karachi', 'Pakistan'], ['Islamabad', 'Pakistan'], ['Rawalpindi', 'Pakistan'],
   ['Faisalabad', 'Pakistan'], ['Multan', 'Pakistan'], ['Peshawar', 'Pakistan'], ['Quetta', 'Pakistan'],
@@ -59,6 +61,7 @@ export const CITIES = [
 ];
 
 // Fixed country list for the dropdown (can't go stale). Aladhan-friendly English names.
+// biome-ignore format: compact hand-packed reference table — one country per line is noise
 export const COUNTRIES = [
   'Afghanistan','Albania','Algeria','Andorra','Angola','Argentina','Armenia','Australia','Austria','Azerbaijan',
   'Bahrain','Bangladesh','Belarus','Belgium','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil',
@@ -81,10 +84,16 @@ export const COUNTRIES = [
 
 // Each prayer's window = [start, end] in Aladhan timing names.
 const _WINDOW = {
-  Fajr: ['Fajr', 'Sunrise'], Zohar: ['Dhuhr', 'Asr'], Asr: ['Asr', 'Maghrib'],
-  Maghrib: ['Maghrib', 'Isha'], Isha: ['Isha', 'Midnight'],
+  Fajr: ['Fajr', 'Sunrise'],
+  Zohar: ['Dhuhr', 'Asr'],
+  Asr: ['Asr', 'Maghrib'],
+  Maghrib: ['Maghrib', 'Isha'],
+  Isha: ['Isha', 'Midnight'],
 };
-function _toMin(t) { const p = String(t).trim().split(' ')[0].split(':'); return (+p[0]) * 60 + (+p[1]); }
+function _toMin(t) {
+  const p = String(t).trim().split(' ')[0].split(':');
+  return +p[0] * 60 + +p[1];
+}
 
 // Aladhan timings → { prayer: window length in minutes } (wrapping past midnight for Isha).
 export function prayerWindows(timings) {
@@ -93,7 +102,7 @@ export function prayerWindows(timings) {
     const [a, b] = _WINDOW[p];
     if (timings[a] == null || timings[b] == null) continue;
     let d = _toMin(timings[b]) - _toMin(timings[a]);
-    if (d < 0) d += 1440;            // Isha → Islamic midnight crosses 00:00
+    if (d < 0) d += 1440; // Isha → Islamic midnight crosses 00:00
     if (d > 0) out[p] = d;
   }
   return out;
@@ -101,14 +110,14 @@ export function prayerWindows(timings) {
 
 // Largest offset that keeps the reminder inside the window (leaving a margin), rounded to 5.
 export function maxOffset(windowMin, margin = 10) {
-  if (!windowMin || windowMin <= margin) return 120;   // unknown yet → conservative cap
+  if (!windowMin || windowMin <= margin) return 120; // unknown yet → conservative cap
   return Math.max(5, Math.floor((windowMin - margin) / 5) * 5);
 }
 
 // config object → base64 of pretty JSON (+ trailing newline) for the GitHub
 // Contents API. UTF-8 safe and diff-friendly (stable 2-space formatting).
 export function encodeContent(obj) {
-  const text = JSON.stringify(obj, null, 2) + '\n';
+  const text = `${JSON.stringify(obj, null, 2)}\n`;
   const bytes = new TextEncoder().encode(text);
   let bin = '';
   for (const b of bytes) bin += String.fromCharCode(b);
@@ -122,13 +131,13 @@ export function encodeContent(obj) {
 // its plugins gets a generic slice in `ext` (its schema defaults overlaid by config[id]).
 export function fromConfig(o = {}, extSchema = {}) {
   const sec = (k) => (o && typeof o[k] === 'object' && o[k]) || {};
-  const nudge = { ...sec('nudge'), ...sec('habitica') };   // 'habitica' (new) wins over legacy 'nudge'
+  const nudge = { ...sec('nudge'), ...sec('habitica') }; // 'habitica' (new) wins over legacy 'nudge'
   const prayer = sec('prayer');
   const ram = sec('ramadan');
   const _lead = (v, d) => (Number.isFinite(+v) && +v >= 0 ? +v : d);
   const ext = {};
   for (const id of Object.keys(extSchema)) {
-    ext[id] = { ...(extSchema[id].defaults || {}), ...sec(id) };   // defaults ← saved config[id]
+    ext[id] = { ...(extSchema[id].defaults || {}), ...sec(id) }; // defaults ← saved config[id]
   }
   return {
     city: o.city ?? '',
@@ -137,9 +146,10 @@ export function fromConfig(o = {}, extSchema = {}) {
     timezone: o.timezone ?? '',
     reminders: prayer.reminders ?? o.reminders ?? {},
     nudgeTime: nudge.time ?? '21:30',
-    nudgeEnabled: nudge.enabled !== false,   // default on; only explicit false is off
-    nudgeStreakRisk: Number.isFinite(+nudge.streak_risk) && +nudge.streak_risk > 0 ? +nudge.streak_risk : 7,
-    ramadanEnabled: ram.enabled !== false,           // default on; silent outside Ramadan anyway
+    nudgeEnabled: nudge.enabled !== false, // default on; only explicit false is off
+    nudgeStreakRisk:
+      Number.isFinite(+nudge.streak_risk) && +nudge.streak_risk > 0 ? +nudge.streak_risk : 7,
+    ramadanEnabled: ram.enabled !== false, // default on; silent outside Ramadan anyway
     ramadanSuhoorLead: _lead(ram.suhoor_lead, 45),
     ramadanIftarLead: _lead(ram.iftar_lead, 0),
     ext,
@@ -157,18 +167,23 @@ export function toConfig(s, base = {}) {
     timezone: s.timezone,
     prayer: { ...(base.prayer || {}), reminders: s.reminders },
     habitica: {
-      ...(base.habitica || {}), time: s.nudgeTime, enabled: Boolean(s.nudgeEnabled),
+      ...(base.habitica || {}),
+      time: s.nudgeTime,
+      enabled: Boolean(s.nudgeEnabled),
       streak_risk: Number(s.nudgeStreakRisk),
     },
     ramadan: {
-      ...(base.ramadan || {}), enabled: Boolean(s.ramadanEnabled),
-      suhoor_lead: Number(s.ramadanSuhoorLead), iftar_lead: Number(s.ramadanIftarLead),
+      ...(base.ramadan || {}),
+      enabled: Boolean(s.ramadanEnabled),
+      suhoor_lead: Number(s.ramadanSuhoorLead),
+      iftar_lead: Number(s.ramadanIftarLead),
     },
   };
-  for (const [id, vals] of Object.entries(s.ext || {})) {   // schema-driven plugins
+  for (const [id, vals] of Object.entries(s.ext || {})) {
+    // schema-driven plugins
     next[id] = { ...(base[id] || {}), ...vals };
   }
-  delete next.nudge;        // migrate away from the legacy section…
-  delete next.reminders;    // …and top-level reminders (now under prayer)
+  delete next.nudge; // migrate away from the legacy section…
+  delete next.reminders; // …and top-level reminders (now under prayer)
   return next;
 }
