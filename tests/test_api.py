@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from noterpiper import api  # noqa: E402
+from noterpiper import api
 
 
 def test_fetch_tags_maps_id_to_name(monkeypatch):

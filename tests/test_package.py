@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-import noterpiper  # noqa: E402
+import noterpiper
 
 
 def test_exposes_a_version_string():

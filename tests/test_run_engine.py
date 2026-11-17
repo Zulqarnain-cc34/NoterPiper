@@ -8,7 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import run_engine  # noqa: E402
+import run_engine
 
 # Settings now only carries the shared location.
 S = SimpleNamespace(city="Lahore", country="Pakistan", method="1", timezone="Asia/Karachi")

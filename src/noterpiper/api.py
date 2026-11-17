@@ -6,6 +6,7 @@ here is GET (read-only). Habitica is optional — see `configured()`.
 
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import Any
 
@@ -18,10 +19,8 @@ def _creds() -> tuple[str, str]:
     token = config.env("HABITICA_API_TOKEN") or config.env("API_TOKEN")
     user_id = config.env("HABITICA_USER_ID") or config.env("USER_ID")
     if not user_id:  # fallback: read the id from a saved snapshot, if present
-        try:
+        with contextlib.suppress(Exception):
             user_id = json.loads(config.RAW_JSON.read_text()).get("id")
-        except Exception:
-            pass
     if not token or not user_id:
         raise RuntimeError("Habitica not configured (need HABITICA_API_TOKEN + HABITICA_USER_ID).")
     return user_id, token

@@ -14,10 +14,10 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from noterpiper import config, settings  # noqa: E402
-from noterpiper.channels import NtfyChannel  # noqa: E402
-from noterpiper.engine import Notification  # noqa: E402
-from noterpiper.plugins.prayer import STARTS_AT, fetch_timings  # noqa: E402
+from noterpiper import config, settings
+from noterpiper.channels import NtfyChannel
+from noterpiper.engine import Notification
+from noterpiper.plugins.prayer import STARTS_AT, fetch_timings
 
 
 def main() -> int:

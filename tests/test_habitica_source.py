@@ -89,7 +89,7 @@ def test_force_sends_even_when_off_and_out_of_time(monkeypatch):
 
 def test_fetch_failure_sends_nothing(monkeypatch):
     monkeypatch.setattr("noterpiper.plugins.habitica.api.configured", lambda: True)
-    monkeypatch.setattr("noterpiper.plugins.habitica.api.fetch_tags", lambda: {})
+    monkeypatch.setattr("noterpiper.plugins.habitica.api.fetch_tags", dict)
 
     def boom():
         raise RuntimeError("habitica down")
