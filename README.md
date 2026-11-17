@@ -94,7 +94,7 @@ About ten minutes, once — then it runs itself.
 | Kind | Name | What it does |
 |---|---|---|
 | 🟡 Source | **prayer** | Rings for each of the five daily prayers |
-| 🟡 Source | **habitica** *(optional)* | One calm nightly "what's left" nudge |
+| 🟡 Source | **habitica** *(optional)* | Evening "what's left" nudge + optional morning brief & weekly digest |
 | 🟡 Source | **ramadan** *(optional)* | Suhoor & iftar reminders during Ramadan |
 | 🟡 Source | **dates** *(optional)* | Birthdays / bills / expiries, reminded a few days ahead |
 | 🟢 Channel | **ntfy** | Push to your phone |

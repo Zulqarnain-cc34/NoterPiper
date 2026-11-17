@@ -3,8 +3,9 @@
 Most "it's doing the wrong thing" turns out to be a deliberate rule. This maps each
 symptom to the cause and the fix.
 
-> **Fastest way to test:** tap **Send now** on the config page. It fires the nudge
-> immediately (bypassing the time gate) so you can see exactly what it would send tonight.
+> **Fastest way to test:** the three **Send now** buttons on the config page (🌙 evening ·
+> 🌅 morning · 📊 weekly) each fire that push immediately, bypassing every time gate — so
+> you can see exactly what each would send with your real data.
 
 ## I got no notification at all
 
@@ -35,6 +36,30 @@ A task is only "owed tonight" if it's genuinely due and not done. Yours is proba
 - **Already completed** today.
 - **Tagged `Archived`**, or a **`#### …` / `-----` divider** — both are skipped.
 - An **undated or future to-do** — those aren't owed tonight; they're the backlog count.
+
+## A whole type (or a tagged task) is missing
+
+Check **quiet mode** on the config page: a switched-off type (`Dailies` / `Habits` /
+`To-dos`) is dropped from every push, and a **tag whitelist** hides any task whose first
+tag isn't on the list. Two deliberate exceptions: **untagged tasks always pass** the
+whitelist, and **overdue to-dos always show** regardless of either filter.
+
+## The morning briefing has no task names
+
+By design — it's counts only (`3 dailies · 2 habits · 1 at risk 🔥`), a glance at the
+day's shape. The 🌙 evening summary is the one with names and sections.
+
+## The weekly digest only reflects today
+
+Expected on GitHub Actions: the runner's disk is wiped between runs, so the week's saved
+state only survives within one run and the digest shows the digest-day's snapshot. The
+format and stats are real; full week-long accumulation needs a persistent machine.
+
+## The weekly digest never arrives
+
+It's **off by default** — enable it on the config page and check its **day** and **time**.
+Like every push it fires only within a few minutes of the set time on the set day; 📊
+Send now previews it any time.
 
 ## A task I don't care about keeps showing
 

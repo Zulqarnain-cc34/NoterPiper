@@ -23,7 +23,7 @@ a new reminder type or a new delivery method **without touching the engine**.
 | Kind | Name | What it does | Docs |
 |---|---|---|---|
 | Source | **prayer** | Rings for each of the five daily prayers | [readme](src/noterpiper/plugins/prayer/README.md) |
-| Source | **habitica** | Optional nightly "what's left" nudge | [readme](src/noterpiper/plugins/habitica/README.md) |
+| Source | **habitica** | Optional evening nudge + morning brief & weekly digest | [readme](src/noterpiper/plugins/habitica/README.md) |
 | Channel | **ntfy** | Push to an ntfy topic (dedups via its cache) | [readme](src/noterpiper/channels/README.md) |
 | Channel | **webhook** | POST to any URL — Discord, Slack, Home Assistant, … | [readme](src/noterpiper/channels/README.md) |
 

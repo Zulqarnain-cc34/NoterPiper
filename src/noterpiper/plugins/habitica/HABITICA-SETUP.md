@@ -1,9 +1,9 @@
-# Getting the most out of the nightly nudge
+# Getting the most out of the Habitica nudges
 
-**You don't have to set your Habitica up any particular way.** The nudge reads Habitica's
-own structured fields — so it works with whatever you already have, however you use the
-app. This page is just two optional tweaks that make the summary nicer, plus the one thing
-that genuinely matters.
+**You don't have to set your Habitica up any particular way.** The nudges read Habitica's
+own structured fields — so they work with whatever you already have, however you use the
+app. This page is the one thing that genuinely matters, two optional tweaks that make the
+summary nicer, and the optional extras you can switch on.
 
 ## It already works out of the box
 
@@ -64,6 +64,24 @@ Ordered by **urgency**: at-risk 🔥 streaks first, then overdue, then your sect
 tasks first), with open to-dos not due tonight collapsed to a single backlog count. The
 headline counts only what's owed tonight. Each section is a capped comma-list (`+N more`)
 so it stays readable at any size.
+
+## Optional extras (all on the config page)
+
+**Quiet mode.** Three switches drop a whole type from the nudges (`Dailies` / `Habits` /
+`To-dos`), and a **tag whitelist** narrows them to just the tags you name (e.g. `deen,
+quran`). Untagged tasks always pass, and **overdue to-dos always show** — being late
+outranks being quiet.
+
+**Morning briefing** *(off by default)*. A counts-only heads-up at your chosen time —
+`3 dailies · 2 habits · 1 at risk 🔥` — no task names, just the shape of the day.
+
+**Weekly digest** *(off by default)*. Once a week (day + time you pick): items due that
+week, your best streak, and an at-risk callout. Note: on GitHub's throwaway runners the
+week's state only survives one run, so there it reflects the digest day's snapshot; on a
+persistent machine it accumulates the whole week.
+
+**Send now.** Three buttons on the config page (🌙 🌅 📊) push any of the three formats
+immediately — the fastest way to see exactly what each one says with your real data.
 
 ---
 
