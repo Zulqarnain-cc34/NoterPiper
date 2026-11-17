@@ -17,39 +17,43 @@ fields, never the wording of a title, so it works for anyone.*
 Once a night, at the time you set, it reads your Habitica tasks + tags and sends **one
 grouped message** of what's still owed today:
 
-- **Dailies** that are due and not done.
-- **To-dos** that aren't done (past their date → `(overdue)`).
-- **Habits** — *opt-in*: shown only if you've **tagged** them (and they're daily-reset &
-  untapped). An untagged habit is just a casual tracker and stays out.
+- **Dailies** due today and not done — any schedule (daily / weekly / monthly / yearly).
+- **To-dos** due today or overdue; ones not due tonight become a backlog count.
+- **Habits** — daily-reset "good" (+) habits you haven't tapped today.
 
-Each item appears under its **tag** as a section (`Prayer`, `Quran`, `Work`, …);
-untagged tasks fall back to `Dailies` / `To-dos` / `Habits`, so it works with zero setup
-for any layout and gets sharper as you tag. It leads with **at-risk streaks** 🔥 and caps
-long lists with `+N more`. Tasks tagged **`Archived`** and `####`/`-----` dividers are
-skipped. One nudge, never a stream.
+Each item appears under its **tag** as a section (`Work`, `Health`, `Study`, … — your own
+words); untagged tasks fall back to `Dailies` / `To-dos` / `Habits`, so it works with zero
+setup for any layout and gets sharper as you tag. The one message is ordered by urgency —
+at-risk 🔥 → overdue → your sections (hardest first) → a backlog count — and caps long lists
+with `+N more`. Tasks tagged **`Archived`** and `####`/`-----` dividers are skipped. One
+nudge, never a stream.
 
 > **Works out of the box; two optional tweaks make it nicer** (tags for named sections, an
-> `Archived` tag to hide things) — see **[HABITICA-SETUP.md](HABITICA-SETUP.md)** (and the
-> exact data shape in **[HABITICA-SCHEMA.md](HABITICA-SCHEMA.md)**).
+> `Archived` tag to hide things) — see **[HABITICA-SETUP.md](HABITICA-SETUP.md)**. Something
+> off? **[HABITICA-TROUBLESHOOTING.md](HABITICA-TROUBLESHOOTING.md)**. Why it behaves this
+> way: **[HABITICA-DECISIONS.md](HABITICA-DECISIONS.md)**. Field shapes (for maintainers):
+> **[HABITICA-SCHEMA.md](HABITICA-SCHEMA.md)**.
 
 ## What lands on your phone
 
 > ### Nightly check-in
-> 7 left before midnight · 2 at risk 🔥
+> 6 to do before midnight · 1 at risk 🔥
 >
-> At risk · 2
-> Surah Mulk · 52, Tasbeeh · 41
+> At risk · 1
+> Meditate · 53
 >
-> Quran · 2
-> Quran Kareem, Quran Fajr
+> Overdue · 1
+> Pay rent
 >
-> Prayer · 2
-> Maghrib, Isha
+> Health · 2
+> Exercise, Drink water
 >
-> To-dos · 1
-> Submit report (overdue)
+> Dailies · 1
+> Journal
+>
+> + 3 open to-dos in your backlog
 
-On a quiet day it's just as short — e.g. `1 left before midnight` with a single line.
+On a quiet day it's just as short — e.g. `1 to do before midnight` with a single line.
 When everything's logged: `All done today — everything is logged. 🌙`
 
 ---
@@ -67,8 +71,8 @@ The engine is set up once in the main **[SETUP](../../../../SETUP.md)**. This pl
    { "nudge": { "time": "21:30", "enabled": true } }
    ```
 
-Then **tag your tasks** in Habitica (see the data standard above). If the secrets aren't
-set, the plugin simply does nothing — nothing breaks.
+Tagging is **optional** (see the setup guide above) — it just gives you named sections. If
+the secrets aren't set, the plugin simply does nothing — nothing breaks.
 
 ## Settings reference
 
@@ -98,10 +102,11 @@ Habitica and a new section appears in the nudge, no config change.
 ## How it works
 
 At the set time (once per day) it fetches your tasks (`GET /tasks/user`) and tags
-(`GET /tags`), keeps what's **owed today** per Habitica's structured fields
-(`isDue`/`completed`/`streak`, `date`, habit `frequency`/`counter`), groups them by tag,
-and builds one message: **at-risk streaks first**, then your tag sections, then the
-type fallbacks — each a capped comma-list. A stable title gives robust **once-per-day**
-delivery under the frequent engine runs; the "send now" button forces it immediately.
+(`GET /tags`), keeps what's **owed tonight** per Habitica's structured fields
+(`isDue`/`completed`/`streak`, due `date`, habit `frequency`/`counter`, `priority`), groups
+them by tag, and builds one **urgency-ordered** message: at-risk streaks → overdue → your
+sections (hardest first) → a backlog count of to-dos not due tonight — each a capped
+comma-list. A stable title gives robust **once-per-day** delivery under the frequent engine
+runs; the "Send now" button forces it immediately.
 Code: [`__init__.py`](__init__.py) — the `HabiticaSource` class satisfies NoterPiper's
 `Source` contract (`id = "habitica"`, `check(now, config) → [Notification]`).

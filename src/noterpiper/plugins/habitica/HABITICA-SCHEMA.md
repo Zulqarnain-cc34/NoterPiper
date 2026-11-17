@@ -205,7 +205,7 @@ nothing is a surprise later.
 ## Tags (`GET /tags`)
 
 ```json
-[ { "id": "8f2c…-uuid", "name": "prayer" }, { "id": "a71b…-uuid", "name": "Archived" } ]
+[ { "id": "8f2c…-uuid", "name": "work" }, { "id": "a71b…-uuid", "name": "Archived" } ]
 ```
 
 A task references these by `id` in its `tags` array; map id → name to get the label.

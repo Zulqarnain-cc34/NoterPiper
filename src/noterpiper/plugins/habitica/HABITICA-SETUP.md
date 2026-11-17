@@ -28,10 +28,11 @@ left out.
 
 ## Two optional tweaks
 
-**1. Tags → named sections.** Tag a task and it groups under that tag's name (e.g. `prayer`
-→ a **Prayer** section) instead of the plain type fallback. The task's **first** tag is
-used as its section, so if you want predictable grouping, keep one "section" tag per task.
-Invent a tag, invent a section — no code change.
+**1. Tags → named sections.** Tag a task and it groups under that tag's name (e.g. `work`
+→ a **Work** section, `health` → **Health**) instead of the plain type fallback. The
+task's **first** tag is used as its section, so if you want predictable grouping, keep one
+"section" tag per task. Invent a tag, invent a section — no code change. Use whatever words
+fit your life.
 
 **2. Hide what shouldn't be nagged.** Tag anything `Archived` to hide it. Visual dividers —
 `#### Morning` markdown headers or `-------` separator rows — are **skipped automatically**,
@@ -42,20 +43,27 @@ tagged or not.
 ```
 Nightly check-in
 
-7 left before midnight · 2 at risk 🔥
+6 to do before midnight · 1 at risk 🔥
 
-At risk · 2
-Surah Mulk · 53, tasbeeh · 53
+At risk · 1
+Meditate · 53
 
-Prayers · 4
-Zohar, Asr, Maghrib, Isha
+Overdue · 1
+Pay rent
 
-Quran · 1
-Quran Kareem
+Health · 2
+Exercise, Drink water
+
+Dailies · 1
+Journal
+
++ 3 open to-dos in your backlog
 ```
 
-Sections are your tags, ordered: at-risk 🔥 first, then your tag sections, then the type
-fallbacks. Each section is a capped comma-list (`+N more`) so it stays readable at any size.
+Ordered by **urgency**: at-risk 🔥 streaks first, then overdue, then your sections (hardest
+tasks first), with open to-dos not due tonight collapsed to a single backlog count. The
+headline counts only what's owed tonight. Each section is a capped comma-list (`+N more`)
+so it stays readable at any size.
 
 ---
 
