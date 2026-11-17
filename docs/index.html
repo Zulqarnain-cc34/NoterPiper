@@ -512,8 +512,10 @@
       items().forEach((item, i) => {
         const r = document.createElement('div'); r.className = 'row';
         r.innerHTML = f.fields.map(sub =>
-          `<input type="text" class="text" data-sub="${esc(sub.key)}" placeholder="${esc(sub.label)}" style="flex:1;width:auto;text-align:left">`
-        ).join('') + `<button class="sendnow" type="button" aria-label="remove" style="padding:10px 14px">×</button>`;
+          // min-width:0 lets the flex inputs shrink below their intrinsic ~20-char width,
+          // so a row with 2 inputs + the × never overflows a narrow phone (was breaking right).
+          `<input type="text" class="text" data-sub="${esc(sub.key)}" placeholder="${esc(sub.label)}" style="flex:1;min-width:0;width:auto;text-align:left">`
+        ).join('') + `<button class="sendnow" type="button" aria-label="remove" style="flex:none;padding:10px 13px">×</button>`;
         r.querySelectorAll('input').forEach(inp => {
           inp.value = item[inp.dataset.sub] ?? '';
           inp.oninput = () => { item[inp.dataset.sub] = inp.value; onEdit(); };
