@@ -358,3 +358,76 @@ def test_a_habit_without_a_frequency_is_treated_as_daily(monkeypatch):
     bare = {"text": "Stretch", "up": True, "counterUp": 0, "counterDown": 0, "tags": []}
     _ready(monkeypatch, _tasks(habits=[bare]))
     assert "Stretch" in HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+
+
+# ─── filtering: type toggles & tag whitelist ───
+
+
+def test_notify_dailies_off_hides_all_dailies(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Morning prayer")]))
+    config = {**CONFIG, "notify_dailies": False}
+    assert "All done" in HabiticaSource().check(AT_NUDGE, config)[0].body
+
+
+def test_notify_habits_off_hides_all_habits(monkeypatch):
+    _ready(monkeypatch, _tasks(habits=[_habit("Meditation")]))
+    config = {**CONFIG, "notify_habits": False}
+    assert "All done" in HabiticaSource().check(AT_NUDGE, config)[0].body
+
+
+def test_notify_todos_off_hides_today_todos(monkeypatch):
+    _ready(monkeypatch, _tasks(todos=[_todo("Write email", date=TODAY_ISO)]))
+    config = {**CONFIG, "notify_todos": False}
+    body = HabiticaSource().check(AT_NUDGE, config)[0].body
+    assert "Write email" not in body
+
+
+def test_tag_whitelist_shows_only_allowed_tags(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[
+                _daily("Prayer 1", tags=["tP"]),  # prayer tag
+                _daily("Quran", tags=["tQ"]),  # quran tag
+            ]
+        ),
+    )
+    config = {**CONFIG, "tag_whitelist": ["prayer"]}  # only prayer allowed
+    body = HabiticaSource().check(AT_NUDGE, config)[0].body
+    assert "Prayer 1" in body and "Quran" not in body
+
+
+def test_tag_whitelist_null_allows_all_tags(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[
+                _daily("Prayer 1", tags=["tP"]),
+                _daily("Quran", tags=["tQ"]),
+            ]
+        ),
+    )
+    config = {**CONFIG, "tag_whitelist": None}  # explicit None = no filtering
+    body = HabiticaSource().check(AT_NUDGE, config)[0].body
+    assert "Prayer 1" in body and "Quran" in body
+
+
+def test_tag_whitelist_respects_at_risk_dailies(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[
+                _daily("At-risk prayer", streak=50, tags=["tP"]),  # prayer tag, at-risk
+                _daily("At-risk quran", streak=50, tags=["tQ"]),  # quran tag, at-risk
+            ]
+        ),
+    )
+    config = {**CONFIG, "tag_whitelist": ["prayer"]}  # only prayer allowed
+    body = HabiticaSource().check(AT_NUDGE, config)[0].body
+    assert "At-risk prayer" in body and "At-risk quran" not in body
+
+
+def test_notify_dailies_off_hides_at_risk_too(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("At-risk task", streak=50)]))
+    config = {**CONFIG, "notify_dailies": False}
+    assert "All done" in HabiticaSource().check(AT_NUDGE, config)[0].body

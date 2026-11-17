@@ -32,6 +32,16 @@ CAP = 5  # max names listed per group before "+N more"
 ARCHIVED = "archived"  # tasks carrying a tag named this (any case) are hidden
 
 
+def _allowed_tags(task: dict, tags: dict, whitelist: list[str] | None) -> bool:
+    """Check if task's first tag is in the whitelist. None = allow all."""
+    if whitelist is None:
+        return True
+    tag_names = [tags[t] for t in task.get("tags", []) if tags.get(t) and tags[t].lower() != ARCHIVED]
+    if not tag_names:
+        return True  # untagged tasks are always allowed
+    return tag_names[0] in whitelist
+
+
 def _due_now(now: datetime, target_hhmm: str, window: int = WINDOW_MIN) -> bool:
     th, tm = (int(x) for x in target_hhmm.split(":")[:2])
     delta = (now.hour * 60 + now.minute) - (th * 60 + tm)
@@ -101,8 +111,12 @@ class _Owed:
         self.sections.setdefault(section, []).append((name, prio))
 
 
-def _owe_daily(owed: _Owed, d: dict, tags: dict, streak_risk: int) -> None:
-    if not d.get("isDue") or d.get("completed") or _hidden(d, tags):
+def _owe_daily(
+    owed: _Owed, d: dict, tags: dict, streak_risk: int, notify_dailies: bool = True, tag_whitelist: list[str] | None = None
+) -> None:
+    if not notify_dailies or not d.get("isDue") or d.get("completed") or _hidden(d, tags):
+        return
+    if not _allowed_tags(d, tags, tag_whitelist):
         return
     name, streak = d["text"].strip(), int(d.get("streak", 0))
     if streak >= streak_risk:
@@ -111,40 +125,56 @@ def _owe_daily(owed: _Owed, d: dict, tags: dict, streak_risk: int) -> None:
         owed.add(_section(d, tags, "Dailies"), name, _priority(d))
 
 
-def _owe_todo(owed: _Owed, t: dict, tags: dict, today: date) -> None:
+def _owe_todo(
+    owed: _Owed, t: dict, tags: dict, today: date, notify_todos: bool = True, tag_whitelist: list[str] | None = None
+) -> None:
     if t.get("completed") or _hidden(t, tags):
         return
     name, prio = t["text"].strip(), _priority(t)
     dd = _todo_date(t)
     if dd is None or dd > today:  # undated or scheduled later → backlog, not owed tonight
         owed.later += 1
-    elif dd < today:  # overdue — you're late; gets its own urgent block
+    elif dd < today:  # overdue — you're late; gets its own urgent block (always shown)
         owed.overdue.append((name, prio))
-    else:  # due today
-        owed.add(_section(t, tags, "To-dos"), name, prio)
+    else:  # due today — respect notify_todos
+        if notify_todos and _allowed_tags(t, tags, tag_whitelist):
+            owed.add(_section(t, tags, "To-dos"), name, prio)
 
 
-def _owe_habit(owed: _Owed, h: dict, tags: dict) -> None:
+def _owe_habit(
+    owed: _Owed, h: dict, tags: dict, notify_habits: bool = True, tag_whitelist: list[str] | None = None
+) -> None:
     # Only a daily-reset "good" (+) habit has a daily "did you do it today?". Weekly/monthly
     # habits reset on their own cycle — no nightly deadline — so they're never owed tonight.
     # Untagged daily habits fall back to "Habits" (like dailies/to-dos), never vanish.
     # Defaults match Habitica's: a habit with no frequency is daily, no `up` is a good habit.
-    if _hidden(h, tags) or h.get("frequency", "daily") != "daily" or not h.get("up", True):
+    if not notify_habits or _hidden(h, tags) or h.get("frequency", "daily") != "daily" or not h.get("up", True):
+        return
+    if not _allowed_tags(h, tags, tag_whitelist):
         return
     if (h.get("counterUp", 0) + h.get("counterDown", 0)) != 0:
         return  # already tapped today
     owed.add(_section(h, tags, "Habits"), h["text"].strip(), _priority(h))
 
 
-def collect(tasks: dict, tags: dict, now: datetime, streak_risk: int = STREAK_RISK) -> dict:
+def collect(
+    tasks: dict,
+    tags: dict,
+    now: datetime,
+    streak_risk: int = STREAK_RISK,
+    notify_dailies: bool = True,
+    notify_habits: bool = True,
+    notify_todos: bool = True,
+    tag_whitelist: list[str] | None = None,
+) -> dict:
     """Tonight's work grouped by section; open to-dos not owed tonight are counted as backlog."""
     owed = _Owed()
     for d in tasks.get("dailys", []):
-        _owe_daily(owed, d, tags, streak_risk)
+        _owe_daily(owed, d, tags, streak_risk, notify_dailies, tag_whitelist)
     for t in tasks.get("todos", []):
-        _owe_todo(owed, t, tags, now.date())
+        _owe_todo(owed, t, tags, now.date(), notify_todos, tag_whitelist)
     for h in tasks.get("habits", []):
-        _owe_habit(owed, h, tags)
+        _owe_habit(owed, h, tags, notify_habits, tag_whitelist)
     return {
         "at_risk": owed.at_risk,
         "overdue": owed.overdue,
@@ -207,7 +237,16 @@ def summarize(c: dict) -> tuple[str, str, str]:
 class HabiticaSource:
     id = "habitica"
     wants_location = False
-    defaults = {"enabled": True, "time": "21:30", "window": WINDOW_MIN, "streak_risk": STREAK_RISK}
+    defaults = {
+        "enabled": True,
+        "time": "21:30",
+        "window": WINDOW_MIN,
+        "streak_risk": STREAK_RISK,
+        "notify_dailies": True,
+        "notify_habits": True,
+        "notify_todos": True,
+        "tag_whitelist": None,
+    }
     # No config_schema: the config page hand-builds this card (docs/index.html), so the
     # generator must not auto-emit competing controls. See PLUGIN-AUTHORING "config UI".
 
@@ -239,7 +278,16 @@ class HabiticaSource:
             return []  # other HTTP error (5xx, etc.) → skip tonight, don't crash
         except Exception:
             return []  # Habitica down / network → skip tonight, don't crash
-        c = collect(tasks, tags, now, int(config.get("streak_risk", STREAK_RISK)))
+        c = collect(
+            tasks,
+            tags,
+            now,
+            int(config.get("streak_risk", STREAK_RISK)),
+            config.get("notify_dailies", True),
+            config.get("notify_habits", True),
+            config.get("notify_todos", True),
+            config.get("tag_whitelist"),
+        )
         body, priority, tag = summarize(c)
         dedup = None if forced else NUDGE_TITLE  # forced always delivers; scheduled dedups
         return [Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup)]
