@@ -23,13 +23,14 @@ grouped message** of what's still owed today:
   untapped). An untagged habit is just a casual tracker and stays out.
 
 Each item appears under its **tag** as a section (`Prayer`, `Quran`, `Work`, …);
-untagged dailies/to-dos fall back to `Dailies` / `To-dos`, so it works with zero setup
-and gets sharper as you tag. It leads with **at-risk streaks** 🔥 and caps long lists
-with `+N more`. Anything tagged **`Archived`** is skipped. One nudge, never a stream.
+untagged tasks fall back to `Dailies` / `To-dos` / `Habits`, so it works with zero setup
+for any layout and gets sharper as you tag. It leads with **at-risk streaks** 🔥 and caps
+long lists with `+N more`. Tasks tagged **`Archived`** and `####`/`-----` dividers are
+skipped. One nudge, never a stream.
 
-> **Get the most out of it:** structure your Habitica the way the nudge reads it — see
-> **[HABITICA-DATA-STANDARD.md](HABITICA-DATA-STANDARD.md)** (and the exact
-> data shape in **[HABITICA-SCHEMA.md](HABITICA-SCHEMA.md)**).
+> **Works out of the box; two optional tweaks make it nicer** (tags for named sections, an
+> `Archived` tag to hide things) — see **[HABITICA-SETUP.md](HABITICA-SETUP.md)** (and the
+> exact data shape in **[HABITICA-SCHEMA.md](HABITICA-SCHEMA.md)**).
 
 ## What lands on your phone
 
