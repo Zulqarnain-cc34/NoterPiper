@@ -25,30 +25,18 @@ test('fromConfig/toConfig round-trips and preserves unknown keys', () => {
   assert.equal(back.city, 'X');
 });
 
-test('fromConfig reads the habitica controls with safe defaults', () => {
-  const on = fromConfig({});                          // nothing set → defaults
-  assert.equal(on.nudgeStreakRisk, 7);
-  assert.equal(on.nudgeShowTodos, true);
-  assert.equal(on.nudgeShowDailies, true);
-  assert.equal(on.nudgeShowPrayers, true);
-  const set = fromConfig({ nudge: { streak_risk: 14, show_todos: false, show_dailies: false, show_prayers: false } });
-  assert.equal(set.nudgeStreakRisk, 14);
-  assert.equal(set.nudgeShowTodos, false);
-  assert.equal(set.nudgeShowDailies, false);
-  assert.equal(set.nudgeShowPrayers, false);
+test('fromConfig reads the at-risk streak threshold with a safe default', () => {
+  assert.equal(fromConfig({}).nudgeStreakRisk, 7);                       // nothing set → default
+  assert.equal(fromConfig({ nudge: { streak_risk: 14 } }).nudgeStreakRisk, 14);
 });
 
-test('toConfig writes the habitica controls as real values', () => {
+test('toConfig writes the at-risk streak threshold as a number', () => {
   const c = toConfig({
     city: 'Makkah', country: 'Saudi Arabia', method: '4', timezone: 'Asia/Riyadh',
-    reminders: {}, nudgeTime: '21:30', nudgeEnabled: true,
-    nudgeStreakRisk: 10, nudgeShowTodos: false, nudgeShowDailies: true, nudgeShowPrayers: false,
+    reminders: {}, nudgeTime: '21:30', nudgeEnabled: true, nudgeStreakRisk: 10,
   });
   assert.equal(c.nudge.streak_risk, 10);
-  assert.equal(c.nudge.show_todos, false);
-  assert.equal(typeof c.nudge.show_todos, 'boolean');
-  assert.equal(c.nudge.show_dailies, true);
-  assert.equal(c.nudge.show_prayers, false);
+  assert.equal(typeof c.nudge.streak_risk, 'number');
 });
 
 test('fromConfig reads the ramadan controls with safe defaults', () => {

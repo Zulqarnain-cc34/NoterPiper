@@ -107,22 +107,13 @@ def test_junk_window_falls_back_to_default(tmp_path):
     assert settings.load_settings(f).prayer_window == 5
 
 
-def test_nudge_controls_default_when_absent(tmp_path):
-    s = settings.load_settings(tmp_path / "nope.json")
-    assert s.nudge_streak_risk == 7
-    assert s.nudge_show_todos is True
-    assert s.nudge_show_dailies is True
-    assert s.nudge_show_prayers is True
+def test_streak_risk_defaults_when_absent(tmp_path):
+    assert settings.load_settings(tmp_path / "nope.json").nudge_streak_risk == 7
 
 
-def test_nudge_controls_are_read_from_config(tmp_path):
-    f = _write(tmp_path, {"nudge": {"streak_risk": 14, "show_todos": False,
-                                    "show_dailies": False, "show_prayers": False}})
-    s = settings.load_settings(f)
-    assert s.nudge_streak_risk == 14
-    assert s.nudge_show_todos is False
-    assert s.nudge_show_dailies is False
-    assert s.nudge_show_prayers is False
+def test_streak_risk_is_read_from_config(tmp_path):
+    f = _write(tmp_path, {"nudge": {"streak_risk": 14}})
+    assert settings.load_settings(f).nudge_streak_risk == 14
 
 
 def test_junk_streak_risk_falls_back_to_default(tmp_path):

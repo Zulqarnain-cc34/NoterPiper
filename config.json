@@ -23,10 +23,7 @@
   "nudge": {
     "time": "22:30",
     "enabled": true,
-    "streak_risk": 40,
-    "show_todos": true,
-    "show_dailies": true,
-    "show_prayers": true
+    "streak_risk": 40
   },
   "ramadan": {
     "enabled": false,

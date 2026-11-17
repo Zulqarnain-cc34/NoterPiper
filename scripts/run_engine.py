@@ -39,8 +39,7 @@ def build_config(s, force_source: str | None = None) -> dict:
         "habitica": {
             "time": s.nudge_time, "enabled": s.nudge_enabled,
             "window": s.nudge_window, "force": force_source == "habitica",
-            "streak_risk": s.nudge_streak_risk, "show_todos": s.nudge_show_todos,
-            "show_dailies": s.nudge_show_dailies, "show_prayers": s.nudge_show_prayers,
+            "streak_risk": s.nudge_streak_risk,
         },
         "ramadan": {
             "city": s.city, "country": s.country, "method": s.method,   # reuses the prayer location

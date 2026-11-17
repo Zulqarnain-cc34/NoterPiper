@@ -14,9 +14,6 @@ export const SCHEMA = {
     { key: 'nudgeTime', label: 'Time', type: 'time' },
     { key: 'nudgeEnabled', label: 'Habitica nudge', type: 'toggle' },
     { key: 'nudgeStreakRisk', label: 'At-risk streak', type: 'stepper' },
-    { key: 'nudgeShowTodos', label: 'Include to-dos', type: 'toggle' },
-    { key: 'nudgeShowDailies', label: 'Include dailies', type: 'toggle' },
-    { key: 'nudgeShowPrayers', label: 'Include prayers', type: 'toggle' },
   ],
   ramadan: [
     { key: 'ramadanEnabled', label: 'Suhoor & iftar', type: 'toggle' },
@@ -132,9 +129,6 @@ export function fromConfig(o = {}) {
     nudgeTime: nudge.time ?? '21:30',
     nudgeEnabled: nudge.enabled !== false,   // default on; only explicit false is off
     nudgeStreakRisk: Number.isFinite(+nudge.streak_risk) && +nudge.streak_risk > 0 ? +nudge.streak_risk : 7,
-    nudgeShowTodos: nudge.show_todos !== false,       // the three include-toggles default on
-    nudgeShowDailies: nudge.show_dailies !== false,
-    nudgeShowPrayers: nudge.show_prayers !== false,
     ramadanEnabled: ram.enabled !== false,           // default on; silent outside Ramadan anyway
     ramadanSuhoorLead: _lead(ram.suhoor_lead, 45),
     ramadanIftarLead: _lead(ram.iftar_lead, 0),
@@ -153,8 +147,7 @@ export function toConfig(s, base = {}) {
     reminders: s.reminders,
     nudge: {
       ...(base.nudge || {}), time: s.nudgeTime, enabled: Boolean(s.nudgeEnabled),
-      streak_risk: Number(s.nudgeStreakRisk), show_todos: Boolean(s.nudgeShowTodos),
-      show_dailies: Boolean(s.nudgeShowDailies), show_prayers: Boolean(s.nudgeShowPrayers),
+      streak_risk: Number(s.nudgeStreakRisk),
     },
     ramadan: {
       ...(base.ramadan || {}), enabled: Boolean(s.ramadanEnabled),
