@@ -142,6 +142,9 @@ export function parseWhitelist(text) {
 export function fromConfig(o = {}, extSchema = {}) {
   const sec = (k) => (o && typeof o[k] === 'object' && o[k]) || {};
   const nudge = { ...sec('nudge'), ...sec('habitica') }; // 'habitica' (new) wins over legacy 'nudge'
+  const sub = (k) => (nudge[k] && typeof nudge[k] === 'object' && nudge[k]) || {};
+  const morning = sub('morning');
+  const weekly = sub('weekly');
   const prayer = sec('prayer');
   const ram = sec('ramadan');
   const _lead = (v, d) => (Number.isFinite(+v) && +v >= 0 ? +v : d);
@@ -166,6 +169,12 @@ export function fromConfig(o = {}, extSchema = {}) {
     nudgeWhitelist: Array.isArray(nudge.tag_whitelist)
       ? nudge.tag_whitelist.join(', ')
       : nudge.tag_whitelist || '',
+    // Morning briefing + weekly digest: opt-in extras — only explicit true is on.
+    morningEnabled: morning.enabled === true,
+    morningTime: morning.time ?? '06:00',
+    weeklyEnabled: weekly.enabled === true,
+    weeklyDay: weekly.day ?? 'Sunday',
+    weeklyTime: weekly.time ?? '19:00',
     ramadanEnabled: ram.enabled !== false, // default on; silent outside Ramadan anyway
     ramadanSuhoorLead: _lead(ram.suhoor_lead, 45),
     ramadanIftarLead: _lead(ram.iftar_lead, 0),
@@ -192,6 +201,17 @@ export function toConfig(s, base = {}) {
       notify_habits: Boolean(s.nudgeHabits),
       notify_todos: Boolean(s.nudgeTodos),
       tag_whitelist: parseWhitelist(s.nudgeWhitelist),
+      morning: {
+        ...((base.habitica || {}).morning || {}),
+        enabled: Boolean(s.morningEnabled),
+        time: s.morningTime,
+      },
+      weekly: {
+        ...((base.habitica || {}).weekly || {}),
+        enabled: Boolean(s.weeklyEnabled),
+        day: s.weeklyDay,
+        time: s.weeklyTime,
+      },
     },
     ramadan: {
       ...(base.ramadan || {}),
