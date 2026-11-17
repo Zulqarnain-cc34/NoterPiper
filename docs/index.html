@@ -446,12 +446,23 @@
       minus.onclick = () => { setExt(id, f.key, Math.max(lo, (extVal(id, f.key) ?? lo) - step)); paint(); };
       plus.onclick = () => { setExt(id, f.key, Math.min(hi, (extVal(id, f.key) ?? lo) + step)); paint(); };
       paint();
-    } else {                                   // 'time' and 'text' are both a right-aligned input
+    } else if (f.type === 'select') {
+      const opts = (f.options || []).map(o => (o && typeof o === 'object' ? o : { value: o, label: o }));
+      row.innerHTML = nameCell(f) + `<span class="spacer"></span><select>`
+        + opts.map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('') + `</select>`;
+      const sel = row.querySelector('select'), cur = extVal(id, f.key);
+      if (cur != null && !opts.some(o => String(o.value) === String(cur)))   // keep an unknown saved value selectable
+        sel.insertAdjacentHTML('beforeend', `<option value="${esc(cur)}">${esc(cur)}</option>`);
+      sel.value = cur ?? (opts[0] ? opts[0].value : '');
+      sel.onchange = () => setExt(id, f.key, sel.value);
+    } else if (f.type === 'time' || f.type === 'text') {
       row.innerHTML = nameCell(f) + `<span class="spacer"></span>`
         + `<input type="${f.type === 'time' ? 'time' : 'text'}" class="text">`;
       const inp = row.querySelector('input');
       inp.value = extVal(id, f.key) ?? '';
       inp[f.type === 'time' ? 'onchange' : 'oninput'] = () => setExt(id, f.key, inp.value);
+    } else {
+      return null;                             // unknown type → render nothing, never a misleading text box
     }
     return row;
   }
@@ -493,7 +504,7 @@
       const label = document.createElement('div'); label.className = 'label';
       label.textContent = spec.title || title(id);
       const card = document.createElement('div'); card.className = 'card';
-      for (const f of spec.fields || []) card.appendChild(makeControl(id, f));
+      for (const f of spec.fields || []) { const el = makeControl(id, f); if (el) card.appendChild(el); }
       host.append(label, card);
     }
   }
