@@ -515,3 +515,75 @@ def test_todos_respect_phase1_whitelist_filter(monkeypatch):
     config = {**CONFIG, "tag_whitelist": ["prayer"]}
     body = HabiticaSource().check(AT_NUDGE, config)[0].body
     assert "Prayer task" in body and "Quran task" not in body
+
+
+# ─── morning & evening nudges (Phase 3) ───
+
+
+def test_morning_enabled_sends_at_time(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)  # 6:03 AM (within 5-min window of 6:00)
+    config = {**CONFIG, "morning": {"enabled": True, "time": "06:00"}, "evening": {"enabled": False}}
+    notes = HabiticaSource().check(morning_time, config)
+    assert len(notes) == 1 and notes[0].title == "Habitica morning briefing"
+
+
+def test_morning_disabled_sends_nothing(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
+    config = {**CONFIG, "morning": {"enabled": False, "time": "06:00"}, "evening": {"enabled": False}}
+    assert HabiticaSource().check(morning_time, config) == []
+
+
+def test_both_morning_and_evening_send_when_both_enabled(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
+    config = {**CONFIG, "morning": {"enabled": True, "time": "06:00"}, "evening": {"enabled": True, "time": "06:00"}}
+    notes = HabiticaSource().check(morning_time, config)
+    assert len(notes) == 2
+    assert notes[0].title == "Habitica morning briefing"
+    assert notes[1].title == "Nightly check-in"
+
+
+def test_morning_summary_is_brief(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task 1"), _daily("Task 2")]))
+    morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
+    config = {**CONFIG, "morning": {"enabled": True, "time": "06:00"}, "evening": {"enabled": False}}
+    notes = HabiticaSource().check(morning_time, config)
+    body = notes[0].body
+    # Morning should have counts, not names
+    assert "2 things" in body and "Task 1" not in body and "Task 2" not in body
+
+
+def test_morning_dedup_separate_from_evening(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("Task")]))
+    morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
+    config = {**CONFIG, "morning": {"enabled": True, "time": "06:00"}, "evening": {"enabled": True, "time": "06:00"}}
+    notes = HabiticaSource().check(morning_time, config)
+    dedup_keys = [n.dedup_key for n in notes]
+    assert "Habitica morning briefing" in dedup_keys
+    assert "Nightly check-in" in dedup_keys
+    assert dedup_keys[0] != dedup_keys[1]  # distinct dedup keys
+
+
+def test_morning_respects_all_filters(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[
+                _daily("Prayer", tags=["tP"]),
+                _daily("Quran", tags=["tQ"]),
+            ]
+        ),
+    )
+    morning_time = datetime(2026, 11, 16, 6, 3, tzinfo=TZ)
+    config = {
+        **CONFIG,
+        "morning": {"enabled": True, "time": "06:00"},
+        "evening": {"enabled": False},
+        "tag_whitelist": ["prayer"],
+    }
+    notes = HabiticaSource().check(morning_time, config)
+    body = notes[0].body
+    # Only 1 task should be visible (Prayer), so "1 thing to do"
+    assert "1 thing" in body

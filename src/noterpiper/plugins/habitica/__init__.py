@@ -26,6 +26,7 @@ from ...engine import Notification
 STREAK_RISK = 7  # a daily with a streak this long is "at risk" if still unticked
 WINDOW_MIN = 5  # fire within this many minutes after the set time
 NUDGE_TITLE = "Nightly check-in"
+MORNING_TITLE = "Habitica morning briefing"
 # ASCII title == dedup_key so the once/day dedup matches (see HABITICA notes / ntfy channel).
 AUTH_FAIL_TITLE = "Habitica sign-in failed"
 CAP = 5  # max names listed per group before "+N more"
@@ -197,6 +198,32 @@ def _plural(n: int) -> str:
 _FALLBACK = ("Dailies", "To-dos", "Habits")
 
 
+def summarize_morning(c: dict) -> tuple[str, str, str]:
+    """Brief morning summary — just counts, no names. Returns (body, priority, tag)."""
+    at_risk, overdue, sections, later = c["at_risk"], c["overdue"], c["sections"], c["later"]
+    time_bound = len(at_risk) + len(overdue) + sum(len(v) for v in sections.values())
+
+    if time_bound == 0:
+        return "Nothing owed today — great start! 🌅", "low", "sunny"
+
+    parts = []
+    dailies = sum(len(v) for v in sections.values() if "Dailies" in str(sections.get("Dailies", [])))
+    habits = sum(len(v) for v in sections.values() if "Habits" in str(sections.get("Habits", [])))
+    todos = sum(len(v) for v in sections.values() if "To-dos" in str(sections.get("To-dos", [])))
+
+    if time_bound == 1:
+        parts.append("1 thing to do today")
+    else:
+        parts.append(f"{time_bound} things to do today")
+
+    if at_risk:
+        parts.append(f"· {len(at_risk)} at risk 🔥")
+
+    priority = "high" if at_risk or overdue else "default"
+    tag = "warning" if at_risk or overdue else "sunny"
+    return " ".join(parts) + "\n\nGet ready! 🌅", priority, tag
+
+
 def summarize(c: dict) -> tuple[str, str, str]:
     """One ruthlessly-ordered message — at-risk → overdue → due-today → backlog count — so
     the single nightly notification leads with what hurts to miss. Returns (body, priority, tag)."""
@@ -246,6 +273,8 @@ class HabiticaSource:
         "notify_habits": True,
         "notify_todos": True,
         "tag_whitelist": None,
+        "morning": {"enabled": False, "time": "06:00"},
+        "evening": {"enabled": True, "time": "21:00"},
     }
     # No config_schema: the config page hand-builds this card (docs/index.html), so the
     # generator must not auto-emit competing controls. See PLUGIN-AUTHORING "config UI".
@@ -256,9 +285,6 @@ class HabiticaSource:
         forced = bool(config.get("force"))  # on-demand 'send now' button
         if not forced:
             if not config.get("enabled", True):
-                return []
-            nudge_time = str(config.get("nudge_time") or config.get("time") or "21:30")
-            if not _due_now(now, nudge_time, int(config.get("window", WINDOW_MIN))):
                 return []
         try:
             tasks = api.fetch_tasks_by_type()
@@ -288,6 +314,36 @@ class HabiticaSource:
             config.get("notify_todos", True),
             config.get("tag_whitelist"),
         )
-        body, priority, tag = summarize(c)
-        dedup = None if forced else NUDGE_TITLE  # forced always delivers; scheduled dedups
-        return [Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup)]
+        notifications = []
+
+        # Support both old format (time/enabled at top level) and new format (morning/evening nested)
+        # If new format is present, use it; otherwise fall back to old format for evening only
+        if "morning" in config or "evening" in config:
+            morning_cfg = config.get("morning", {})
+            evening_cfg = config.get("evening", {})
+            due_morning = forced or (
+                morning_cfg.get("enabled")
+                and _due_now(now, str(morning_cfg.get("time", "06:00")), int(config.get("window", WINDOW_MIN)))
+            )
+            due_evening = forced or (
+                evening_cfg.get("enabled")
+                and _due_now(now, str(evening_cfg.get("time", "21:00")), int(config.get("window", WINDOW_MIN)))
+            )
+            if due_morning:
+                body, priority, tag = summarize_morning(c)
+                dedup = None if forced else MORNING_TITLE
+                notifications.append(Notification(MORNING_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup))
+            if due_evening:
+                body, priority, tag = summarize(c)
+                dedup = None if forced else NUDGE_TITLE
+                notifications.append(Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup))
+        else:
+            # Old format: single nudge with time/enabled at top level
+            nudge_time = str(config.get("nudge_time") or config.get("time") or "21:30")
+            if not forced and not _due_now(now, nudge_time, int(config.get("window", WINDOW_MIN))):
+                return []
+            body, priority, tag = summarize(c)
+            dedup = None if forced else NUDGE_TITLE
+            notifications.append(Notification(NUDGE_TITLE, body, priority=priority, tags=(tag,), dedup_key=dedup))
+
+        return notifications
