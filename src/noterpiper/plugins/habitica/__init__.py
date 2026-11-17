@@ -3,15 +3,15 @@
 One calm end-of-day summary of what you still owe today (see HABITICA-SETUP.md). It
 reads only Habitica's structured fields, never the wording of a title:
 
-  • Dailies  — `isDue and not completed`; a long `streak` is flagged 🔥 at-risk.
-  • To-dos   — `not completed`; past its `date` → "(overdue)".
-  • Habits   — daily-reset "good" habits that are still untapped today.
+  • Dailies  — due today (`isDue`, any frequency) and not done; long `streak` → 🔥 at-risk.
+  • To-dos   — due today or overdue are listed; undated / later ones become a backlog count.
+  • Habits   — daily-reset "good" (+) habits still untapped today (weekly/monthly left out).
   • Hidden   — tasks tagged `Archived`, or `#### …` / `-----` dividers, are skipped.
 
 Each task's section is its first (non-Archived) tag; untagged tasks fall back to a
-"Dailies" / "To-dos" / "Habits" section — so it works with zero setup for any layout
-and gets better as you tag. At-risk streaks are a cross-cutting block shown first. A
-stable title ("Nightly check-in") gives robust once-per-day dedup under the ~2-min engine.
+"Dailies" / "To-dos" / "Habits" section — so it works with zero setup for any layout. The
+one message is ordered by urgency — at-risk → overdue → due-today sections (hardest first)
+→ a backlog count. A stable title ("Nightly check-in") gives once-per-day dedup.
 """
 
 from __future__ import annotations
@@ -125,12 +125,14 @@ def _owe_todo(owed: _Owed, t: dict, tags: dict, today: date) -> None:
 
 
 def _owe_habit(owed: _Owed, h: dict, tags: dict) -> None:
-    # Counted when it's a daily-reset "good" habit, untapped today, and not hidden.
-    # Untagged ones fall back to "Habits" (like dailies/to-dos) instead of vanishing.
-    if _hidden(h, tags) or h.get("frequency") != "daily" or not h.get("up"):
+    # Only a daily-reset "good" (+) habit has a daily "did you do it today?". Weekly/monthly
+    # habits reset on their own cycle — no nightly deadline — so they're never owed tonight.
+    # Untagged daily habits fall back to "Habits" (like dailies/to-dos), never vanish.
+    # Defaults match Habitica's: a habit with no frequency is daily, no `up` is a good habit.
+    if _hidden(h, tags) or h.get("frequency", "daily") != "daily" or not h.get("up", True):
         return
     if (h.get("counterUp", 0) + h.get("counterDown", 0)) != 0:
-        return
+        return  # already tapped today
     owed.add(_section(h, tags, "Habits"), h["text"].strip(), _priority(h))
 
 

@@ -325,3 +325,36 @@ def test_long_lists_are_capped_but_count_stays_true(monkeypatch):
 def test_titles_are_header_safe(monkeypatch):
     _ready(monkeypatch, _tasks(dailys=[_daily("X")]))
     HabiticaSource().check(AT_NUDGE, CONFIG)[0].title.encode("latin-1")  # must not raise
+
+
+# ─── recurrence / frequency: every case (dailies via isDue, habits daily-only) ───
+
+
+def test_a_daily_not_due_today_is_skipped(monkeypatch):
+    # a weekly/monthly/yearly daily on an off day → Habitica sets isDue=False → not owed tonight
+    _ready(monkeypatch, _tasks(dailys=[_daily("Weekly chore", isDue=False)]))
+    assert "All done" in HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+
+
+def test_a_due_daily_is_shown_regardless_of_frequency(monkeypatch):
+    # frequency is irrelevant for dailies — isDue is authoritative
+    yearly = {"text": "Renew passport", "isDue": True, "completed": False, "streak": 1,
+              "tags": [], "priority": 1, "frequency": "yearly"}  # fmt: skip
+    _ready(monkeypatch, _tasks(dailys=[yearly]))
+    assert "Renew passport" in HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+
+
+def test_a_monthly_habit_is_ignored(monkeypatch):
+    _ready(monkeypatch, _tasks(habits=[_habit("Monthly review", tags=["tQ"], frequency="monthly")]))
+    assert "All done" in HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+
+
+def test_a_down_only_bad_habit_is_ignored(monkeypatch):
+    _ready(monkeypatch, _tasks(habits=[_habit("No sugar", tags=["tQ"], up=False)]))
+    assert "All done" in HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+
+
+def test_a_habit_without_a_frequency_is_treated_as_daily(monkeypatch):
+    bare = {"text": "Stretch", "up": True, "counterUp": 0, "counterDown": 0, "tags": []}
+    _ready(monkeypatch, _tasks(habits=[bare]))
+    assert "Stretch" in HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
