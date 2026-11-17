@@ -124,6 +124,16 @@ export function encodeContent(obj) {
   return btoa(bin);
 }
 
+// "prayer, Quran" → ["prayer", "quran"] · empty/blank → null (no filtering).
+// Mirrors the engine's whitelist normalization (lowercase, trimmed).
+export function parseWhitelist(text) {
+  const names = String(text || '')
+    .split(',')
+    .map((p) => p.trim().toLowerCase())
+    .filter(Boolean);
+  return names.length ? names : null;
+}
+
 // config.json object → flat form state the controls bind to.
 // Reads the keyed shape ({habitica,prayer,ramadan}); falls back to the legacy shape
 // (a `nudge` section, top-level `reminders`) so an un-migrated file still loads.
@@ -149,6 +159,13 @@ export function fromConfig(o = {}, extSchema = {}) {
     nudgeEnabled: nudge.enabled !== false, // default on; only explicit false is off
     nudgeStreakRisk:
       Number.isFinite(+nudge.streak_risk) && +nudge.streak_risk > 0 ? +nudge.streak_risk : 7,
+    // Quiet mode: type toggles default on; the whitelist binds as a comma string.
+    nudgeDailies: nudge.notify_dailies !== false,
+    nudgeHabits: nudge.notify_habits !== false,
+    nudgeTodos: nudge.notify_todos !== false,
+    nudgeWhitelist: Array.isArray(nudge.tag_whitelist)
+      ? nudge.tag_whitelist.join(', ')
+      : nudge.tag_whitelist || '',
     ramadanEnabled: ram.enabled !== false, // default on; silent outside Ramadan anyway
     ramadanSuhoorLead: _lead(ram.suhoor_lead, 45),
     ramadanIftarLead: _lead(ram.iftar_lead, 0),
@@ -171,6 +188,10 @@ export function toConfig(s, base = {}) {
       time: s.nudgeTime,
       enabled: Boolean(s.nudgeEnabled),
       streak_risk: Number(s.nudgeStreakRisk),
+      notify_dailies: Boolean(s.nudgeDailies),
+      notify_habits: Boolean(s.nudgeHabits),
+      notify_todos: Boolean(s.nudgeTodos),
+      tag_whitelist: parseWhitelist(s.nudgeWhitelist),
     },
     ramadan: {
       ...(base.ramadan || {}),

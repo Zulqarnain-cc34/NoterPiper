@@ -194,6 +194,14 @@
             <div class="val"><span class="n" id="streakVal">7</span><small>days</small></div>
             <button data-step="1" aria-label="more days">+</button>
           </div></div>
+        <div class="row"><span class="rname">Dailies<span class="hint">include in the nudge</span></span>
+          <div class="toggle" id="nudgeDailies"><div class="knob"></div></div></div>
+        <div class="row"><span class="rname">Habits<span class="hint">include in the nudge</span></span>
+          <div class="toggle" id="nudgeHabits"><div class="knob"></div></div></div>
+        <div class="row"><span class="rname">To-dos<span class="hint">include in the nudge · overdue always shows</span></span>
+          <div class="toggle" id="nudgeTodos"><div class="knob"></div></div></div>
+        <div class="row"><span class="rname">Tag whitelist<span class="hint">only these tags · empty = all</span></span><span class="spacer"></span>
+          <input class="text" id="nudgeWhitelist" placeholder="all tags" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
         <div class="row" id="nudgeNowRow"><span class="rname">Send now<span class="hint">push my summary immediately</span></span><span class="spacer"></span>
           <button class="sendnow" id="nudgeNow">Send</button></div>
       </div>
@@ -390,6 +398,11 @@
       };
     };
     wireToggle('nudgeEnabled', 'nudgeEnabled', updateNudgeNow);
+    wireToggle('nudgeDailies', 'nudgeDailies');
+    wireToggle('nudgeHabits', 'nudgeHabits');
+    wireToggle('nudgeTodos', 'nudgeTodos');
+    g('nudgeWhitelist').value = state.nudgeWhitelist;
+    g('nudgeWhitelist').oninput = () => { state.nudgeWhitelist = g('nudgeWhitelist').value; onEdit(); };
     wireToggle('ramEnabled', 'ramadanEnabled', updateRamOpts);
     wireStepper('streakStepper', 'streakVal', 'nudgeStreakRisk', 1, 60);
     wireStepper('suhoorStepper', 'suhoorVal', 'ramadanSuhoorLead', 0, 120);
@@ -440,6 +453,7 @@
     state.country = g('country').value.trim();
     state.method = g('method').value;
     state.nudgeTime = g('nudgeTime').value.trim();
+    state.nudgeWhitelist = g('nudgeWhitelist').value;
     return state;
   };
 
@@ -671,6 +685,11 @@
     tsel.value = state.nudgeTime;
     g('nudgeEnabled').classList.toggle('off', !state.nudgeEnabled);
     g('streakVal').textContent = state.nudgeStreakRisk;
+    g('nudgeDailies').classList.toggle('off', !state.nudgeDailies);
+    g('nudgeHabits').classList.toggle('off', !state.nudgeHabits);
+    g('nudgeTodos').classList.toggle('off', !state.nudgeTodos);
+    if (document.activeElement !== g('nudgeWhitelist'))   // never clobber mid-typing
+      g('nudgeWhitelist').value = state.nudgeWhitelist;
     g('ramEnabled').classList.toggle('off', !state.ramadanEnabled);
     g('suhoorVal').textContent = state.ramadanSuhoorLead;
     g('iftarVal').textContent = state.ramadanIftarLead;

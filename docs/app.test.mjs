@@ -6,6 +6,7 @@ import {
   encodeContent,
   fromConfig,
   maxOffset,
+  parseWhitelist,
   prayerWindows,
   resolveState,
   toConfig,
@@ -204,4 +205,40 @@ test('maxOffset leaves a margin, rounds to 5, caps when unknown', () => {
   assert.equal(maxOffset(90), 80);
   assert.equal(maxOffset(300), 290);
   assert.equal(maxOffset(0), 120); // not resolved yet
+});
+
+test('parseWhitelist normalizes a comma string; blank means no filter', () => {
+  assert.deepEqual(parseWhitelist('prayer, Quran'), ['prayer', 'quran']);
+  assert.deepEqual(parseWhitelist('  deen  '), ['deen']);
+  assert.equal(parseWhitelist(''), null);
+  assert.equal(parseWhitelist('  ,  '), null);
+  assert.equal(parseWhitelist(undefined), null);
+});
+
+test('quiet-mode filters round-trip through fromConfig/toConfig', () => {
+  const file = {
+    habitica: {
+      time: '21:00',
+      enabled: true,
+      streak_risk: 40,
+      notify_dailies: false,
+      notify_todos: true,
+      tag_whitelist: ['prayer', 'quran'],
+    },
+  };
+  const s = fromConfig(file);
+  assert.equal(s.nudgeDailies, false);
+  assert.equal(s.nudgeHabits, true); // absent → default on
+  assert.equal(s.nudgeTodos, true);
+  assert.equal(s.nudgeWhitelist, 'prayer, quran'); // list binds as a comma string
+  const back = toConfig(s, file);
+  assert.equal(back.habitica.notify_dailies, false);
+  assert.equal(back.habitica.notify_habits, true);
+  assert.deepEqual(back.habitica.tag_whitelist, ['prayer', 'quran']);
+});
+
+test('an empty whitelist field saves as null — filtering off', () => {
+  const s = fromConfig({ habitica: { tag_whitelist: null } });
+  assert.equal(s.nudgeWhitelist, '');
+  assert.equal(toConfig(s).habitica.tag_whitelist, null);
 });
