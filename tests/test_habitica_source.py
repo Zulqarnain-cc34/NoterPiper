@@ -145,6 +145,40 @@ def test_forced_auth_failure_always_delivers(monkeypatch):
     assert n.title == AUTH_FAIL_TITLE and n.dedup_key is None
 
 
+# ─── handles any setup: no convention required (A1 habits, A2 dividers) ───
+
+
+def test_untagged_habit_shows_under_a_Habits_fallback(monkeypatch):
+    # habits must behave like dailies/to-dos: untagged ones fall back, never vanish silently.
+    _ready(monkeypatch, _tasks(habits=[_habit("Pushups")]))  # untagged, daily, up, untapped
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "Habits" in body and "Pushups" in body
+
+
+def test_tagged_habit_still_uses_its_tag_section(monkeypatch):
+    _ready(monkeypatch, _tasks(habits=[_habit("Surah", tags=["tQ"])]))  # tQ → "quran"
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "Quran" in body and "Surah" in body
+
+
+def test_markdown_header_tasks_are_skipped_as_dividers(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("#### Morning"), _daily("Real one")]))
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "Morning" not in body and "Real one" in body
+
+
+def test_separator_rule_tasks_are_skipped_as_dividers(monkeypatch):
+    _ready(monkeypatch, _tasks(todos=[_todo("--------"), _todo("Buy milk")]))
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "Buy milk" in body and "--------" not in body
+
+
+def test_a_hash_without_a_space_is_a_real_task(monkeypatch):
+    _ready(monkeypatch, _tasks(dailys=[_daily("#1 goal")]))  # not a markdown header
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "#1 goal" in body
+
+
 def test_all_logged_is_a_calm_all_done(monkeypatch):
     _ready(monkeypatch, _tasks())
     assert "All done" in HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
@@ -174,19 +208,19 @@ def test_untagged_todo_falls_back_to_type(monkeypatch):
     assert "To-dos · 1" in body and "Buy milk" in body
 
 
-def test_habit_shows_only_when_tagged(monkeypatch):
+def test_habits_group_by_tag_and_untagged_fall_back(monkeypatch):
     _ready(
         monkeypatch,
         _tasks(
             habits=[
-                _habit("Quran Fajr", tags=["tQ"]),  # opted in
-                _habit("Drink water"),
+                _habit("Quran Fajr", tags=["tQ"]),  # → Quran section
+                _habit("Drink water"),  # untagged → Habits section (no longer dropped)
             ]
         ),
-    )  # untagged → ignored
+    )
     body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
     assert "Quran" in body and "Quran Fajr" in body
-    assert "Drink water" not in body
+    assert "Habits" in body and "Drink water" in body
 
 
 def test_non_daily_habit_is_ignored(monkeypatch):

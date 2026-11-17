@@ -1,22 +1,22 @@
 """Habitica nightly-nudge source — tag-driven.
 
-One calm end-of-day summary of what you still owe today, grouped by *your own tags*
-(see HABITICA-DATA-STANDARD.md). It reads only Habitica's structured fields, never the
-wording of a title:
+One calm end-of-day summary of what you still owe today (see HABITICA-SETUP.md). It
+reads only Habitica's structured fields, never the wording of a title:
 
   • Dailies  — `isDue and not completed`; a long `streak` is flagged 🔥 at-risk.
   • To-dos   — `not completed`; past its `date` → "(overdue)".
-  • Habits   — opt-in: shown only if *tagged* (and daily-reset & untapped).
-  • Anything tagged `Archived` is skipped.
+  • Habits   — daily-reset "good" habits that are still untapped today.
+  • Hidden   — tasks tagged `Archived`, or `#### …` / `-----` dividers, are skipped.
 
-Each task's section is its first (non-Archived) tag; untagged dailies/to-dos fall back
-to a "Dailies" / "To-dos" section, so it works with zero setup and gets better as you
-tag. At-risk streaks are a cross-cutting block shown first. A stable title
-("Nightly check-in") gives robust once-per-day dedup under the ~2-min engine.
+Each task's section is its first (non-Archived) tag; untagged tasks fall back to a
+"Dailies" / "To-dos" / "Habits" section — so it works with zero setup for any layout
+and gets better as you tag. At-risk streaks are a cross-cutting block shown first. A
+stable title ("Nightly check-in") gives robust once-per-day dedup under the ~2-min engine.
 """
 
 from __future__ import annotations
 
+import re
 import urllib.error
 from datetime import date, datetime
 
@@ -58,6 +58,21 @@ def _archived(task: dict, tags: dict) -> bool:
     return any(tags.get(t, "").lower() == ARCHIVED for t in task.get("tags", []))
 
 
+_HEADER = re.compile(r"^#{1,6}\s")  # "#### Morning" — a markdown header used as a divider
+_RULE = re.compile(r"^[\s#=_*~·—–-]{3,}$")  # "-----", "######", "———", "===" — a separator rule
+
+
+def _is_divider(text: str) -> bool:
+    """A visual divider/header, not a real task — e.g. '#### Morning' or '-------'."""
+    t = text.strip()
+    return bool(_HEADER.match(t) or _RULE.match(t))
+
+
+def _hidden(task: dict, tags: dict) -> bool:
+    """Never shown: tagged Archived, or a markdown-header / separator divider (any tags)."""
+    return _archived(task, tags) or _is_divider(task.get("text", ""))
+
+
 def _section(task: dict, tags: dict, fallback: str) -> str:
     """Section = the first non-Archived tag (capitalised), else the type fallback."""
     names = _tag_names(task, tags)
@@ -77,7 +92,7 @@ class _Owed:
 
 
 def _owe_daily(owed: _Owed, d: dict, tags: dict, streak_risk: int) -> None:
-    if not d.get("isDue") or d.get("completed") or _archived(d, tags):
+    if not d.get("isDue") or d.get("completed") or _hidden(d, tags):
         return
     name, streak = d["text"].strip(), int(d.get("streak", 0))
     if streak >= streak_risk:
@@ -87,7 +102,7 @@ def _owe_daily(owed: _Owed, d: dict, tags: dict, streak_risk: int) -> None:
 
 
 def _owe_todo(owed: _Owed, t: dict, tags: dict, today: date) -> None:
-    if t.get("completed") or _archived(t, tags):
+    if t.get("completed") or _hidden(t, tags):
         return
     name = t["text"].strip()
     dd = _todo_date(t)
@@ -99,14 +114,13 @@ def _owe_todo(owed: _Owed, t: dict, tags: dict, today: date) -> None:
 
 
 def _owe_habit(owed: _Owed, h: dict, tags: dict) -> None:
-    # Opt-in: counted only if tagged, daily-reset, a "good" habit, and untapped today.
-    if _archived(h, tags) or h.get("frequency") != "daily" or not h.get("up"):
+    # Counted when it's a daily-reset "good" habit, untapped today, and not hidden.
+    # Untagged ones fall back to "Habits" (like dailies/to-dos) instead of vanishing.
+    if _hidden(h, tags) or h.get("frequency") != "daily" or not h.get("up"):
         return
     if (h.get("counterUp", 0) + h.get("counterDown", 0)) != 0:
         return
-    names = _tag_names(h, tags)
-    if names:
-        owed.add(names[0].capitalize(), h["text"].strip())
+    owed.add(_section(h, tags, "Habits"), h["text"].strip())
 
 
 def collect(tasks: dict, tags: dict, now: datetime, streak_risk: int = STREAK_RISK) -> dict:
@@ -129,7 +143,7 @@ def _cap(names: list[str]) -> str:
 
 
 # Sections that come from the type fallback (shown after the user's tag sections).
-_FALLBACK = ("Dailies", "To-dos")
+_FALLBACK = ("Dailies", "To-dos", "Habits")
 
 
 def summarize(c: dict) -> tuple[str, str, str]:
