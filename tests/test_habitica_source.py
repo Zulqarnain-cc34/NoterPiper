@@ -4,10 +4,11 @@ Same gating as before (configured + enabled + at the set time), but categorisati
 now by the user's tags, reading only Habitica's structured fields — never a title's
 wording. Habitica (tasks + tags) is mocked; `now` is engine-supplied."""
 
+import urllib.error
 from datetime import datetime, timedelta, timezone
 
 from noterpiper.engine import Source
-from noterpiper.plugins.habitica import NUDGE_TITLE, HabiticaSource
+from noterpiper.plugins.habitica import AUTH_FAIL_TITLE, NUDGE_TITLE, HabiticaSource
 
 TZ = timezone(timedelta(hours=5))
 AT_NUDGE = datetime(2026, 11, 16, 21, 34, tzinfo=TZ)  # within the default window of 21:30
@@ -102,6 +103,46 @@ def test_stable_dedup_title(monkeypatch):
     _ready(monkeypatch, _tasks(dailys=[_daily("X")]))
     n = HabiticaSource().check(AT_NUDGE, CONFIG)[0]
     assert n.dedup_key == n.title == NUDGE_TITLE
+
+
+# ─── auth failure is surfaced, not swallowed (B3) ───
+
+
+def _auth_fails(monkeypatch, code):
+    """Habitica configured + due, but the API rejects the credentials with `code`."""
+    monkeypatch.setattr("noterpiper.plugins.habitica.api.configured", lambda: True)
+    monkeypatch.setattr("noterpiper.plugins.habitica.api.fetch_tags", dict)
+
+    def boom():
+        raise urllib.error.HTTPError("https://habitica.com", code, "err", None, None)
+
+    monkeypatch.setattr("noterpiper.plugins.habitica.api.fetch_tasks_by_type", boom)
+
+
+def test_bad_credentials_send_a_deduped_warning(monkeypatch):
+    _auth_fails(monkeypatch, 401)
+    notes = HabiticaSource().check(AT_NUDGE, CONFIG)
+    assert len(notes) == 1
+    n = notes[0]
+    assert n.title == AUTH_FAIL_TITLE
+    assert n.dedup_key == n.title  # once/day dedup matches on the title
+    assert n.priority == "high"
+
+
+def test_403_is_also_an_auth_failure(monkeypatch):
+    _auth_fails(monkeypatch, 403)
+    assert HabiticaSource().check(AT_NUDGE, CONFIG)[0].title == AUTH_FAIL_TITLE
+
+
+def test_other_http_errors_still_send_nothing(monkeypatch):
+    _auth_fails(monkeypatch, 500)  # server blip, not a credential problem
+    assert HabiticaSource().check(AT_NUDGE, CONFIG) == []
+
+
+def test_forced_auth_failure_always_delivers(monkeypatch):
+    _auth_fails(monkeypatch, 401)
+    n = HabiticaSource().check(BEFORE, {"time": "21:30", "enabled": False, "force": True})[0]
+    assert n.title == AUTH_FAIL_TITLE and n.dedup_key is None
 
 
 def test_all_logged_is_a_calm_all_done(monkeypatch):

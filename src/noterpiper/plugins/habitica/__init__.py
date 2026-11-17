@@ -17,6 +17,7 @@ tag. At-risk streaks are a cross-cutting block shown first. A stable title
 
 from __future__ import annotations
 
+import urllib.error
 from datetime import date, datetime
 
 from ... import api
@@ -25,6 +26,8 @@ from ...engine import Notification
 STREAK_RISK = 7  # a daily with a streak this long is "at risk" if still unticked
 WINDOW_MIN = 5  # fire within this many minutes after the set time
 NUDGE_TITLE = "Nightly check-in"
+# ASCII title == dedup_key so the once/day dedup matches (see HABITICA notes / ntfy channel).
+AUTH_FAIL_TITLE = "Habitica sign-in failed"
 CAP = 5  # max names listed per group before "+N more"
 ARCHIVED = "archived"  # tasks carrying a tag named this (any case) are hidden
 
@@ -158,8 +161,21 @@ class HabiticaSource:
         try:
             tasks = api.fetch_tasks_by_type()
             tags = api.fetch_tags()
+        except urllib.error.HTTPError as e:
+            # 401/403 = bad or expired token / user id — surface it, don't go silent forever.
+            if e.code in (401, 403):
+                return [
+                    Notification(
+                        AUTH_FAIL_TITLE,
+                        "Your Habitica API token or user ID looks wrong — update the secrets.",
+                        priority="high",
+                        tags=("warning",),
+                        dedup_key=None if forced else AUTH_FAIL_TITLE,
+                    )
+                ]
+            return []  # other HTTP error (5xx, etc.) → skip tonight, don't crash
         except Exception:
-            return []  # Habitica down → skip tonight, don't crash
+            return []  # Habitica down / network → skip tonight, don't crash
         c = collect(tasks, tags, now, int(config.get("streak_risk", STREAK_RISK)))
         body, priority, tag = summarize(c)
         dedup = None if forced else NUDGE_TITLE  # forced always delivers; scheduled dedups
