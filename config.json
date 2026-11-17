@@ -25,7 +25,11 @@
   "habitica": {
     "time": "21:00",
     "enabled": true,
-    "streak_risk": 40
+    "streak_risk": 40,
+    "notify_dailies": true,
+    "notify_habits": true,
+    "notify_todos": true,
+    "tag_whitelist": null
   },
   "ramadan": {
     "enabled": false,
