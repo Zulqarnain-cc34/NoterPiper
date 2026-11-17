@@ -18,8 +18,25 @@ and the nudge treats each differently.
 | Type | What Habitica models it as | Has "owed today"? | The nudge reads |
 |---|---|---|---|
 | **Daily** | A scheduled, recurring commitment | ✅ `isDue` + `completed` + `streak` | due-but-not-done → shown; long streak → 🔥 at-risk |
-| **Habit** | A +/− behaviour to reinforce | ⚠️ only if **reset = Daily** | `frequency == daily` **and** not tapped today → shown |
+| **Habit** | A +/− behaviour to reinforce | ⚠️ ambiguous — **opt-in only** | shown **only if you tagged it** (and it's daily-reset & untapped) |
 | **To-do** | A one-off finite task | optional due `date` | not completed → shown; past its date → overdue |
+
+### The design in one line: progressive enhancement
+
+> **Works out-of-the-box on *universal* fields; gets smarter when you add *your own* structure.**
+
+Habitica's data is either **universal** (means the same for everyone — a daily's
+`isDue`/`completed`/`streak`, a to-do's `date`, `priority`, `checklist`) or **personal**
+(means different things to different people — `tags`, titles, notes). The nudge **never
+guesses meaning from a title**; it reads universal fields by default, and layers your
+personal structure (tags) on top when it's there:
+
+- **Level 0 — zero setup:** shows what's owed (dailies due, to-dos open), grouped **by type**.
+- **Level 1 — you tag:** grouped **by your tags** → real sections (Prayer, Work, Quran).
+- **Level 2 — priority & checklists:** Hard tasks first, `2/3` progress shown.
+
+Because it reads *fields*, not intent, it works even when someone "uses a daily as a
+habit" — the daily still has `isDue`/`completed`, so it shows when owed.
 
 ### The golden rule
 > **If you should do it every day (or on a schedule), make it a _Daily_ — not a Habit.**
