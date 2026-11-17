@@ -116,16 +116,20 @@ export function encodeContent(obj) {
 }
 
 // config.json object → flat form state the controls bind to.
+// Reads the keyed shape ({habitica,prayer,ramadan}); falls back to the legacy shape
+// (a `nudge` section, top-level `reminders`) so an un-migrated file still loads.
 export function fromConfig(o = {}) {
-  const nudge = (o && typeof o.nudge === 'object' && o.nudge) || {};
-  const ram = (o && typeof o.ramadan === 'object' && o.ramadan) || {};
+  const sec = (k) => (o && typeof o[k] === 'object' && o[k]) || {};
+  const nudge = { ...sec('nudge'), ...sec('habitica') };   // 'habitica' (new) wins over legacy 'nudge'
+  const prayer = sec('prayer');
+  const ram = sec('ramadan');
   const _lead = (v, d) => (Number.isFinite(+v) && +v >= 0 ? +v : d);
   return {
     city: o.city ?? '',
     country: o.country ?? '',
     method: String(o.method ?? '1'),
     timezone: o.timezone ?? '',
-    reminders: o.reminders ?? {},
+    reminders: prayer.reminders ?? o.reminders ?? {},
     nudgeTime: nudge.time ?? '21:30',
     nudgeEnabled: nudge.enabled !== false,   // default on; only explicit false is off
     nudgeStreakRisk: Number.isFinite(+nudge.streak_risk) && +nudge.streak_risk > 0 ? +nudge.streak_risk : 7,
@@ -138,15 +142,15 @@ export function fromConfig(o = {}) {
 // Form state → config.json object. `base` is the loaded file so unknown keys
 // (anything a future version adds) survive a round-trip untouched.
 export function toConfig(s, base = {}) {
-  return {
+  const next = {
     ...base,
     city: s.city,
     country: s.country,
     method: String(s.method),
     timezone: s.timezone,
-    reminders: s.reminders,
-    nudge: {
-      ...(base.nudge || {}), time: s.nudgeTime, enabled: Boolean(s.nudgeEnabled),
+    prayer: { ...(base.prayer || {}), reminders: s.reminders },
+    habitica: {
+      ...(base.habitica || {}), time: s.nudgeTime, enabled: Boolean(s.nudgeEnabled),
       streak_risk: Number(s.nudgeStreakRisk),
     },
     ramadan: {
@@ -154,4 +158,7 @@ export function toConfig(s, base = {}) {
       suhoor_lead: Number(s.ramadanSuhoorLead), iftar_lead: Number(s.ramadanIftarLead),
     },
   };
+  delete next.nudge;        // migrate away from the legacy section…
+  delete next.reminders;    // …and top-level reminders (now under prayer)
+  return next;
 }

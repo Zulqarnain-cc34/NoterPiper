@@ -2,32 +2,39 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { toConfig, fromConfig, validTime, resolveState, COUNTRIES, CITIES, encodeContent, prayerWindows, maxOffset } from './app.js';
 
-test('toConfig emits a real boolean nudge.enabled (not a string)', () => {
+test('toConfig writes the keyed shape — habitica section, reminders under prayer', () => {
   const c = toConfig({
     city: 'Makkah', country: 'Saudi Arabia', method: '4', timezone: 'Asia/Riyadh',
     reminders: { Isha: { after_start: 60 } }, nudgeTime: '21:30', nudgeEnabled: false,
   });
-  assert.equal(c.nudge.enabled, false);
-  assert.equal(typeof c.nudge.enabled, 'boolean');
-  assert.equal(c.nudge.time, '21:30');
+  assert.equal(c.habitica.enabled, false);
+  assert.equal(typeof c.habitica.enabled, 'boolean');
+  assert.equal(c.habitica.time, '21:30');
+  assert.deepEqual(c.prayer.reminders, { Isha: { after_start: 60 } });  // reminders live under prayer
+  assert.equal(c.nudge, undefined);        // legacy section dropped on save
+  assert.equal(c.reminders, undefined);    // legacy top-level reminders dropped
   assert.equal(c.city, 'Makkah');
 });
 
-test('fromConfig/toConfig round-trips and preserves unknown keys', () => {
-  const orig = {
+test('fromConfig/toConfig migrates a legacy file to keyed + preserves unknown keys', () => {
+  const legacy = {
     city: 'X', country: 'Y', method: '1', timezone: 'Z',
     reminders: { Isha: { after_start: 60 } },
     nudge: { time: '21:30', enabled: true }, _future: 'keep',
   };
-  const back = toConfig(fromConfig(orig), orig);
-  assert.equal(back._future, 'keep');          // unknown top-level key survives
-  assert.equal(back.nudge.enabled, true);
+  const back = toConfig(fromConfig(legacy), legacy);
+  assert.equal(back._future, 'keep');                   // unknown top-level key survives
+  assert.equal(back.habitica.enabled, true);            // nudge -> habitica
+  assert.deepEqual(back.prayer.reminders, { Isha: { after_start: 60 } });
+  assert.equal(back.nudge, undefined);                  // legacy removed
+  assert.equal(back.reminders, undefined);
   assert.equal(back.city, 'X');
 });
 
-test('fromConfig reads the at-risk streak threshold with a safe default', () => {
-  assert.equal(fromConfig({}).nudgeStreakRisk, 7);                       // nothing set → default
-  assert.equal(fromConfig({ nudge: { streak_risk: 14 } }).nudgeStreakRisk, 14);
+test('fromConfig reads the at-risk streak — keyed habitica, and legacy nudge', () => {
+  assert.equal(fromConfig({}).nudgeStreakRisk, 7);                            // default
+  assert.equal(fromConfig({ habitica: { streak_risk: 14 } }).nudgeStreakRisk, 14);  // new
+  assert.equal(fromConfig({ nudge: { streak_risk: 9 } }).nudgeStreakRisk, 9);       // legacy still read
 });
 
 test('toConfig writes the at-risk streak threshold as a number', () => {
@@ -35,8 +42,8 @@ test('toConfig writes the at-risk streak threshold as a number', () => {
     city: 'Makkah', country: 'Saudi Arabia', method: '4', timezone: 'Asia/Riyadh',
     reminders: {}, nudgeTime: '21:30', nudgeEnabled: true, nudgeStreakRisk: 10,
   });
-  assert.equal(c.nudge.streak_risk, 10);
-  assert.equal(typeof c.nudge.streak_risk, 'number');
+  assert.equal(c.habitica.streak_risk, 10);
+  assert.equal(typeof c.habitica.streak_risk, 'number');
 });
 
 test('fromConfig reads the ramadan controls with safe defaults', () => {
