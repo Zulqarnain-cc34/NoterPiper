@@ -143,12 +143,8 @@ class HabiticaSource:
     defaults = {"enabled": True, "time": "21:30", "window": WINDOW_MIN, "streak_risk": STREAK_RISK}
     # UI metadata for the config page — controls are generated from this (see
     # scripts/gen_plugin_schema.py); a plugin never touches the app's JS.
-    config_schema = [
-        {"key": "enabled", "type": "toggle", "label": "Habitica nudge", "hint": "optional"},
-        {"key": "time", "type": "time", "label": "Time", "hint": "end-of-day check"},
-        {"key": "streak_risk", "type": "stepper", "label": "At-risk streak",
-         "hint": "flag streaks this long if unticked", "min": 1, "max": 60, "unit": "days"},
-    ]
+    # No config_schema: the config page hand-builds this card (docs/index.html), so the
+    # generator must not auto-emit competing controls. See PLUGIN-AUTHORING "config UI".
 
     def check(self, now: datetime, config: dict) -> list[Notification]:
         if not api.configured():

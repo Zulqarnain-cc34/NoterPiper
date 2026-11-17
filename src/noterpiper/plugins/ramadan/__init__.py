@@ -63,14 +63,8 @@ class RamadanSource:
     id = "ramadan"
     wants_location = True        # needs city/country/method for Aladhan times
     defaults = {"enabled": True, "suhoor_lead": SUHOOR_LEAD, "iftar_lead": IFTAR_LEAD, "window": WINDOW_MIN}
-    config_schema = [            # controls generated from this — no app JS to touch
-        {"key": "enabled", "type": "toggle", "label": "Suhoor & iftar",
-         "hint": "reminders — only during Ramadan"},
-        {"key": "suhoor_lead", "type": "stepper", "label": "Suhoor lead",
-         "hint": "minutes before Fajr", "min": 0, "max": 120, "step": 5, "unit": "min"},
-        {"key": "iftar_lead", "type": "stepper", "label": "Iftar lead",
-         "hint": "minutes before Maghrib", "min": 0, "max": 120, "step": 5, "unit": "min"},
-    ]
+    # No config_schema: the config page hand-builds this card (docs/index.html), so the
+    # generator must not auto-emit competing controls. See PLUGIN-AUTHORING "config UI".
 
     def check(self, now: datetime, config: dict) -> list[Notification]:
         forced = bool(config.get("force"))                  # config page's 'send now' test
