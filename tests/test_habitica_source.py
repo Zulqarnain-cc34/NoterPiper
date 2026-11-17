@@ -874,3 +874,38 @@ def test_forced_kind_unknown_falls_back_to_full_summary(monkeypatch):
         notes = HabiticaSource().check(BEFORE, {**CONFIG, "force": True, "force_kind": kind})
         assert len(notes) == 1 and notes[0].title == NUDGE_TITLE
         assert "Task" in notes[0].body
+
+
+def test_notify_todos_off_also_silences_the_backlog_line(monkeypatch):
+    """'Notify to-dos' off means the nudge never mentions to-dos — including the
+    '+N in your backlog' counter. Overdue stays (urgent exception)."""
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[_daily("Keep me")],
+            todos=[
+                _todo("Future", date="2026-11-20"),
+                _todo("Undated"),
+                _todo("Late", date="2026-11-01"),
+            ],
+        ),
+    )
+    body = HabiticaSource().check(AT_NUDGE, {**CONFIG, "notify_todos": False})[0].body
+    assert "backlog" not in body and "open to-do" not in body
+    assert "Late" in body  # overdue still shown
+
+
+def test_whitelist_also_filters_the_backlog_count(monkeypatch):
+    """Backlog counts only to-dos that would be eligible: whitelisted or untagged."""
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[_daily("Keep me")],
+            todos=[
+                _todo("Quran future", tags=["tQ"], date="2026-11-20"),
+                _todo("Untagged future", date="2026-11-20"),
+            ],
+        ),
+    )
+    body = HabiticaSource().check(AT_NUDGE, {**CONFIG, "tag_whitelist": ["prayer"]})[0].body
+    assert "1 open to-do" in body  # only the untagged one counts; the quran one is quiet

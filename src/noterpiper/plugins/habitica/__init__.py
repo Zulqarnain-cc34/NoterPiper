@@ -179,12 +179,15 @@ def _owe_todo(
         return
     name, prio = t["text"].strip(), _priority(t)
     dd = _todo_date(t)
-    if dd is None or dd > today:  # undated or scheduled later → backlog, not owed tonight
-        owed.later += 1
-    elif dd < today:  # overdue — you're late; its own urgent block, shown despite quiet mode
+    if dd and dd < today:  # overdue — urgent, shown despite quiet mode
         owed.overdue.append((name, prio))
         owed.counts["todos"] += 1
-    elif notify_todos and _allowed_tags(t, tags, tag_whitelist):  # due today → its section
+        return
+    if not notify_todos or not _allowed_tags(t, tags, tag_whitelist):
+        return  # quiet mode: no section entry AND no backlog mention
+    if dd is None or dd > today:  # undated or scheduled later → backlog, not owed tonight
+        owed.later += 1
+    else:  # due today → its section
         owed.add(_section(t, tags, "To-dos"), name, prio)
         owed.counts["todos"] += 1
 
