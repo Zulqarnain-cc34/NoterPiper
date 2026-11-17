@@ -431,3 +431,87 @@ def test_notify_dailies_off_hides_at_risk_too(monkeypatch):
     _ready(monkeypatch, _tasks(dailys=[_daily("At-risk task", streak=50)]))
     config = {**CONFIG, "notify_dailies": False}
     assert "All done" in HabiticaSource().check(AT_NUDGE, config)[0].body
+
+
+# ─── to-dos due today as full sections (Phase 2) ───
+
+
+def test_todos_due_today_in_sections(monkeypatch):
+    _ready(monkeypatch, _tasks(todos=[_todo("Write email", date=TODAY_ISO)]))
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "Write email" in body and "To-dos" in body
+
+
+def test_todos_in_sections_sorted_by_priority(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            todos=[
+                _todo("Trivial task", date=TODAY_ISO, priority=0.1),
+                _todo("Hard task", date=TODAY_ISO, priority=2),
+            ]
+        ),
+    )
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert body.index("Hard task") < body.index("Trivial task")
+
+
+def test_todos_in_sections_capped(monkeypatch):
+    many_todos = [_todo(f"Task {i}", date=TODAY_ISO) for i in range(9)]
+    _ready(monkeypatch, _tasks(todos=many_todos))
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "To-dos · 9" in body and "+4 more" in body
+
+
+def test_todos_capped_shows_plus_n(monkeypatch):
+    many_todos = [_todo(f"T{i}", date=TODAY_ISO) for i in range(7)]
+    _ready(monkeypatch, _tasks(todos=many_todos))
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "+2 more" in body
+
+
+def test_todos_section_after_at_risk_and_overdue(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            dailys=[_daily("At-risk daily", streak=50)],
+            todos=[
+                _todo("Overdue", date="2026-11-10"),  # past
+                _todo("Today", date=TODAY_ISO),  # today
+            ],
+        ),
+    )
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    # Order: At risk → Overdue → Sections
+    assert body.index("At-risk daily") < body.index("Overdue") < body.index("Today")
+
+
+def test_todos_with_tags_appear_under_tag_section(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(todos=[_todo("Work email", tags=["tP"], date=TODAY_ISO)]),
+    )
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    # Tag "tP" = "prayer", so section should be "Prayer"
+    assert "Work email" in body and "Prayer" in body
+
+
+def test_untagged_todos_fallback_to_todos_section(monkeypatch):
+    _ready(monkeypatch, _tasks(todos=[_todo("Untagged", date=TODAY_ISO, tags=[])]))
+    body = HabiticaSource().check(AT_NUDGE, CONFIG)[0].body
+    assert "Untagged" in body and "To-dos" in body
+
+
+def test_todos_respect_phase1_whitelist_filter(monkeypatch):
+    _ready(
+        monkeypatch,
+        _tasks(
+            todos=[
+                _todo("Prayer task", tags=["tP"], date=TODAY_ISO),
+                _todo("Quran task", tags=["tQ"], date=TODAY_ISO),
+            ]
+        ),
+    )
+    config = {**CONFIG, "tag_whitelist": ["prayer"]}
+    body = HabiticaSource().check(AT_NUDGE, config)[0].body
+    assert "Prayer task" in body and "Quran task" not in body
