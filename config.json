@@ -29,7 +29,9 @@
     "notify_dailies": true,
     "notify_habits": true,
     "notify_todos": true,
-    "tag_whitelist": null
+    "tag_whitelist": [
+      "deen"
+    ]
   },
   "ramadan": {
     "enabled": false,
