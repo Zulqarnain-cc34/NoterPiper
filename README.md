@@ -10,7 +10,6 @@
 ![License](https://img.shields.io/badge/license-MIT-6366f1?labelColor=1e293b)
 ![Python](https://img.shields.io/badge/python-3.12-3776ab?labelColor=1e293b)
 ![Dependencies](https://img.shields.io/badge/dependencies-none-14b8a6?labelColor=1e293b)
-![Tests](https://img.shields.io/badge/tests-57%20passing-22c55e?labelColor=1e293b)
 ![Serverless](https://img.shields.io/badge/serverless-✓-8b5cf6?labelColor=1e293b)
 
 </div>
