@@ -15,24 +15,14 @@ from datetime import datetime, timedelta
 
 from ... import net
 from ...engine import Notification
+from .._common import due_at as _due
+from .._common import fmt as _fmt
+from .._common import to_dt as _to_dt
 
 RAMADAN = 9  # Hijri month number
 WINDOW_MIN = 10  # fire if a run lands within this many minutes after the reminder time
 SUHOOR_LEAD = 45  # default minutes before Fajr
 IFTAR_LEAD = 0  # default minutes before Maghrib (0 = exactly at Maghrib)
-
-
-def _fmt(t: datetime) -> str:
-    return t.strftime("%I:%M %p").lstrip("0")
-
-
-def _to_dt(hhmm: str, ref: datetime) -> datetime:
-    h, m = (int(x) for x in hhmm.split()[0].split(":")[:2])
-    return ref.replace(hour=h, minute=m, second=0, microsecond=0)
-
-
-def _due(remind: datetime, now: datetime, window: int) -> bool:
-    return 0 <= (now - remind).total_seconds() / 60 < window
 
 
 def fetch_day(city: str, country: str, method: str) -> dict:
@@ -110,7 +100,7 @@ class RamadanSource:
                     f"Stop eating soon — Fajr at {_fmt(fajr)}",
                     priority="high",
                     tags=("crescent_moon",),
-                    dedup_key="suhoor",
+                    dedup_key="Suhoor",
                 )
             )
         if _due(iftar, now, window):
@@ -120,7 +110,7 @@ class RamadanSource:
                     f"Time to break your fast — Maghrib at {_fmt(maghrib)}",
                     priority="high",
                     tags=("sunrise_over_mountains",),
-                    dedup_key="iftar",
+                    dedup_key="Iftar",
                 )
             )
         return out

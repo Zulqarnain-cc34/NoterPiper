@@ -21,7 +21,6 @@ from typing import overload
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ENV_FILE = PROJECT_ROOT / ".env"
 DATA_DIR = PROJECT_ROOT / "data"
-RAW_JSON = DATA_DIR / "habitica-live.json"  # optional local snapshot (User-ID fallback)
 
 
 def _load_env_file(path: Path) -> dict[str, str]:

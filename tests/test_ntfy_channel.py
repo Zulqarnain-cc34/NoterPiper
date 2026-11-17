@@ -96,3 +96,19 @@ def test_already_sent_returns_false_if_the_poll_fails(monkeypatch):
     monkeypatch.setattr("noterpiper.channels.ntfy.net.request", boom)
     # can't verify → don't block the send
     assert NtfyChannel("t").already_sent("Maghrib", now) is False
+
+
+def test_already_sent_normalizes_the_key_like_the_delivered_title(monkeypatch):
+    """ntfy stores the latin-1-safe title send() produced — an emoji-bearing or
+    differently-encoded dedup_key must still match it, or dedup silently fails."""
+    import json as _json
+
+    from noterpiper.channels import ntfy as ntfy_module
+
+    stored = _json.dumps({"event": "message", "title": "Mom's birthday"})
+    monkeypatch.setattr(ntfy_module.net, "request", lambda *a, **k: stored.encode())
+    ch = ntfy_module.NtfyChannel("topic")
+    now = datetime(2026, 11, 16, 21, 0, tzinfo=timezone.utc)
+    # the emoji is stripped from the delivered title; the key must normalize the same way
+    assert ch.already_sent("Mom's birthday 🎂", now) is True
+    assert ch.already_sent("Someone else", now) is False

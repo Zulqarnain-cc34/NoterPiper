@@ -13,6 +13,9 @@ from datetime import datetime, timedelta
 
 from ... import net
 from ...engine import Notification
+from .._common import due_at as _due
+from .._common import fmt as _fmt
+from .._common import to_dt as _to_dt
 
 # When each prayer STARTS and when its window ENDS (ends when the next one starts;
 # Isha ends at Islamic midnight).
@@ -35,15 +38,6 @@ DEFAULT_REMINDERS = {
 }
 
 
-def _fmt(t: datetime) -> str:
-    return t.strftime("%I:%M %p").lstrip("0")
-
-
-def _to_dt(hhmm: str, ref: datetime) -> datetime:
-    h, m = (int(x) for x in hhmm.split()[0].split(":")[:2])
-    return ref.replace(hour=h, minute=m, second=0, microsecond=0)
-
-
 def _reminder_dt(prayer: str, timings: dict, ref: datetime, rules: dict) -> datetime:
     rule = rules.get(prayer, DEFAULT_RULE)
     if "after_start" in rule:
@@ -51,10 +45,6 @@ def _reminder_dt(prayer: str, timings: dict, ref: datetime, rules: dict) -> date
     return _to_dt(timings[ENDS_AT[prayer]], ref) - timedelta(
         minutes=int(rule.get("before_end", 30))
     )
-
-
-def _due(remind: datetime, now: datetime, window: int = WINDOW_MIN) -> bool:
-    return 0 <= (now - remind).total_seconds() / 60 < window
 
 
 def fetch_timings(city: str, country: str, method: str) -> dict:
@@ -82,9 +72,11 @@ def fetch_timings(city: str, country: str, method: str) -> dict:
 class PrayerSource:
     id = "prayer"
     wants_location = True  # city/country/method/timezone come from the shared location
-    defaults = {"window": WINDOW_MIN, "reminders": DEFAULT_REMINDERS}
+    defaults = {"enabled": True, "window": WINDOW_MIN, "reminders": DEFAULT_REMINDERS}
 
     def check(self, now: datetime, config: dict) -> list[Notification]:
+        if not config.get("enabled", True):  # same off-switch every other plugin has
+            return []
         timings = fetch_timings(config.get("city"), config.get("country"), config.get("method"))
         rules = config.get("reminders", {})
         window = int(config.get("window", WINDOW_MIN))

@@ -103,3 +103,13 @@ def test_keyed_config_passes_through_the_new_keyed_shape(tmp_path):
     )
     raw = settings.keyed_config(f)
     assert raw["habitica"] == {"time": "21:00"} and raw["ramadan"]["enabled"] is True
+
+
+def test_keyed_config_merges_a_half_migrated_file_with_the_new_shape_winning(tmp_path):
+    """A file holding both the legacy `nudge` section and a new `habitica` section
+    must merge (new wins), not silently drop whichever iterates first."""
+    p = tmp_path / "config.json"
+    p.write_text('{"nudge": {"time": "20:00", "streak_risk": 9}, "habitica": {"time": "21:30"}}')
+    out = settings.keyed_config(p)
+    assert out["habitica"]["time"] == "21:30"  # new shape wins the collision
+    assert out["habitica"]["streak_risk"] == 9  # legacy still fills the gap

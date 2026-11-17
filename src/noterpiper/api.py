@@ -13,6 +13,7 @@ from typing import Any
 from . import config, net
 
 API_BASE = "https://habitica.com/api/v3"
+RAW_JSON = config.DATA_DIR / "habitica-live.json"  # optional local snapshot (User-ID fallback)
 
 
 def _creds() -> tuple[str, str]:
@@ -20,7 +21,7 @@ def _creds() -> tuple[str, str]:
     user_id = config.env("HABITICA_USER_ID") or config.env("USER_ID")
     if not user_id:  # fallback: read the id from a saved snapshot, if present
         with contextlib.suppress(Exception):
-            user_id = json.loads(config.RAW_JSON.read_text()).get("id")
+            user_id = json.loads(RAW_JSON.read_text()).get("id")
     if not token or not user_id:
         raise RuntimeError("Habitica not configured (need HABITICA_API_TOKEN + HABITICA_USER_ID).")
     return user_id, token
@@ -57,9 +58,10 @@ def fetch_tasks() -> list[dict[str, Any]]:
 
 
 def fetch_tasks_by_type() -> dict[str, list]:
-    """Tasks grouped: {'dailys': [...], 'todos': [...], 'habits': [...]}."""
-    groups: dict[str, list] = {"dailys": [], "todos": [], "habits": [], "rewards": []}
-    key = {"daily": "dailys", "todo": "todos", "habit": "habits", "reward": "rewards"}
+    """Tasks grouped: {'dailys': [...], 'todos': [...], 'habits': [...]}.
+    Rewards are dropped — no consumer reads them."""
+    groups: dict[str, list] = {"dailys": [], "todos": [], "habits": []}
+    key = {"daily": "dailys", "todo": "todos", "habit": "habits"}
     for t in fetch_tasks():
         g = key.get(t.get("type", ""))
         if g:

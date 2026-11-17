@@ -286,13 +286,13 @@
   </div>
 
 <script type="module">
-  import { PRAYERS, fromConfig, toConfig, validTime, resolveState, COUNTRIES, CITIES, encodeContent, prayerWindows, maxOffset } from './app.js';
+  import { PRAYERS, fromConfig, toConfig, validTime, resolveState, COUNTRIES, CITIES, encodeContent, decodeContent, prayerWindows, maxOffset } from './app.js';
 
   // Offline shell: a default config stands in until loadConfig() fetches the real file.
   const DEFAULT = {
     city: 'Makkah', country: 'Saudi Arabia', method: '4', timezone: 'Asia/Riyadh',
-    reminders: { Fajr:{before_end:30}, Zohar:{before_end:30}, Asr:{before_end:30}, Maghrib:{before_end:30}, Isha:{after_start:60} },
-    nudge: { time: '21:30', enabled: true },
+    prayer: { reminders: { Fajr:{before_end:30}, Zohar:{before_end:30}, Asr:{before_end:30}, Maghrib:{before_end:30}, Isha:{after_start:60} } },
+    habitica: { time: '21:30', enabled: true },
   };
   // Curated shortlist of the stable, long-established methods only. The full list is
   // Aladhan's (aladhan.com/calculation-methods) and changes over time — don't hand-sync
@@ -408,10 +408,10 @@
     sug.className = 'suggest show';
   }
 
+  // bind() wires handlers once at startup; applyState() paints values (and is the
+  // only place that does — it runs at init and again after every config load).
   function bind() {
     const g = id => document.getElementById(id);
-    g('city').value = state.city; g('country').value = state.country;
-    g('method').value = state.method; g('nudgeTime').value = state.nudgeTime;
     // Toggles and steppers: flip/step state, repaint, and autosave (onEdit).
     const wireToggle = (id, key, after) => {
       g(id).classList.toggle('off', !state[key]);
@@ -428,11 +428,10 @@
         g(valId).textContent = state[key]; onEdit();
       };
     };
-    wireToggle('nudgeEnabled', 'nudgeEnabled', updateNudgeNow);
+    wireToggle('nudgeEnabled', 'nudgeEnabled', updateNudgeOpts);
     wireToggle('nudgeDailies', 'nudgeDailies');
     wireToggle('nudgeHabits', 'nudgeHabits');
     wireToggle('nudgeTodos', 'nudgeTodos');
-    g('nudgeWhitelist').value = state.nudgeWhitelist;
     g('nudgeWhitelist').oninput = () => { state.nudgeWhitelist = g('nudgeWhitelist').value; onEdit(); };
     wireToggle('morningEnabled', 'morningEnabled', updateMorningWeeklyRows);
     wireToggle('weeklyEnabled', 'weeklyEnabled', updateMorningWeeklyRows);
@@ -443,7 +442,7 @@
     wireStepper('streakStepper', 'streakVal', 'nudgeStreakRisk', 1, 60);
     wireStepper('suhoorStepper', 'suhoorVal', 'ramadanSuhoorLead', 0, 120);
     wireStepper('iftarStepper', 'iftarVal', 'ramadanIftarLead', 0, 120);
-    g('ramTest').onclick = doRamadanTest;
+    g('ramTest').onclick = () => dispatchWorkflow('ramadan.yml', null, 'ramTest');
     g('city').oninput = () => {
       resolved = null; userTouched = true;
       const v = g('city').value.trim();
@@ -483,18 +482,16 @@
     const mode = prow.querySelector('.mode b').textContent;
     state.reminders[p] = mode === 'after' ? { after_start: n } : { before_end: n };
   }
-  window.readForm = function () {
+  // Controls that get validated before saving (location, nudge time) are read here at
+  // save time; every other control writes `state` directly in its own handler.
+  function readForm() {
     const g = id => document.getElementById(id);
     state.city = g('city').value.trim();
     state.country = g('country').value.trim();
     state.method = g('method').value;
     state.nudgeTime = g('nudgeTime').value.trim();
-    state.nudgeWhitelist = g('nudgeWhitelist').value;
-    state.morningTime = g('morningTime').value;
-    state.weeklyDay = g('weeklyDay').value;
-    state.weeklyTime = g('weeklyTime').value;
     return state;
-  };
+  }
 
   // ─── Schema-driven plugin cards ───────────────────────────────────────────
   // prayer/habitica/ramadan keep their hand-built cards above; every OTHER plugin
@@ -663,9 +660,13 @@
     if (!r.ok) throw new Error('GitHub ' + r.status);
     return r.json();
   }
+  async function ghFail(r) {   // uniform GitHub error: status + API message when present
+    let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {}
+    throw new Error('GitHub ' + m);
+  }
   async function ghPut(path, body) {
     const r = await fetch(API() + path, { method: 'PUT', headers: { ...ghHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
+    if (!r.ok) await ghFail(r);
     return r.json();
   }
   // Your real location lives in private repo Variables (not the public config.json).
@@ -684,11 +685,7 @@
     if (r.status === 404) r = await fetch(API() + '/actions/variables', {   // create if missing
       method: 'POST', headers: { ...ghHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, value }) });
-    if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
-  }
-  function decodeB64(b64) {
-    const bin = atob(String(b64).replace(/\s/g, ''));
-    return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+    if (!r.ok) await ghFail(r);
   }
   function ghHint(e) {
     const m = e && e.message || '';
@@ -699,7 +696,6 @@
     return m;
   }
 
-  let loaded = null;
   const setStatus = t => { document.getElementById('status').textContent = t; };
   function toast(msg, err) {
     const el = document.getElementById('toast');
@@ -708,20 +704,18 @@
   }
   function applyState() {
     const g = id => document.getElementById(id);
+    // A select keeps an out-of-range saved value selectable instead of silently dropping it.
+    const setSel = (id, val, label = val) => {
+      const sel = g(id);
+      if (![...sel.options].some(o => o.value === val)) {
+        const o = document.createElement('option');
+        o.value = val; o.textContent = label; sel.appendChild(o);
+      }
+      sel.value = val;
+    };
     g('city').value = state.city; g('country').value = state.country;
-    const sel = g('method');
-    if (![...sel.options].some(o => o.value === state.method)) {   // never drop a method not in our list
-      const o = document.createElement('option');
-      o.value = state.method; o.textContent = 'Method ' + state.method;
-      sel.appendChild(o);
-    }
-    sel.value = state.method;
-    const tsel = g('nudgeTime');
-    if (![...tsel.options].some(o => o.value === state.nudgeTime)) {   // keep an out-of-range saved time selectable
-      const o = document.createElement('option');
-      o.value = state.nudgeTime; o.textContent = state.nudgeTime; tsel.appendChild(o);
-    }
-    tsel.value = state.nudgeTime;
+    setSel('method', state.method, 'Method ' + state.method);  // never drop an unlisted method
+    setSel('nudgeTime', state.nudgeTime);
     g('nudgeEnabled').classList.toggle('off', !state.nudgeEnabled);
     g('streakVal').textContent = state.nudgeStreakRisk;
     g('nudgeDailies').classList.toggle('off', !state.nudgeDailies);
@@ -731,15 +725,6 @@
       g('nudgeWhitelist').value = state.nudgeWhitelist;
     g('morningEnabled').classList.toggle('off', !state.morningEnabled);
     g('weeklyEnabled').classList.toggle('off', !state.weeklyEnabled);
-    // Keep an out-of-range saved time/day selectable, like nudgeTime above.
-    const setSel = (id, val) => {
-      const sel = g(id);
-      if (![...sel.options].some(o => o.value === val)) {
-        const o = document.createElement('option');
-        o.value = val; o.textContent = val; sel.appendChild(o);
-      }
-      sel.value = val;
-    };
     setSel('morningTime', state.morningTime);
     setSel('weeklyDay', state.weeklyDay);
     setSel('weeklyTime', state.weeklyTime);
@@ -747,7 +732,7 @@
     g('ramEnabled').classList.toggle('off', !state.ramadanEnabled);
     g('suhoorVal').textContent = state.ramadanSuhoorLead;
     g('iftarVal').textContent = state.ramadanIftarLead;
-    updateNudgeNow(); updateRamOpts(); renderExtCards(); syncGear();
+    updateNudgeOpts(); updateRamOpts(); renderExtCards(); syncGear();
   }
   // Cache the private location on this device so the NEXT load paints it instantly,
   // instead of flashing the config.json placeholder while the Variables API responds.
@@ -776,7 +761,7 @@
     await loadExtSchema();                           // ext plugin schema → generic cards (best-effort)
     try {
       const d = await ghGet('/contents/config.json?ref=main');   // public read — no token needed
-      loaded = JSON.parse(decodeB64(d.content));
+      const loaded = JSON.parse(decodeContent(d.content));
       state = fromConfig(loaded, extSchema);
       if (cached) {                                   // instant: paint last-known real location, reveal now
         Object.assign(state, cached);
@@ -831,14 +816,14 @@
       // Retry on 409: refetch the current sha and re-apply, so a stale sha self-heals.
       for (let attempt = 0; ; attempt++) {
         const cur = await ghGet('/contents/config.json?ref=main');       // always-fresh sha (no-store)
-        const base = JSON.parse(decodeB64(cur.content));
+        const base = JSON.parse(decodeContent(cur.content));
         const next = toConfig(state, base);
         next.city = base.city; next.country = base.country;              // keep placeholder; real location is in Variables
         next.method = base.method; next.timezone = base.timezone;
         try {
           await ghPut('/contents/config.json', { message: 'Update settings via NoterPiper config page',
             content: encodeContent(next), sha: cur.sha, branch: 'main' });
-          loaded = next; break;
+          break;
         } catch (e) {
           if (attempt < 2 && /\b409\b/.test(e.message)) continue;        // sha moved under us → refetch & retry
           throw e;
@@ -850,39 +835,29 @@
     if (dirtyAgain) { dirtyAgain = false; scheduleSave(); }     // flush changes made during the save
   }
 
-  // On-demand nudge: trigger the notify workflow now (it bypasses the time gate).
-  // `kind` picks the format — evening (full), morning (counts), weekly (digest).
-  async function doNudge(kind, btnId) {
+  // One trigger behind every "send/test now" button: dispatch a workflow on main,
+  // keeping the button disabled while the request is in flight. The nudge buttons pass
+  // `kind` (evening/morning/weekly); the ramadan test passes no inputs.
+  async function dispatchWorkflow(file, inputs, btnId) {
     if (!token()) { openSettings(); document.getElementById('connect').open = true; toast('Add your GitHub token first', true); return; }
     const b = document.getElementById(btnId); b.disabled = true;
     try {
-      const r = await fetch(API() + '/actions/workflows/notify.yml/dispatches',
-        { method: 'POST', headers: { ...ghHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ ref: 'main', inputs: { kind } }) });
-      if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
+      const r = await fetch(API() + '/actions/workflows/' + file + '/dispatches',
+        { method: 'POST', headers: { ...ghHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ref: 'main', ...(inputs ? { inputs } : {}) }) });
+      if (!r.ok) await ghFail(r);
       toast('Sent ✓');
     } catch (e) { toast('Send failed — ' + ghHint(e), true); }
     b.disabled = false;
   }
-  function updateNudgeNow() { document.getElementById('nudgeOpts').style.display = state.nudgeEnabled ? 'block' : 'none'; }
+  const doNudge = (kind, btnId) => dispatchWorkflow('notify.yml', { kind }, btnId);
+  function updateNudgeOpts() { document.getElementById('nudgeOpts').style.display = state.nudgeEnabled ? 'block' : 'none'; }
   function updateMorningWeeklyRows() {   // the time/day pickers only matter when their nudge is on
     document.getElementById('morningTimeRow').style.display = state.morningEnabled ? '' : 'none';
     document.getElementById('weeklyDayRow').style.display = state.weeklyEnabled ? '' : 'none';
     document.getElementById('weeklyTimeRow').style.display = state.weeklyEnabled ? '' : 'none';
   }
   function updateRamOpts() { document.getElementById('ramOpts').style.display = state.ramadanEnabled ? 'block' : 'none'; }
-
-  // Ramadan test: force the ramadan source now (previews today's Fajr/Maghrib, any day).
-  async function doRamadanTest() {
-    if (!token()) { openSettings(); document.getElementById('connect').open = true; toast('Add your GitHub token first', true); return; }
-    const b = document.getElementById('ramTest'); b.disabled = true;
-    try {
-      const r = await fetch(API() + '/actions/workflows/ramadan.yml/dispatches',
-        { method: 'POST', headers: { ...ghHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ ref: 'main' }) });
-      if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
-      toast('Sent — arrives in ~30s');
-    } catch (e) { toast('Send failed — ' + ghHint(e), true); }
-    b.disabled = false;
-  }
 
   // ─── Settings sheet: location + connection, opened from the ⚙ in the app bar ───
   function openSettings() {
@@ -912,7 +887,7 @@
   document.getElementById('sendMorning').onclick = () => doNudge('morning', 'sendMorning');
   document.getElementById('sendWeekly').onclick = () => doNudge('weekly', 'sendWeekly');
 
-  renderMethods(); renderPrayers(); bind(); updateNudgeNow(); updateRamOpts(); checkCity(); syncGear(); loadConfig();
+  renderMethods(); renderPrayers(); bind(); applyState(); checkCity(); loadConfig();
   setTimeout(() => document.body.classList.remove('loading'), 6000);   // safety: never leave the skeleton stuck
 </script>
 </body>

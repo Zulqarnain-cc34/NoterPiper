@@ -1,7 +1,11 @@
 """The delivery contract: a Channel sends notifications and remembers what it sent.
 
-One concrete channel ships today (ntfy). The engine depends only on this interface,
-so a second channel (email, Telegram, …) could be added later without touching it.
+Two concrete channels ship today (ntfy, webhook). The engine depends only on this
+interface, so further channels (email, Telegram, …) can be added without touching it.
+
+Dedup contract: `already_sent` answers "did a push for this key already go out
+today?". How a channel matches the key is its own business — NtfyChannel matches it
+against the delivered (latin-1-safe) title, so sources should keep title == dedup_key.
 """
 
 from __future__ import annotations

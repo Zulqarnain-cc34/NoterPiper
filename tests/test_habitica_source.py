@@ -7,12 +7,12 @@ wording. Habitica (tasks + tags) is mocked; `now` is engine-supplied."""
 import shutil
 import urllib.error
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 import pytest
 
 from noterpiper.engine import Source
 from noterpiper.plugins.habitica import AUTH_FAIL_TITLE, NUDGE_TITLE, WEEKLY_TITLE, HabiticaSource
+from noterpiper.plugins.habitica import weekly as state_module
 
 TZ = timezone(timedelta(hours=5))
 AT_NUDGE = datetime(2026, 11, 16, 21, 34, tzinfo=TZ)  # within the default window of 21:30
@@ -617,7 +617,7 @@ def test_morning_respects_all_filters(monkeypatch):
 @pytest.fixture(autouse=True)
 def cleanup_state():
     """Clean up .noterpiper_state/ before and after each test."""
-    state_dir = Path(".noterpiper_state")
+    state_dir = state_module.STATE_DIR
     if state_dir.exists():
         shutil.rmtree(state_dir)
     yield
@@ -651,7 +651,6 @@ def test_weekly_state_appends_daily_runs(monkeypatch):
     # Second run same day (should not duplicate)
     HabiticaSource().check(monday, config)
     # Verify state has one entry for today
-    from noterpiper import state as state_module
 
     ws = state_module.load_weekly_state()
     assert len(ws["day_runs"]) == 1 and ws["day_runs"][0]["date"] == monday.date().isoformat()
@@ -692,7 +691,6 @@ def test_weekly_state_reset_after_send(monkeypatch):
     config = {**CONFIG, "weekly": {"enabled": True, "day": "Sunday", "time": "19:00"}}
     HabiticaSource().check(monday, config)
     # Verify Monday was added
-    from noterpiper import state as state_module
 
     ws = state_module.load_weekly_state()
     assert len(ws["day_runs"]) == 1
@@ -828,8 +826,6 @@ def test_corrupt_weekly_state_entries_never_kill_the_nudge(monkeypatch, tmp_path
     """day_runs holding non-dict garbage must warn and skip the digest, not raise."""
     import json
 
-    from noterpiper import state as state_module
-
     monkeypatch.setattr(state_module, "STATE_DIR", tmp_path / ".noterpiper_state")
     state_module.STATE_DIR.mkdir()
     (state_module.STATE_DIR / "habitica_weekly.json").write_text(
@@ -855,7 +851,6 @@ def test_forced_kind_morning_sends_the_brief(monkeypatch):
 
 
 def test_forced_kind_weekly_previews_without_resetting_state(monkeypatch, tmp_path):
-    from noterpiper import state as state_module
 
     monkeypatch.setattr(state_module, "STATE_DIR", tmp_path / ".noterpiper_state")
     _ready(monkeypatch, _tasks(dailys=[_daily("Risk", streak=50)]))

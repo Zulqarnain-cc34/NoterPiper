@@ -11,14 +11,9 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from ...engine import Notification
+from .._common import due_now as _due_now
 
 WINDOW_MIN = 5
-
-
-def _due_now(now: datetime, hhmm: str, window: int = WINDOW_MIN) -> bool:
-    th, tm = (int(x) for x in str(hhmm).split(":")[:2])
-    delta = (now.hour * 60 + now.minute) - (th * 60 + tm)
-    return 0 <= delta < window
 
 
 def _date(y: int, m: int, d: int) -> date | None:

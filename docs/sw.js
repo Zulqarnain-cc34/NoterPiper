@@ -1,7 +1,9 @@
 // Minimal service worker — makes this an installable PWA (clean home-screen
 // icon, no browser badge) and serves the shell offline. Network-first so an
 // online visit is always fresh; the live GitHub/Aladhan APIs are never cached.
-const CACHE = 'noterpiper-v1';
+// Bump the version whenever a shell file is REMOVED — the activate handler only
+// deletes other-named caches, so stale entries inside the current one live forever.
+const CACHE = 'noterpiper-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
 
@@ -21,8 +23,11 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     fetch(e.request)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        if (res.ok) {
+          // only cache good responses — a cached 404 would outlive the outage
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+        }
         return res;
       })
       .catch(() => caches.match(e.request)),

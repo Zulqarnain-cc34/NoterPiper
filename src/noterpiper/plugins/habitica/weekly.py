@@ -1,26 +1,25 @@
-"""State persistence for multi-run features (e.g., weekly digest aggregation).
+"""Weekly-digest state for the Habitica plugin — its only consumer.
 
-State files live in `.noterpiper_state/` (git-ignored) — one JSON file per feature.
-No server, no external store — just local files next to the working directory.
+One JSON file under `.noterpiper_state/` (git-ignored) accumulates each day's
+collect() snapshot so the Sunday digest can aggregate the week. No server, no
+external store.
 
-Honesty note: on an ephemeral runner (GitHub Actions) the working directory is wiped
-between runs, so the "week" a digest sees there is whatever accumulated in that one
-run — effectively the current day. The digest stays correct-but-shallow on CI and
-grows richer on any persistent machine (a laptop, a VPS, a repo that commits state).
+Honesty note: on an ephemeral runner (GitHub Actions) the directory is wiped
+between runs, so the "week" a digest sees there is whatever accumulated in that
+one run — effectively the current day. The digest stays correct-but-shallow on
+CI and grows richer on any persistent machine.
 """
+
+from __future__ import annotations
 
 import json
 from datetime import date, datetime, timedelta
-from pathlib import Path
 
-STATE_DIR = Path(".noterpiper_state")
+from ... import config
+
+STATE_DIR = config.PROJECT_ROOT / ".noterpiper_state"
 
 _EMPTY = {"week_start": None, "week_end": None, "day_runs": [], "last_digest_sent": None}
-
-
-def _ensure_state_dir() -> None:
-    """Create state dir if missing."""
-    STATE_DIR.mkdir(exist_ok=True)
 
 
 def load_weekly_state() -> dict:
@@ -37,15 +36,13 @@ def load_weekly_state() -> dict:
 
 def save_weekly_state(state: dict) -> None:
     """Persist weekly digest state."""
-    _ensure_state_dir()
-    path = STATE_DIR / "habitica_weekly.json"
-    path.write_text(json.dumps(state, indent=2))
+    STATE_DIR.mkdir(exist_ok=True)
+    (STATE_DIR / "habitica_weekly.json").write_text(json.dumps(state, indent=2))
 
 
 def get_weekly_bounds(now: datetime) -> tuple[date, date]:
     """Week start (Monday) and end (Sunday) for the given date."""
-    now_date = now.date()
-    start = now_date - timedelta(days=now_date.weekday())  # Monday
+    start = now.date() - timedelta(days=now.date().weekday())  # Monday
     return start, start + timedelta(days=6)  # Sunday
 
 

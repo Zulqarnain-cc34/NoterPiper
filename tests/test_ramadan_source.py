@@ -48,7 +48,9 @@ def test_suhoor_fires_before_fajr_in_ramadan(monkeypatch):
     assert len(notes) == 1
     assert "Suhoor" in notes[0].title
     assert "5:12" in notes[0].body  # shows the Fajr deadline
-    assert notes[0].dedup_key == "suhoor"
+    assert (
+        notes[0].dedup_key == notes[0].title == "Suhoor"
+    )  # key == title: ntfy dedups by delivered title
 
 
 def test_iftar_fires_at_maghrib_in_ramadan(monkeypatch):
@@ -60,7 +62,9 @@ def test_iftar_fires_at_maghrib_in_ramadan(monkeypatch):
     assert len(notes) == 1
     assert "Iftar" in notes[0].title
     assert "6:45" in notes[0].body
-    assert notes[0].dedup_key == "iftar"
+    assert (
+        notes[0].dedup_key == notes[0].title == "Iftar"
+    )  # key == title: ntfy dedups by delivered title
 
 
 def test_nothing_due_between_the_two_times(monkeypatch):
