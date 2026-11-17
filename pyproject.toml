@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "noterpiper"
+version = "1.0.0"
+description = "A free, serverless notification engine with a plugin ecosystem."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Zulqarnain-cc34" }]
+keywords = ["notifications", "serverless", "plugins", "ntfy", "prayer", "habitica"]
+# The core engine is stdlib-only. A plugin may declare its own dependencies in its
+# own package — they never leak into the core.
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/Zulqarnain-cc34/NoterPiper"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# ─── Plugin authors ───
+# A pip-installed plugin registers itself under the "noterpiper.plugins" entry-point
+# group; the engine auto-discovers it (see PLUGIN-AUTHORING.md). In your plugin's
+# pyproject.toml:
+#
+#   [project.entry-points."noterpiper.plugins"]
+#   weather = "noterpiper_weather:WeatherSource"

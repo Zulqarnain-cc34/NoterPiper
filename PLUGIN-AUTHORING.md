@@ -101,14 +101,50 @@ returned Notifications — see [`examples/plugin_template/test_example_source.py
 
 ## 8. Shipping it — repo, not fork
 
-- **Official plugin** → open a PR adding your folder under `src/noterpiper/plugins/`. It
-  becomes part of the curated core.
-- **Your own plugin** → keep it in **your own repo** (depend on `noterpiper`), the way Vim/
-  Neovim and pytest plugins live in their authors' repos. A deployer adds it by dropping the
-  folder into their `plugins/` (or a `git submodule`); auto-discovery picks it up.
-- **Never fork the engine to add a plugin.** Forking is for running your own deployment, not
-  for authoring — forks can't be combined and drift from the core. Target the `Source`
-  contract instead, and the engine stays untouched.
+Pick one of three, none of which touches the engine:
+
+- **Pip package (the standard).** Keep it in **your own repo** that depends on `noterpiper`,
+  and register your Source as an **entry point** — then anyone `pip install`s it and it
+  **auto-registers** (the pytest `pytest11` model). In your plugin's `pyproject.toml`:
+
+  ```toml
+  [project.entry-points."noterpiper.plugins"]
+  weather = "noterpiper_weather:WeatherSource"
+  ```
+
+  The deployer adds your package to the install step (`pip install noterpiper-weather`), and
+  `discover_all` finds it via `importlib.metadata`. No code, no app, no engine changes.
+
+- **Drop-in folder** (no packaging). Copy your plugin package into a deployment's
+  `src/noterpiper/plugins/` (or add it as a `git submodule`); the `pkgutil` scan picks it up.
+  Good for a quick personal plugin on the serverless/fork deployment.
+
+- **Official plugin** → open a PR adding your folder under `src/noterpiper/plugins/`; it joins
+  the curated core.
+
+**Never fork the engine to add a plugin.** Forking is for running your own deployment, not for
+authoring — forks can't be combined and drift from the core. Target the `Source` contract,
+and the engine stays untouched.
+
+## 9. Contract & compatibility (what you can rely on)
+
+The `Source` contract — `id`, `check(now, config) → [Notification]`, plus optional `defaults`
+and `wants_location` — is **stable within a major version.** NoterPiper follows
+[SemVer](https://semver.org): a breaking change to the contract bumps the **major** version.
+
+- **Pin it** in your plugin's dependencies: `noterpiper>=1,<2`.
+- Check it at runtime if you like: `noterpiper.__version__` / `noterpiper.PLUGIN_API_MAJOR`.
+- New *optional* fields (like `defaults` was) are **minor** — they never break an existing
+  plugin, because the engine reads them with `getattr(..., default)`.
+
+So a plugin written against `1.x` keeps working across every `1.x` engine release.
+
+## 10. Make your plugin run in a serverless deployment
+
+A pip plugin still needs to be **installed** where the engine runs. On the GitHub-Actions
+deployment, a deployer lists their plugins in **`plugins-requirements.txt`** at the repo root;
+the workflows `pip install -r` it before each run (skipped if the file is absent). So shipping
+a plugin to a deployment is: add one line to that file.
 
 ---
 

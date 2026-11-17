@@ -19,3 +19,8 @@ env/
 # local secret — never commit (repo is public)
 token.txt
 *.token
+
+# Python packaging build artifacts
+dist/
+build/
+*.egg-info/

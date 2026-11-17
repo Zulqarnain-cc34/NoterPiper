@@ -40,7 +40,7 @@ def test_build_config_marks_the_forced_source():
 
 
 def test_select_sources_runs_all_by_default():
-    assert {s.id for s in run_engine.select_sources()} == {"prayer", "habitica", "ramadan"}
+    assert {s.id for s in run_engine.select_sources()} == {"prayer", "habitica", "ramadan", "dates"}
 
 
 def test_select_sources_runs_only_the_forced_one():

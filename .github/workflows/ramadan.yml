@@ -25,7 +25,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # run_engine.py forces just the Ramadan source (stdlib only — no install).
+      # Optional: install any third-party (pip) plugins the deployer listed.
+      - run: '[ -f plugins-requirements.txt ] && pip install -r plugins-requirements.txt || echo "no third-party plugins"'
+      # run_engine.py forces just the Ramadan source; core is stdlib, plugins bring their own deps.
       - run: python scripts/run_engine.py
 
       # Push an urgent alert (and GitHub emails you too) if the test job breaks.
