@@ -7,6 +7,7 @@ whose module defines a class satisfying the `Source` contract (a `str` `id` and 
 on a stdlib, no-install, serverless deployment. (Third-party pip-installed plugins would
 layer on `importlib.metadata` entry points; the `Source` contract stays identical.)
 """
+
 from __future__ import annotations
 
 import importlib
@@ -17,15 +18,17 @@ from types import ModuleType
 
 from .plugin import Source
 
-ENTRY_POINT_GROUP = "noterpiper.plugins"    # pip-installed plugins register here
+ENTRY_POINT_GROUP = "noterpiper.plugins"  # pip-installed plugins register here
 
 
 def _is_source_class(obj: object, module: ModuleType) -> bool:
     """A class defined *in this module* that looks like a Source (str id + check())."""
-    return (inspect.isclass(obj)
-            and obj.__module__ == module.__name__          # defined here, not imported in
-            and isinstance(getattr(obj, "id", None), str)
-            and callable(getattr(obj, "check", None)))
+    return (
+        inspect.isclass(obj)
+        and obj.__module__ == module.__name__  # defined here, not imported in
+        and isinstance(getattr(obj, "id", None), str)
+        and callable(getattr(obj, "check", None))
+    )
 
 
 def discover_sources(package: ModuleType) -> list[Source]:
@@ -52,7 +55,7 @@ def discover_entry_points(group: str = ENTRY_POINT_GROUP) -> list[Source]:
         try:
             obj = ep.load()
             inst = obj() if inspect.isclass(obj) else obj
-        except Exception as e:                          # a bad plugin must not take down the engine
+        except Exception as e:  # a bad plugin must not take down the engine
             print(f"[warn] plugin entry point {ep.name!r} failed to load: {e}")
             continue
         if isinstance(inst, Source):

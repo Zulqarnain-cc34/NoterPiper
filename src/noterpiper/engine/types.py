@@ -3,6 +3,7 @@
 Sources produce Notifications; the engine routes them; a channel delivers them.
 It is frozen so it can't be mutated in transit between those layers.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -18,6 +19,7 @@ class Notification:
     dedup_key           when set, the channel delivers it at most once (per key),
                         so repeated engine runs inside a window don't re-send.
     """
+
     title: str
     body: str
     priority: str = "default"

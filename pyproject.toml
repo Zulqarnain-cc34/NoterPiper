@@ -28,3 +28,17 @@ where = ["src"]
 #
 #   [project.entry-points."noterpiper.plugins"]
 #   weather = "noterpiper_weather:WeatherSource"
+
+# ─── Lint + format (Ruff) ───
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+# Don't touch Python snippets inside Markdown docs — they're hand-aligned for teaching
+# (aligned inline comments), not real source, and ruff would expand them.
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]   # pycodestyle, pyflakes, isort, pyupgrade, bugbear, warnings
+# `ruff format` manages structural line width; don't hard-fail on the occasional long
+# string / comment / test assertion it can't (and shouldn't) rewrap.
+ignore = ["E501"]

@@ -4,6 +4,7 @@ Every external call (Habitica, Aladhan, ntfy) goes through here, so transient
 failures (timeouts, blips, 5xx) are retried with backoff instead of crashing a
 run. Standard library only — no dependency to rot over 5 years.
 """
+
 from __future__ import annotations
 
 import json

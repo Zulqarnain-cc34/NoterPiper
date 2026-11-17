@@ -8,6 +8,7 @@ Copy this folder to start your own plugin:
 Then rename the class and implement `check()`. You never edit the engine.
 Full walkthrough: ../../PLUGIN-AUTHORING.md
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -25,14 +26,17 @@ def _due_now(now: datetime, hhmm: str, window: int = 5) -> bool:
 class ExampleSource:
     """`id` + `check()` is the whole contract (`noterpiper.engine.Source`)."""
 
-    id = "example"          # short, stable — also the key for this plugin's config slice
+    id = "example"  # short, stable — also the key for this plugin's config slice
 
     def check(self, now: datetime, config: dict) -> list[Notification]:
-        if not config.get("enabled", False):              # opt-in; off by default
+        if not config.get("enabled", False):  # opt-in; off by default
             return []
         if not _due_now(now, str(config.get("time", "09:00"))):
-            return []                                      # only fire when it's due
+            return []  # only fire when it's due
         message = str(config.get("message") or "👋 Hello from your NoterPiper plugin")
         # Keep the TITLE ASCII (ntfy puts it in an HTTP header); emoji belong in the body/tags.
-        return [Notification("Example", message, priority="default",
-                             tags=("wave",), dedup_key="example")]
+        return [
+            Notification(
+                "Example", message, priority="default", tags=("wave",), dedup_key="example"
+            )
+        ]

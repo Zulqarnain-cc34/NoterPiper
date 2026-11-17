@@ -13,6 +13,7 @@ per-channel best-effort policy it does not de-duplicate — `already_sent` is al
 False, and the engine delivers whenever the source reports a notification due. Keep
 the source's window tight if repeats would matter, or pair it with ntfy as primary.
 """
+
 from __future__ import annotations
 
 import json
@@ -28,15 +29,17 @@ class WebhookChannel:
 
     def send(self, notification: Notification) -> None:
         text = f"{notification.title}\n{notification.body}"
-        payload = json.dumps({
-            "text": text,          # Slack, Mattermost, Google Chat, many others
-            "content": text,       # Discord
-            "title": notification.title,
-            "body": notification.body,
-            "priority": notification.priority,
-            "tags": list(notification.tags),
-        }).encode("utf-8")
+        payload = json.dumps(
+            {
+                "text": text,  # Slack, Mattermost, Google Chat, many others
+                "content": text,  # Discord
+                "title": notification.title,
+                "body": notification.body,
+                "priority": notification.priority,
+                "tags": list(notification.tags),
+            }
+        ).encode("utf-8")
         net.request(self.url, data=payload, headers={"Content-Type": "application/json"})
 
     def already_sent(self, dedup_key: str, now: datetime) -> bool:
-        return False               # no serverless cache for a plain webhook
+        return False  # no serverless cache for a plain webhook

@@ -11,6 +11,7 @@ reproducible for anyone.
     PRAYER_TIMEZONE  IANA tz, e.g. Europe/Istanbul      (overrides config.json)
     HABITICA_API_TOKEN / HABITICA_USER_ID   enable the optional nightly nudge
 """
+
 from __future__ import annotations
 
 import os

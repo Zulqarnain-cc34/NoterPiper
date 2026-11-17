@@ -3,6 +3,7 @@
 Layered merge (highest wins): plugin `defaults` ← shared location (if wanted) ←
 user `config[id]`. This is how a new plugin's config works with zero wiring —
 the pydantic-settings / VS Code contributes.configuration pattern."""
+
 import sys
 from pathlib import Path
 
@@ -55,5 +56,8 @@ def test_build_maps_each_source_by_id():
 def test_a_plugin_with_no_defaults_still_works():
     class Bare:
         id = "bare"
-        def check(self, now, config): return []
+
+        def check(self, now, config):
+            return []
+
     assert slice_for(Bare(), {"bare": {"on": True}}, {}) == {"on": True, "force": False}

@@ -77,10 +77,54 @@ Users set it in `config.json` under your id:
 { "weather": { "enabled": true, "city": "Lahore" } }
 ```
 
-For now, to give your slice defaults and wire it to the phone config page, add a few lines
-in [`scripts/run_engine.py`](scripts/run_engine.py) (`build_config`) and
-[`settings.py`](src/noterpiper/settings.py). *(A per-plugin config schema that removes this
-last manual step is on the roadmap — your `check()` won't change.)*
+### Defaults
+
+Declare them on your Source class — the engine merges
+`defaults ← shared location (if you want it) ← the user's config[your_id]` and hands you the
+result. **No app code to touch** (nothing in `run_engine.py` or `settings.py`):
+
+```python
+class WeatherSource:
+    id = "weather"
+    wants_location = True                       # receive the shared city/country/method
+    defaults = {"enabled": True, "warn_mm": 2}  # your slice's defaults
+```
+
+### A config UI on the phone page (optional)
+
+Add a `config_schema` and your controls render on the
+[config page](https://zulqarnain-cc34.github.io/NoterPiper/) automatically — **no JS to
+write**. Each entry is a field spec:
+
+```python
+    config_schema = [
+        {"key": "enabled", "type": "toggle", "label": "Rain warnings"},
+        {"key": "warn_mm", "type": "stepper", "label": "Warn above",
+         "min": 0, "max": 20, "step": 1, "unit": "mm"},
+    ]
+```
+
+| Key | Required | Notes |
+|---|---|---|
+| `key` | ✓ | the config key under your id |
+| `type` | ✓ | `toggle` · `stepper` · `time` · `text` · `select` · `list` |
+| `label` | ✓ | the control's name |
+| `hint` | | a dim sub-label |
+| `min` `max` `step` `unit` | | `stepper` only (`step` defaults to 1) |
+| `options` | | `select` only — `["a","b"]` or `[{"value":"a","label":"A"}]` |
+| `fields` | | `list` only — the per-row sub-fields (e.g. `label`+`date`); the value is an array of objects |
+
+Then regenerate the committed schema and commit it alongside your code:
+
+```bash
+python scripts/gen_plugin_schema.py      # writes docs/plugins.schema.json
+```
+
+A CI drift-guard fails if you forget this step. For a **pip-installed** plugin the schema
+must be regenerated with your plugin importable, so your repo that hosts the config page
+runs the generator with its `plugins-requirements.txt` installed (see §10). The three
+built-in cards (prayer, habitica, ramadan) are hand-built and deliberately **not**
+auto-generated. Worked example: [`plugins/dates`](src/noterpiper/plugins/dates/).
 
 Talking to an external API? Keep it **read-only**, keep credentials in **secrets / `.env`**
 (never printed or logged), and **respect the service's rate limits** (cache, back off on
@@ -145,6 +189,11 @@ A pip plugin still needs to be **installed** where the engine runs. On the GitHu
 deployment, a deployer lists their plugins in **`plugins-requirements.txt`** at the repo root;
 the workflows `pip install -r` it before each run (skipped if the file is absent). So shipping
 a plugin to a deployment is: add one line to that file.
+
+Editing that file also triggers the **`Regenerate plugin config schema`** workflow
+([`schema.yml`](.github/workflows/schema.yml)): it installs the listed plugins, runs the
+generator, and commits `docs/plugins.schema.json` — so a pip plugin's controls reach the
+phone config page with no local step. (You can also run it by hand from the Actions tab.)
 
 ---
 

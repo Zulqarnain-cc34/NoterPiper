@@ -5,6 +5,7 @@
 2. Sends ONE real notification the same way reminders are sent, so you can confirm
    it actually reaches your phone.
 """
+
 from __future__ import annotations
 
 import sys
@@ -37,7 +38,8 @@ def main() -> int:
         return 0
 
     NtfyChannel(topic).send(
-        Notification("Self-test", "If this reached your phone, reminders will too."))
+        Notification("Self-test", "If this reached your phone, reminders will too.")
+    )
     print("\nSent a live test notification — watch your phone now.")
     return 0
 

@@ -5,6 +5,7 @@ as the "already sent today" store — so dedup works with no database on a state
 serverless run. This consolidates what used to live twice (the prayer script's
 `send_live` + `already_sent` and the nudge script's `send`).
 """
+
 from __future__ import annotations
 
 import json
@@ -32,8 +33,7 @@ class NtfyChannel:
         headers = {"Title": _header_safe(notification.title), "Priority": notification.priority}
         if notification.tags:
             headers["Tags"] = ",".join(notification.tags)
-        net.request(f"{NTFY}/{self.topic}",
-                    data=notification.body.encode("utf-8"), headers=headers)
+        net.request(f"{NTFY}/{self.topic}", data=notification.body.encode("utf-8"), headers=headers)
 
     def already_sent(self, dedup_key: str, now: datetime) -> bool:
         """True if a message whose title equals `dedup_key` already went out since

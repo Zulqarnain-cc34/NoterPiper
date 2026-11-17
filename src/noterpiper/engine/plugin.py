@@ -3,6 +3,7 @@
 Adding a new reminder type (prayer, gym, anything) is exactly: write one class that
 satisfies this protocol, and register it. Nothing in the engine changes.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -23,5 +24,4 @@ class Source(Protocol):
 
     id: str
 
-    def check(self, now: datetime, config: dict) -> list[Notification]:
-        ...
+    def check(self, now: datetime, config: dict) -> list[Notification]: ...

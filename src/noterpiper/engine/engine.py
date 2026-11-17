@@ -4,6 +4,7 @@ On each run it asks every registered source "anything due right now?", enforces 
 once-per-day dedup via the channel, and delivers. It depends only on the Source and
 Channel contracts, so adding a plugin never changes this file (Open/Closed).
 """
+
 from __future__ import annotations
 
 from datetime import datetime

@@ -6,6 +6,7 @@ combination of them without change.
   NtfyChannel     — push to an ntfy topic (dedups via ntfy's message cache)
   WebhookChannel  — POST to any URL (Discord, Slack, Home Assistant, your endpoint…)
 """
+
 from .ntfy import NtfyChannel
 from .webhook import WebhookChannel
 
