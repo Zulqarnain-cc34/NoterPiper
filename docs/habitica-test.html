@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Habitica Testing · 4 Phases</title>
+<title>Habitica Testing</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0b1018">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -28,44 +28,55 @@
     -webkit-font-smoothing:antialiased;line-height:1.3}
   .wrap{width:100%;max-width:480px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) clamp(14px,4vw,20px) 120px}
 
-  .appbar{display:flex;align-items:center;gap:11px;padding:6px 2px 20px}
-  .appbar .logo{font-size:25px}
+  .appbar{display:flex;align-items:center;gap:11px;padding:6px 2px 22px}
+  .appbar .logo{font-size:25px;filter:drop-shadow(0 0 12px rgba(240,180,41,.35))}
   .appbar h1{margin:0;font-size:clamp(19px,5.5vw,22px);font-weight:700;letter-spacing:-.3px;font-family:Georgia,"Times New Roman",serif}
-  .appbar .link{margin-left:auto;font-size:12px;color:var(--gold);cursor:pointer;text-decoration:none}
+  .appbar .link{margin-left:auto;font-size:12px;color:var(--gold);cursor:pointer;text-decoration:none;
+    background:var(--card);border:1px solid var(--edge);padding:7px 13px;border-radius:30px}
 
-  .label{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin:24px 6px 10px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .label{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin:26px 6px 10px;font-weight:700;display:flex;align-items:center;gap:8px}
   .label::before{content:"";width:13px;height:2px;border-radius:2px;background:var(--gold)}
-  .cap{font-size:12px;color:var(--muted);margin:-5px 6px 10px;line-height:1.5}
-  .cap b{color:var(--text);font-weight:600}
 
-  .card{background:var(--card);border:1px solid var(--edge);border-radius:var(--r);padding:0 clamp(13px,3.5vw,17px)}
-  .row{display:flex;align-items:center;gap:12px;padding:15px 0;border-bottom:1px solid var(--edge);min-height:56px}
-  .row:last-child{border-bottom:none}
-  .rname{font-size:16px;font-weight:500;min-width:0}
-  .rname .hint{display:block;font-size:11.5px;color:var(--muted);font-weight:400;margin-top:2px}
-  .spacer{flex:1}
+  /* ─ send buttons: one tappable card per nudge ─ */
+  .sendcard{display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+    background:var(--card);border:1px solid var(--edge);border-radius:var(--r);
+    padding:15px 16px;margin-bottom:10px;cursor:pointer;color:var(--text);
+    font-family:inherit;transition:border-color .15s,transform .05s;box-shadow:0 10px 30px -24px #000}
+  .sendcard:active{transform:scale(.985)}
+  .sendcard:disabled{opacity:.5}
+  .sendcard .emoji{font-size:26px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+    background:var(--card2);border:1px solid var(--edge);border-radius:13px;flex:none}
+  .sendcard .meta{min-width:0;flex:1}
+  .sendcard .name{font-size:16px;font-weight:700}
+  .sendcard .desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45}
+  .sendcard .go{flex:none;font-size:13px;font-weight:800;color:var(--ink);background:var(--gold);
+    border-radius:30px;padding:8px 14px;letter-spacing:.2px}
+  .sendcard.sending .go{background:var(--card2);color:var(--muted);border:1px solid var(--edge)}
 
-  input[type="text"]{background:var(--card2);color:var(--text);border:1px solid var(--edge);border-radius:11px;
-    padding:11px 12px;font-size:15px;font-family:inherit;outline:none;max-width:100%}
-  input[type="text"]:focus{border-color:var(--goldEdge)}
-  .toggle input[type="checkbox"]{width:44px;height:28px;cursor:pointer;accent-color:var(--gold)}
-
-  button{background:var(--gold);color:var(--ink);border:none;border-radius:11px;padding:13px 18px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:10px}
-  button:active{opacity:.8}
-  button:disabled{opacity:.45}
-  button.ghost{background:var(--card2);color:var(--text);border:1px solid var(--edge);font-weight:600}
-  .btnrow{display:flex;gap:8px}
-  .btnrow button{flex:1}
-
-  .status{font-size:13px;line-height:1.5;margin:10px 6px 0;padding:11px 13px;border-radius:12px;display:none;
-    background:var(--card2);border:1px solid var(--edge);color:var(--muted)}
-  .status.show{display:block}
+  /* ─ status pill ─ */
+  .status{display:none;align-items:center;gap:9px;font-size:13.5px;line-height:1.5;margin:4px 2px 0;
+    padding:12px 14px;border-radius:13px;background:var(--card2);border:1px solid var(--edge);color:var(--muted)}
+  .status.show{display:flex}
   .status.good{background:var(--goodSoft);border-color:var(--goodEdge);color:var(--good)}
   .status.bad{background:var(--warnSoft);border-color:var(--warnEdge);color:var(--warn)}
+  .status .dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+  .status.busy .dot{animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.25}}
 
-  .notif{background:var(--card2);border:1px solid var(--edge);border-radius:var(--r);padding:16px;margin:12px 0;font-size:14px;line-height:1.6}
-  .notif .title{font-size:15px;font-weight:600;color:var(--gold);margin-bottom:8px}
-  .notif .body{color:var(--text);white-space:pre-line}
+  /* ─ phase 2 steps ─ */
+  .step{display:flex;gap:13px;background:var(--card);border:1px solid var(--edge);border-radius:var(--r);
+    padding:14px 15px;margin-bottom:10px;box-shadow:0 10px 30px -24px #000}
+  .step .num{flex:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:var(--goldSoft);border:1px solid var(--goldEdge);color:var(--gold);font-size:13px;font-weight:800}
+  .step .body{min-width:0}
+  .step .do{font-size:14.5px;font-weight:600;line-height:1.4}
+  .step .do b{color:var(--gold);font-weight:700}
+  .step .expect{font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+  .step .expect b{color:var(--text);font-weight:600}
+
+  .done{display:flex;flex-wrap:wrap;gap:7px;margin:2px 4px 0}
+  .chip{font-size:11.5px;color:var(--good);background:var(--goodSoft);border:1px solid var(--goodEdge);
+    border-radius:30px;padding:5px 11px;font-weight:600}
 </style>
 </head>
 <body>
@@ -73,39 +84,60 @@
   <div class="appbar">
     <div class="logo">🧪</div>
     <h1>Habitica Test</h1>
-    <a class="link" href="index.html">← Config</a>
+    <a class="link" href="index.html">⚙ Config</a>
   </div>
 
-  <!-- ═══ LIVE SENDS — real pushes to your phone ═══ -->
-  <div class="label">Live · send to my phone now</div>
-  <div class="cap">Each button runs the real engine with <b>your Habitica data</b> and pushes one
-    notification via ntfy — arrives in ~30s. Uses the GitHub token saved on the Config page.</div>
-  <div class="btnrow">
-    <button id="sendEvening" onclick="liveSend('evening', this)">🌙 Evening</button>
-    <button id="sendMorning" onclick="liveSend('morning', this)">🌅 Morning</button>
-    <button id="sendWeekly" onclick="liveSend('weekly', this)">📊 Weekly</button>
-  </div>
-  <div class="status" id="sendStatus"></div>
-
-  <!-- ═══ REMAINING TESTS — Phase 2 and Weekly ═══ -->
-  <div class="cap" style="margin-top:14px">✅ Already verified: quiet-mode filters, tag whitelist,
-    morning brief, evening summary, save flow. Left to test: the two below.</div>
-
-  <div class="label">Phase 2 · To-dos — test steps</div>
-  <div class="card">
-    <div class="row"><div class="rname">1 · Due today<span class="hint">In Habitica, set a to-do's due date to today → press 🌙. It appears as its own "To-dos" section (or under its tag).</span></div></div>
-    <div class="row"><div class="rname">2 · Due yesterday<span class="hint">Change the date to yesterday → 🌙. It moves to the "Overdue" block near the top.</span></div></div>
-    <div class="row"><div class="rname">3 · Due tomorrow<span class="hint">Change it to tomorrow → 🌙. Gone from the list; only "+1 open to-do in your backlog" remains.</span></div></div>
-    <div class="row"><div class="rname">Extra · Capping<span class="hint">6 to-dos due today → 🌙 lists the 5 hardest + "+1 more".</span></div></div>
+  <div class="done">
+    <span class="chip">✓ Quiet mode</span>
+    <span class="chip">✓ Tag whitelist</span>
+    <span class="chip">✓ Morning</span>
+    <span class="chip">✓ Evening</span>
+    <span class="chip">✓ Weekly</span>
   </div>
 
-  <div class="label">Phase 4 · Weekly digest — test steps</div>
-  <div class="card">
-    <div class="row"><div class="rname">Press 📊<span class="hint">Expect: "Weekly Summary · <week range>" with items due, best streak, and an at-risk callout.</span></div></div>
+  <div class="label">Send a real nudge</div>
+  <button class="sendcard" id="btn-evening" onclick="liveSend('evening', this)">
+    <span class="emoji">🌙</span>
+    <span class="meta"><span class="name">Evening summary</span>
+      <span class="desc">The full list — at-risk, overdue, sections, backlog</span></span>
+    <span class="go">Send</span>
+  </button>
+  <button class="sendcard" id="btn-morning" onclick="liveSend('morning', this)">
+    <span class="emoji">🌅</span>
+    <span class="meta"><span class="name">Morning briefing</span>
+      <span class="desc">Counts only — a glance at the day ahead</span></span>
+    <span class="go">Send</span>
+  </button>
+  <button class="sendcard" id="btn-weekly" onclick="liveSend('weekly', this)">
+    <span class="emoji">📊</span>
+    <span class="meta"><span class="name">Weekly digest</span>
+      <span class="desc">Totals, best streak, at-risk callout</span></span>
+    <span class="go">Send</span>
+  </button>
+  <div class="status" id="sendStatus"><span class="dot"></span><span id="sendText"></span></div>
+
+  <div class="label">Last check · Phase 2 — to-do due dates</div>
+  <div class="step">
+    <div class="num">1</div>
+    <div class="body">
+      <div class="do">In Habitica, set a to-do's due date to <b>today</b>, then send 🌙</div>
+      <div class="expect">It appears as its own <b>"To-dos"</b> section — not just when overdue.</div>
+    </div>
   </div>
-  <div class="cap" style="margin-top:10px">⚠️ <b>Weekly caveat:</b> GitHub's runners are wiped between runs,
-    so the 📊 button's digest aggregates <b>today's snapshot only</b> — the format and stats logic are real,
-    the "whole week" accumulation isn't testable from this button.</div>
+  <div class="step">
+    <div class="num">2</div>
+    <div class="body">
+      <div class="do">Change the date to <b>yesterday</b>, send 🌙 again</div>
+      <div class="expect">It moves up into the <b>"Overdue"</b> block.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="num">3</div>
+    <div class="body">
+      <div class="do">Change it to <b>tomorrow</b>, send 🌙 once more</div>
+      <div class="expect">Gone from the list — only <b>"+1 open to-do in your backlog"</b> remains.</div>
+    </div>
+  </div>
 
   <div style="height:40px"></div>
 </div>
@@ -126,17 +158,16 @@ const ghHeaders = () => {
   return h;
 };
 
-function show(id, msg, cls) {
-  const el = document.getElementById(id);
-  el.textContent = msg;
+function status(msg, cls) {
+  const el = document.getElementById('sendStatus');
+  document.getElementById('sendText').textContent = msg;
   el.className = 'status show ' + (cls || '');
 }
 
-// ─── Live sends: dispatch the notify workflow with the chosen kind ───
 async function liveSend(kind, btn) {
-  if (!token()) { show('sendStatus', 'No GitHub token — open ← Config, tap ⚙ → Connect, paste your token, then come back.', 'bad'); return; }
-  btn.disabled = true;
-  show('sendStatus', `Sending ${kind} nudge…`);
+  if (!token()) { status('Add your GitHub token first — tap ⚙ Config → Connect.', 'bad'); return; }
+  btn.disabled = true; btn.classList.add('sending');
+  status('Sending…', 'busy');
   try {
     const r = await fetch(API() + '/actions/workflows/notify.yml/dispatches', {
       method: 'POST',
@@ -144,15 +175,12 @@ async function liveSend(kind, btn) {
       body: JSON.stringify({ ref: 'main', inputs: { kind } }),
     });
     if (!r.ok) { let m = String(r.status); try { m += ' ' + (await r.json()).message; } catch {} throw new Error('GitHub ' + m); }
-    show('sendStatus', `✓ ${kind} nudge dispatched — check your phone in ~30s (ntfy can add a minute when rate-limited).`, 'good');
+    status('Sent ✓', 'good');
   } catch (e) {
-    show('sendStatus', 'Send failed — ' + e.message, 'bad');
+    status('Failed — ' + e.message, 'bad');
   }
-  btn.disabled = false;
+  btn.disabled = false; btn.classList.remove('sending');
 }
-
-// Phase 1 was verified and its live filter editor removed — quiet-mode settings
-// now live only in config.json (editable from the Config page or the repo).
 </script>
 </body>
 </html>
