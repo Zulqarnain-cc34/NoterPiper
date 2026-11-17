@@ -26,9 +26,9 @@
     "time": "23:00",
     "enabled": true,
     "streak_risk": 40,
-    "notify_dailies": false,
-    "notify_habits": false,
-    "notify_todos": false,
+    "notify_dailies": true,
+    "notify_habits": true,
+    "notify_todos": true,
     "tag_whitelist": null
   },
   "ramadan": {
