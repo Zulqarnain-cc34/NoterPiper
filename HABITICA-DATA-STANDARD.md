@@ -1,88 +1,126 @@
-# Habitica data standard — tag your tasks, don't make the nudge guess
+# Habitica setup standard for NoterPiper
 
-**Status:** design / proposal (not yet implemented in the plugin)
-**Scope:** habits + dailies (to-dos later — same idea)
+**A structure anyone can follow so the nightly nudge is accurate, organised, and scalable.**
 
-## Why this exists
+NoterPiper's Habitica plugin sends **one calm summary each night of what you still owe
+today**. It can only be as good as the data behind it. Habitica gives every task
+structured fields — *type*, *tags*, *priority*, *streak*, *checklist* — so the nudge
+should read those, not guess from the wording of a title. This document is the standard:
+set your Habitica up this way and the nudge "just works" for anyone, not just one person.
 
-Today the nightly nudge **guesses categories from task names** — it hardcodes that a
-habit called `Fajr`, `Zohar`, `Asr`, `Maghrib`, or `Isha` means "a prayer," and lumps
-them into a **Prayers** section. You never wrote the word "prayer" anywhere; the plugin
-assumed it. That guessing is fragile:
+---
 
-- `Quran Fajr` contains "Fajr" → it was wrongly counted as a *prayer*.
-- A future `Fajr workout` would pollute your prayers too.
-- Headers like `#### Quran` would print literally if they ever came due.
+## 1. Know the three task types — and use the right one
 
-**The fix:** *you* label each task with a **tag**, and the nudge groups by that tag.
-No parsing, no assumptions. A tag is a structured signal; a name is just text.
+Habitica has three types. They are **not** interchangeable; each carries different fields,
+and the nudge treats each differently.
 
-## The principle
+| Type | What Habitica models it as | Has "owed today"? | The nudge reads |
+|---|---|---|---|
+| **Daily** | A scheduled, recurring commitment | ✅ `isDue` + `completed` + `streak` | due-but-not-done → shown; long streak → 🔥 at-risk |
+| **Habit** | A +/− behaviour to reinforce | ⚠️ only if **reset = Daily** | `frequency == daily` **and** not tapped today → shown |
+| **To-do** | A one-off finite task | optional due `date` | not completed → shown; past its date → overdue |
 
-> **One task → one section tag.** The tag decides which section it appears under.
+### The golden rule
+> **If you should do it every day (or on a schedule), make it a _Daily_ — not a Habit.**
 
-- The tag is the source of truth for "what kind of thing is this."
-- Task **names stay human** (`Surah Mulk`, `100 tasbeeh fatima`) — the tag does the sorting.
-- **Notes are optional** and only for you; the plugin never needs them.
+Dailies are the only type with a true *"you still owe this today, and here's your streak"*
+model, so they are the **backbone** of the nudge. A Habit has no "due date," so the nudge
+can only ask *"tapped today?"* — and that's only meaningful if the habit's **reset
+frequency is Daily** (which zeroes its counter each day). A habit set to weekly/monthly
+reset is reinforcement, not a daily obligation, so the nudge **ignores it**.
 
-## Your tag vocabulary (the sections)
+*(This is read from the real `frequency` field — no guessing from the title.)*
 
-Grounded in your actual tasks. Create these tags in Habitica, then tag each task:
+---
 
-| Tag | Nudge section | Your tasks that belong here |
+## 2. Tags = your sections
+
+A **tag is a category**, and each category becomes a **section** in the summary. You
+choose the vocabulary — `prayer`, `quran`, `work`, `health`, `study`, anything.
+
+- **One section tag per task.** The nudge groups tasks by that tag.
+- **Invent a tag → invent a section.** No code change, ever.
+- **Untagged tasks** still appear, under a catch-all **Other** — so nothing is silently
+  dropped, and it's your cue to tag them.
+
+This replaces title-guessing entirely: a task called `Quran Fajr` lands under **Quran**
+because you tagged it `quran`, never under Prayers because its name happens to contain
+"Fajr."
+
+---
+
+## 3. Hide what shouldn't be nagged
+
+- Tag dividers, headers (`#### …`), and retired tasks **`Archived`** — the nudge skips
+  anything tagged `Archived`.
+- Markers you tap to *record* something (not tasks you *owe*) don't belong as nagged
+  items — model those as a daily you complete, or leave them untagged/Archived.
+
+---
+
+## 4. Optional signals that make the nudge smarter
+
+All read from Habitica's own fields — you don't have to use them, but they help:
+
+| Signal | Habitica field | What the nudge does with it |
 |---|---|---|
-| `prayer` | **Prayers** | Fajr · Zohar · Asr · Maghrib · Isha · Qaza 2 fajar |
-| `quran` | **Quran** | Quran Fajr · Quran Kareem · Surah Mulk · Quran Every Jummah |
-| `dhikr` | **Dhikr** | 11 Times Muhammad · 500 La hawla wala quwwata · 100 tasbeeh fatima · 313 darood |
-| `sadaqa` | **Sadaqa** | Sadaqa |
-| `Archived` *(you already have it)* | *(hidden)* | `#### Quran`, `#### Namaz & Jammat - archive`, retired tasks |
+| **Urgency** | daily `streak` | a long unticked streak is flagged 🔥 **at-risk** and shown first |
+| **Importance** | `priority` (Trivial / Easy / Medium / **Hard**) | Hard tasks can be surfaced above easy ones within a section |
+| **Progress** | `checklist` | a part-done task can show `Surah Mulk · 2/3` instead of just the name |
 
-> You can add more sections later just by inventing a tag (`sunnah`, `health`, …) and
-> tagging tasks with it — the nudge picks it up automatically. No code change.
+---
 
-## The rules
+## 5. What lands on your phone
 
-1. **Every habit and daily gets exactly one section tag** from the vocabulary above.
-2. **`Archived` means "ignore me"** — the nudge skips anything tagged `Archived`.
-   Use it for `####` dividers and retired tasks.
-3. **Untagged tasks** still appear, but under a catch-all **Other** section — that's your
-   signal that something needs a tag (nothing is ever silently dropped).
-4. Multiple tags are fine; the nudge only reads the **section** tags it knows.
+One grouped message, built from the rules above:
 
-## How the nudge will use it
+> ### Nightly check-in
+> 7 left before midnight · 2 at risk 🔥
+>
+> At risk · 2
+> Surah Mulk · 53, 100 tasbeeh · 53
+>
+> Prayers · 4
+> Zohar, Asr, Maghrib, Isha
+>
+> Quran · 1
+> Quran Kareem
+>
+> Dhikr · 1
+> 313 darood
 
-1. Fetch your tags (`GET /tags`) and map each task's tag IDs to names.
-2. Find the **pending** tasks as it does now — a habit that's **untapped today**, a daily
-   that's **due and not done**.
-3. **Group those by section tag** → one block per section:
-   `Prayers`, `Quran`, `Dhikr`, `Sadaqa`, (`Other`).
-4. **Skip** anything tagged `Archived`.
-5. **At-risk streaks** stay a cross-cutting flag (🔥, shown first) regardless of section —
-   urgency is about streaks, not category.
+- Sections are **your tags**, ordered: **at-risk 🔥 first**, then your sections, then **Other**.
+- Each section is a capped comma-list (`+N more`) so it stays readable at any size.
+- Everything tagged `Archived` is gone.
 
-This replaces the hardcoded `PRAYERS` list and the "contains a prayer word" matching
-entirely. `Quran Fajr` lands under **Quran** (because you tagged it `quran`), never under
-Prayers — no assumptions left.
+---
 
-## Going forward — the standard for any new task
+## 6. Quick-start checklist (hand this to anyone)
 
-When you create a habit or daily, before you save it:
+1. **Create tags** for your categories (`prayer`, `quran`, `work`, …).
+2. **Make recurring commitments _Dailies_** and set their schedule.
+3. For a **habit** you want nudged, set its **reset to Daily**.
+4. **Tag every task** with exactly one section tag.
+5. **Tag dividers / retired tasks `Archived`.**
+6. *(Optional)* mark must-dos **Hard**; use **checklists** for multi-step tasks.
 
-- [ ] Give it a clear, human **name**.
-- [ ] Add **one section tag** (`prayer` / `quran` / `dhikr` / `sadaqa` / …).
-- [ ] If it's a divider or retired, tag it **`Archived`** instead.
+That's it. Follow this and the nudge categorises everything correctly with **zero guessing**.
 
-That's it — three seconds, and the nudge categorizes it perfectly with zero guessing.
+---
 
-## One-time migration
+## 7. How the plugin consumes this (for maintainers)
 
-1. In Habitica, create the tags: `prayer`, `quran`, `dhikr`, `sadaqa`.
-2. Tag your existing habits + dailies per the table above.
-3. Tag the two `####` dividers as `Archived`.
+1. `GET /tags` → map tag id → name.
+2. Collect **pending** items:
+   - **Dailies**: `isDue and not completed`.
+   - **Habits**: `frequency == 'daily' and up and counterUp == 0`.
+   - **To-dos**: `not completed` (flag overdue by `date`).
+   - Skip anything tagged `Archived`.
+3. **Group by section tag**; untagged → `Other`.
+4. **Rank**: at-risk streaks (`streak ≥ threshold`) first across all sections; within a
+   section, higher `priority` first; then by streak.
+5. Render capped sections with `+N more`; show `checklist` progress where present.
 
-## Open question for later (not part of this standard)
-
-Your `Quran Fajr` **habit** is really a *marker* ("I recited"), while `Quran Kareem` /
-`Surah Mulk` **dailies** are the actual tasks. Tagging fixes *where* the habit shows
-(Quran, not Prayers). Whether an untapped habit-marker should **nag at all** — or only
-the daily should — is a separate tweak we can make once the tag sections are in place.
+The hardcoded `PRAYERS` tuple and "contains a prayer word" matching are **removed** — all
+categorisation is tag-driven and user-owned.
