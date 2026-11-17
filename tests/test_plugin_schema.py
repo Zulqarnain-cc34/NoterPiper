@@ -30,4 +30,4 @@ def test_every_field_declares_key_type_and_label():
     for plugin in schema.values():
         for field in plugin["fields"]:
             assert {"key", "type", "label"} <= set(field)
-            assert field["type"] in {"toggle", "stepper", "time", "text", "select"}
+            assert field["type"] in {"toggle", "stepper", "time", "text", "select", "list"}

@@ -1,4 +1,52 @@
 {
+  "dates": {
+    "fields": [
+      {
+        "key": "enabled",
+        "type": "toggle",
+        "label": "Date reminders"
+      },
+      {
+        "key": "lead_days",
+        "type": "stepper",
+        "label": "Remind ahead",
+        "hint": "days before the date",
+        "min": 0,
+        "max": 30,
+        "unit": "days"
+      },
+      {
+        "key": "time",
+        "type": "time",
+        "label": "Time"
+      },
+      {
+        "key": "items",
+        "type": "list",
+        "label": "Dates",
+        "hint": "MM-DD for a birthday (yearly), YYYY-MM-DD for a one-off",
+        "fields": [
+          {
+            "key": "label",
+            "type": "text",
+            "label": "What"
+          },
+          {
+            "key": "date",
+            "type": "text",
+            "label": "Date"
+          }
+        ]
+      }
+    ],
+    "defaults": {
+      "enabled": true,
+      "lead_days": 3,
+      "time": "09:00",
+      "window": 5,
+      "items": []
+    }
+  },
   "habitica": {
     "fields": [
       {

@@ -33,7 +33,7 @@ def _fake_eps(group=None, **_):
 # ─── in-repo (pkgutil) ───
 
 def test_discovers_every_shipped_source():
-    assert {s.id for s in discover_sources(plugins)} == {"prayer", "habitica", "ramadan"}
+    assert {s.id for s in discover_sources(plugins)} == {"prayer", "habitica", "ramadan", "dates"}
 
 
 def test_discovered_sources_satisfy_the_contract():
@@ -68,4 +68,4 @@ def test_a_broken_entry_point_never_breaks_discovery(monkeypatch):
 
 def test_discover_all_combines_in_repo_and_installed(monkeypatch):
     monkeypatch.setattr("noterpiper.engine.registry.metadata.entry_points", _fake_eps)
-    assert {s.id for s in discover_all(plugins)} == {"prayer", "habitica", "ramadan", "weather"}
+    assert {s.id for s in discover_all(plugins)} == {"prayer", "habitica", "ramadan", "dates", "weather"}

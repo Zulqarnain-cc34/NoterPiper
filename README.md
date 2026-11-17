@@ -57,7 +57,7 @@ reminder, or a new app to receive on, slots in **without the engine changing at 
 | 5 | **[DECISIONS](DECISIONS.md)** · **[SECURITY](SECURITY.md)** | The *why*, and what's safe |
 
 Each plugin also has its own short guide:
-**[prayer](src/noterpiper/plugins/prayer/README.md)** · **[habitica](src/noterpiper/plugins/habitica/README.md)** · **[ramadan](src/noterpiper/plugins/ramadan/README.md)**.
+**[prayer](src/noterpiper/plugins/prayer/README.md)** · **[habitica](src/noterpiper/plugins/habitica/README.md)** · **[ramadan](src/noterpiper/plugins/ramadan/README.md)** · **[dates](src/noterpiper/plugins/dates/README.md)**.
 
 ## Community plugins
 
@@ -96,6 +96,7 @@ About ten minutes, once — then it runs itself.
 | 🟡 Source | **prayer** | Rings for each of the five daily prayers |
 | 🟡 Source | **habitica** *(optional)* | One calm nightly "what's left" nudge |
 | 🟡 Source | **ramadan** *(optional)* | Suhoor & iftar reminders during Ramadan |
+| 🟡 Source | **dates** *(optional)* | Birthdays / bills / expiries, reminded a few days ahead |
 | 🟢 Channel | **ntfy** | Push to your phone |
 | 🟢 Channel | **webhook** | POST to Discord, Slack, Home Assistant, any URL |
 
