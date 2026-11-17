@@ -135,29 +135,38 @@
     box-shadow:0 12px 32px -12px rgba(240,180,41,.55);transition:transform .1s,filter .15s}
   .save:active{transform:translateY(1px)} .save:disabled{filter:grayscale(.55) brightness(.6);cursor:not-allowed;box-shadow:none}
 
-  .toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%) translateY(6px);background:var(--good);color:#06230f;font-weight:800;
+  .toast{position:fixed;left:50%;bottom:92px;z-index:70;transform:translateX(-50%) translateY(6px);background:var(--good);color:#06230f;font-weight:800;
     font-size:13.5px;padding:11px 18px;border-radius:30px;opacity:0;transition:.25s;pointer-events:none;max-width:90%;text-align:center;box-shadow:0 10px 30px -8px #0008}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .toast.err{background:var(--warn);color:#2a1407}
+
+  /* ── Settings sheet (gear) ── location + connection live here, off the main view ── */
+  .gearbtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--edge);background:var(--card);color:var(--text);
+    font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none;transition:.15s;position:relative}
+  .gearbtn:active{transform:translateY(1px)} .gearbtn:hover{border-color:var(--goldEdge);color:var(--gold)}
+  /* a warning dot draws first-run users to the gear when they haven't connected yet */
+  .gearbtn.needs::after{content:"";position:absolute;top:-1px;right:-1px;width:11px;height:11px;border-radius:50%;
+    background:var(--warn);border:2px solid var(--bg)}
+  .backdrop{position:fixed;inset:0;background:rgba(3,6,12,.62);opacity:0;pointer-events:none;transition:opacity .28s;z-index:60;backdrop-filter:blur(2px)}
+  .backdrop.open{opacity:1;pointer-events:auto}
+  .sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,103%);width:100%;max-width:480px;z-index:61;
+    background:var(--card2);border:1px solid var(--edge);border-bottom:0;border-radius:24px 24px 0 0;
+    padding:8px clamp(14px,4vw,20px) calc(26px + env(safe-area-inset-bottom));
+    max-height:90vh;overflow-y:auto;transition:transform .34s cubic-bezier(.3,.8,.3,1);box-shadow:0 -24px 60px -24px #000}
+  .sheet.open{transform:translate(-50%,0)}
+  .grab{width:38px;height:4px;border-radius:3px;background:var(--edge);margin:6px auto 4px}
+  .sheet-head{display:flex;align-items:center;padding:4px 2px 2px}
+  .sheet-head h2{margin:0;font-size:19px;font-weight:700;font-family:Georgia,"Times New Roman",serif}
+  .sheet-close{margin-left:auto;width:34px;height:34px;border-radius:50%;border:1px solid var(--edge);background:var(--card);
+    color:var(--muted);font-size:14px;cursor:pointer;font-family:inherit}
+  .sheet .label:first-of-type{margin-top:14px}
+  @media (prefers-reduced-motion: reduce){.sheet,.backdrop{transition:none}}
 </style>
 </head>
 <body class="loading">
   <div class="wrap">
-    <div class="appbar"><span class="logo">🕌</span><h1>NoterPiper</h1><span class="sub" id="status">settings</span></div>
-
-    <details class="connect" id="connect"><summary>⚙&nbsp; Connect to GitHub</summary>
-      <div class="crow"><input id="token" placeholder="fine-grained token" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true"><button id="saveToken">Save</button></div>
-      <div class="chint" id="chint">Your settings load without this. A token is only needed to <b>save</b> — GitHub never allows anonymous writes, even on a public repo. Fine-grained token: Contents + Actions + Variables, this repo only. Stored just on this device.</div>
-    </details>
-
-    <div class="label">Location</div>
-    <div class="card">
-      <div class="row" id="cityRow"><span class="rname">City</span><span class="spacer"></span><input class="text" id="city" name="noterpiper-city" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-form-type="other"><div class="suggest" id="suggest"></div></div>
-      <div class="row"><span class="rname">Country</span><span class="spacer"></span><select id="country"></select></div>
-      <div class="row"><span class="rname">Method<span class="hint">calculation</span></span><span class="spacer"></span>
-        <select id="method"></select></div>
-    </div>
-    <div class="resolve" id="resolve"><span id="ricon">🕓</span><span class="rtxt" id="rtxt">Enter your city</span><span class="rtag" id="rtag"></span></div>
+    <div class="appbar"><span class="logo">🕌</span><h1>NoterPiper</h1><span class="sub" id="status">settings</span>
+      <button class="gearbtn" id="gear" aria-label="Location &amp; connection settings" title="Settings">⚙</button></div>
 
     <div class="label">Prayer reminders</div>
     <div class="cap">Minutes <b>before</b> each prayer's window ends — tap <b>⇄</b> to switch to <b>after</b> it starts.</div>
@@ -212,6 +221,29 @@
 
   <div class="toast" id="toast"></div>
   <div class="savebar"><div class="inner"><button class="save" id="save">Save changes</button></div></div>
+
+  <!-- Settings sheet: location + the GitHub connection — the set-once things, kept off the
+       main reminders view. Opened by the ⚙ in the app bar (auto-opens on a fresh first run). -->
+  <div class="backdrop" id="settingsBackdrop"></div>
+  <div class="sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-label="Settings">
+    <div class="grab"></div>
+    <div class="sheet-head"><h2>Settings</h2><button class="sheet-close" id="settingsClose" aria-label="Close settings">✕</button></div>
+
+    <div class="label">Location</div>
+    <div class="card">
+      <div class="row" id="cityRow"><span class="rname">City</span><span class="spacer"></span><input class="text" id="city" name="noterpiper-city" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-form-type="other"><div class="suggest" id="suggest"></div></div>
+      <div class="row"><span class="rname">Country</span><span class="spacer"></span><select id="country"></select></div>
+      <div class="row"><span class="rname">Method<span class="hint">calculation</span></span><span class="spacer"></span>
+        <select id="method"></select></div>
+    </div>
+    <div class="resolve" id="resolve"><span id="ricon">🕓</span><span class="rtxt" id="rtxt">Enter your city</span><span class="rtag" id="rtag"></span></div>
+
+    <div class="label">Connection</div>
+    <details class="connect" id="connect"><summary>⚙&nbsp; Connect to GitHub</summary>
+      <div class="crow"><input id="token" placeholder="fine-grained token" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true"><button id="saveToken">Save</button></div>
+      <div class="chint" id="chint">Your settings load without this. A token is only needed to <b>save</b> — GitHub never allows anonymous writes, even on a public repo. Fine-grained token: Contents + Actions + Variables, this repo only. Stored just on this device.</div>
+    </details>
+  </div>
 
 <script type="module">
   import { PRAYERS, fromConfig, toConfig, validTime, resolveState, COUNTRIES, CITIES, encodeContent, prayerWindows, maxOffset } from './app.js';
@@ -594,7 +626,7 @@
     g('ramEnabled').classList.toggle('off', !state.ramadanEnabled);
     g('suhoorVal').textContent = state.ramadanSuhoorLead;
     g('iftarVal').textContent = state.ramadanIftarLead;
-    updateNudgeNow(); updateRamOpts(); renderExtCards();
+    updateNudgeNow(); updateRamOpts(); renderExtCards(); syncGear();
   }
   // Cache the private location on this device so the NEXT load paints it instantly,
   // instead of flashing the config.json placeholder while the Variables API responds.
@@ -634,8 +666,16 @@
       writeLocCache();                                 // remember it for next time
       renderPrayers(); applyState(); checkCity();
       setStatus(token() ? 'loaded ✓' : 'loaded · connect to see your location + save');
+      firstRunPrompt();                               // nothing set up yet → open Settings for them
     } catch (e) { setStatus('load failed'); toast('Load failed: ' + e.message, true); }
     finally { document.body.classList.remove('loading'); }       // first-ever load reveals here (after Variables)
+  }
+  // On a genuinely fresh start (no saved city), open Settings once so the first thing the
+  // user sees is where to set location + connect — the one downside of hiding it behind ⚙.
+  let firstRunDone = false;
+  function firstRunPrompt() {
+    if (firstRunDone) return; firstRunDone = true;
+    if (!String(state.city || '').trim()) openSettings();
   }
   // ─── Autosave: any change schedules a debounced save (a burst → one save) ───
   let userTouched = false, saveTimer = null, saving = false, dirtyAgain = false;
@@ -653,7 +693,7 @@
       setStatus('unsaved · check the city'); if (!auto) toast('Check the city — it must resolve first', true); return; }
     if (!token()) {
       setStatus('unsaved · connect to save');
-      if (!auto) { document.getElementById('connect').open = true; toast('Add your GitHub token first', true); }
+      if (!auto) { openSettings(); document.getElementById('connect').open = true; toast('Add your GitHub token first', true); }
       return;
     }
     if (saving) { dirtyAgain = true; return; }                  // a save is in flight — re-run once it's done
@@ -691,7 +731,7 @@
 
   // On-demand nudge: trigger the notify workflow now (it bypasses the time gate).
   async function doNudge() {
-    if (!token()) { document.getElementById('connect').open = true; toast('Add your GitHub token first', true); return; }
+    if (!token()) { openSettings(); document.getElementById('connect').open = true; toast('Add your GitHub token first', true); return; }
     const b = document.getElementById('nudgeNow'); b.disabled = true;
     try {
       const r = await fetch(API() + '/actions/workflows/notify.yml/dispatches',
@@ -706,7 +746,7 @@
 
   // Ramadan test: force the ramadan source now (previews today's Fajr/Maghrib, any day).
   async function doRamadanTest() {
-    if (!token()) { document.getElementById('connect').open = true; toast('Add your GitHub token first', true); return; }
+    if (!token()) { openSettings(); document.getElementById('connect').open = true; toast('Add your GitHub token first', true); return; }
     const b = document.getElementById('ramTest'); b.disabled = true;
     try {
       const r = await fetch(API() + '/actions/workflows/ramadan.yml/dispatches',
@@ -717,17 +757,33 @@
     b.disabled = false;
   }
 
+  // ─── Settings sheet: location + connection, opened from the ⚙ in the app bar ───
+  function openSettings() {
+    document.getElementById('settingsSheet').classList.add('open');
+    document.getElementById('settingsBackdrop').classList.add('open');
+  }
+  function closeSettings() {
+    document.getElementById('settingsSheet').classList.remove('open');
+    document.getElementById('settingsBackdrop').classList.remove('open');
+  }
+  function syncGear() { document.getElementById('gear').classList.toggle('needs', !token()); }  // dot until connected
+  document.getElementById('gear').onclick = openSettings;
+  document.getElementById('settingsClose').onclick = closeSettings;
+  document.getElementById('settingsBackdrop').onclick = closeSettings;
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSettings(); });
+
   document.getElementById('saveToken').onclick = () => {
     const el = document.getElementById('token'), v = el.value.trim();
     if (!v) return;
     localStorage.setItem(LKEY, v); el.value = '';
     document.getElementById('connect').open = false;
+    syncGear();                                      // clear the "needs setup" dot
     toast('Token saved on this device'); loadConfig();
   };
   document.getElementById('save').onclick = doSave;
   document.getElementById('nudgeNow').onclick = doNudge;
 
-  renderMethods(); renderPrayers(); bind(); updateNudgeNow(); updateRamOpts(); checkCity(); loadConfig();
+  renderMethods(); renderPrayers(); bind(); updateNudgeNow(); updateRamOpts(); checkCity(); syncGear(); loadConfig();
   setTimeout(() => document.body.classList.remove('loading'), 6000);   // safety: never leave the skeleton stuck
 </script>
 </body>
