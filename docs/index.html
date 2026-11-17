@@ -117,6 +117,14 @@
     font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;transition:transform .1s,background .15s}
   .sendnow:active{transform:translateY(1px);background:var(--goldSoft)} .sendnow:disabled{opacity:.5;cursor:not-allowed}
 
+  /* list editor: each item is a bordered block, one sub-field per row so it never overflows */
+  .litem{border:1px solid var(--edge);border-radius:12px;background:var(--card2);padding:0 12px;margin:10px 0}
+  .litem .litem-row{display:flex;align-items:center;gap:10px;min-height:50px;padding:10px 0;border-bottom:1px solid var(--edge)}
+  .litem .litem-row:last-child{border-bottom:none}
+  .yearly{flex:none;border:1px solid var(--edge);background:var(--card);color:var(--muted);border-radius:12px;
+    padding:10px 12px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
+  .yearly.on{border-color:var(--goldEdge);color:var(--gold);background:var(--goldSoft)}
+
   details.connect{background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:12px 15px;margin:4px 2px 2px;font-size:13.5px}
   details.connect summary{cursor:pointer;color:var(--muted);font-weight:600;list-style:none;display:flex;align-items:center}
   details.connect summary::-webkit-details-marker{display:none}
@@ -500,6 +508,10 @@
   }
 
   // A `list` field: a repeating editor over an array of objects (e.g. dates items).
+  // Sub-fields render by type: `text` → text input, `date` → native date picker (no free text).
+  // A `recurring` list pairs the date picker with an "every year" toggle: on → store MM-DD
+  // (recurs yearly), off → YYYY-MM-DD (one-off). Built programmatically — user text is set via
+  // .value / .textContent, never innerHTML, so nothing a user types can "escape".
   function makeListEditor(id, f) {
     const wrap = document.createElement('div');
     const head = document.createElement('div'); head.className = 'row';
@@ -507,19 +519,54 @@
     const rows = document.createElement('div');
     wrap.append(head, rows);
     const items = () => (extVal(id, f.key) || []);
+    const SHRINK = 'flex:1;min-width:0;width:auto;text-align:left';   // shrink to fit a phone, never overflow
+
+    function removeBtn(onClick) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'sendnow'; b.setAttribute('aria-label', 'remove');
+      b.style.cssText = 'flex:none;padding:10px 13px'; b.textContent = '×'; b.onclick = onClick;
+      return b;
+    }
+    function textRow(item, sub, onRemove) {
+      const line = document.createElement('div'); line.className = 'litem-row';
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.className = 'text'; inp.placeholder = sub.label; inp.style.cssText = SHRINK;
+      inp.value = item[sub.key] ?? '';
+      inp.oninput = () => { item[sub.key] = inp.value; onEdit(); };
+      line.append(inp);
+      if (onRemove) line.append(removeBtn(onRemove));
+      return line;
+    }
+    function dateRow(item, sub, onRemove) {
+      const line = document.createElement('div'); line.className = 'litem-row';
+      const raw = item[sub.key] ?? '';
+      let yearly = /^\d{2}-\d{2}$/.test(raw);                          // MM-DD stored → recurs yearly
+      const di = document.createElement('input');
+      di.type = 'date'; di.className = 'text'; di.style.cssText = SHRINK;
+      di.value = yearly ? `${new Date().getFullYear()}-${raw}`        // picker needs a full date
+        : (/^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '');
+      const writeBack = () => { item[sub.key] = !di.value ? '' : (yearly ? di.value.slice(5) : di.value); onEdit(); };
+      di.onchange = writeBack;
+      line.append(di);
+      if (f.recurring) {
+        const yr = document.createElement('button'); yr.type = 'button'; yr.className = 'yearly';
+        const paint = () => { yr.classList.toggle('on', yearly); yr.textContent = yearly ? '⟳ every year' : 'every year'; };
+        yr.onclick = () => { yearly = !yearly; paint(); writeBack(); };
+        paint(); line.append(yr);
+      }
+      if (onRemove) line.append(removeBtn(onRemove));
+      return line;
+    }
     function render() {
       rows.innerHTML = '';
       items().forEach((item, i) => {
-        const r = document.createElement('div'); r.className = 'row';
-        r.innerHTML = f.fields.map(sub =>
-          `<input type="text" class="text" data-sub="${esc(sub.key)}" placeholder="${esc(sub.label)}" style="flex:1;width:auto;text-align:left">`
-        ).join('') + `<button class="sendnow" type="button" aria-label="remove" style="padding:10px 14px">×</button>`;
-        r.querySelectorAll('input').forEach(inp => {
-          inp.value = item[inp.dataset.sub] ?? '';
-          inp.oninput = () => { item[inp.dataset.sub] = inp.value; onEdit(); };
+        const block = document.createElement('div'); block.className = 'litem';
+        const remove = () => { const a = items(); a.splice(i, 1); setExt(id, f.key, a); render(); };
+        f.fields.forEach((sub, idx) => {
+          const onRemove = idx === 0 ? remove : null;                 // × sits on the first sub-field's row
+          block.append(sub.type === 'date' ? dateRow(item, sub, onRemove) : textRow(item, sub, onRemove));
         });
-        r.querySelector('button').onclick = () => { const a = items(); a.splice(i, 1); setExt(id, f.key, a); render(); };
-        rows.appendChild(r);
+        rows.appendChild(block);
       });
     }
     head.querySelector('button').onclick = () => { const a = items(); a.push({}); setExt(id, f.key, a); render(); };

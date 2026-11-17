@@ -2,8 +2,15 @@
 # Source: https://raw.githubusercontent.com/igromanru/habitica-api/master/openapi.yaml
 # Habitica has NO official OpenAPI spec (apidoc only; migration tracked in
 # HabitRPG/habitica#15361). This community spec is the closest machine-readable
-# contract. Pinned copy for reference + drift detection; NOT a runtime dependency.
+# contract. Pinned copy for reference; NOT a runtime dependency.
 # Fetched for the v3 API (tasks/user, tags, user). Re-fetch to refresh.
+#
+# SCOPE — this spec is thin and write-oriented. GET responses are typed only as a
+# generic DataResponse (data: {additionalProperties:true}); the `Task` schema is a
+# create/update model and omits the read-only fields the nudge actually reads
+# (completed, isDue, tags, counterUp/Down, id). So it validates endpoints, methods,
+# auth headers and query params — but NOT the fields we depend on. The authoritative
+# read-contract for those is HABITICA-SCHEMA.md, not this file.
 
 ---
 openapi: 3.1.1

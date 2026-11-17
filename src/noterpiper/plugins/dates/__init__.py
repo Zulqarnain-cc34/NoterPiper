@@ -67,10 +67,13 @@ class DateRemindersSource:
             "key": "items",
             "type": "list",
             "label": "Dates",
-            "hint": "MM-DD for a birthday (yearly), YYYY-MM-DD for a one-off",
+            "hint": "pick a date — toggle 'every year' for a birthday",
+            # recurring: the date control pairs with an "every year" toggle. On → the date is
+            # stored as MM-DD (recurs yearly); off → YYYY-MM-DD (a one-off). Logic unchanged.
+            "recurring": True,
             "fields": [
                 {"key": "label", "type": "text", "label": "What"},
-                {"key": "date", "type": "text", "label": "Date"},
+                {"key": "date", "type": "date", "label": "Date"},
             ],
         },
     ]

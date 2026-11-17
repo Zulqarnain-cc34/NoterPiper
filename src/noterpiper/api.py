@@ -43,7 +43,12 @@ def _get(path: str) -> Any:
         "x-client": f"{user_id}-noterpiper",  # "UserID-AppName" per Habitica guidelines
         "Content-Type": "application/json",
     }
-    return net.get_json(API_BASE + path, headers=headers, timeout=30)["data"]
+    payload = net.get_json(API_BASE + path, headers=headers, timeout=30)
+    # {success:false} (often with no `data`) → surface the message, not a bare KeyError
+    if isinstance(payload, dict) and payload.get("success") is False:
+        msg = payload.get("message") or payload.get("error") or "unknown"
+        raise RuntimeError(f"Habitica API error: {msg}")
+    return payload["data"]
 
 
 def fetch_tasks() -> list[dict[str, Any]]:

@@ -24,7 +24,8 @@
         "key": "items",
         "type": "list",
         "label": "Dates",
-        "hint": "MM-DD for a birthday (yearly), YYYY-MM-DD for a one-off",
+        "hint": "pick a date \u2014 toggle 'every year' for a birthday",
+        "recurring": true,
         "fields": [
           {
             "key": "label",
@@ -33,7 +34,7 @@
           },
           {
             "key": "date",
-            "type": "text",
+            "type": "date",
             "label": "Date"
           }
         ]

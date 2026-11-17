@@ -17,6 +17,7 @@ tag. At-risk streaks are a cross-cutting block shown first. A stable title
 
 from __future__ import annotations
 
+import urllib.error
 from datetime import date, datetime
 
 from ... import api
@@ -25,6 +26,8 @@ from ...engine import Notification
 STREAK_RISK = 7  # a daily with a streak this long is "at risk" if still unticked
 WINDOW_MIN = 5  # fire within this many minutes after the set time
 NUDGE_TITLE = "Nightly check-in"
+# ASCII title == dedup_key so the once/day dedup matches (see HABITICA notes / ntfy channel).
+AUTH_FAIL_TITLE = "Habitica sign-in failed"
 CAP = 5  # max names listed per group before "+N more"
 ARCHIVED = "archived"  # tasks carrying a tag named this (any case) are hidden
 
@@ -61,48 +64,62 @@ def _section(task: dict, tags: dict, fallback: str) -> str:
     return names[0].capitalize() if names else fallback
 
 
+class _Owed:
+    """Accumulates what's still owed today as collect() walks the tasks."""
+
+    def __init__(self) -> None:
+        self.at_risk: list[tuple[str, int]] = []  # dailies over the streak threshold (cross-cut)
+        self.sections: dict[str, list[str]] = {}  # section name → display names
+        self.overdue: list[str] = []
+
+    def add(self, section: str, display: str) -> None:
+        self.sections.setdefault(section, []).append(display)
+
+
+def _owe_daily(owed: _Owed, d: dict, tags: dict, streak_risk: int) -> None:
+    if not d.get("isDue") or d.get("completed") or _archived(d, tags):
+        return
+    name, streak = d["text"].strip(), int(d.get("streak", 0))
+    if streak >= streak_risk:
+        owed.at_risk.append((name, streak))  # urgency trumps category
+    else:
+        owed.add(_section(d, tags, "Dailies"), name)
+
+
+def _owe_todo(owed: _Owed, t: dict, tags: dict, today: date) -> None:
+    if t.get("completed") or _archived(t, tags):
+        return
+    name = t["text"].strip()
+    dd = _todo_date(t)
+    if dd is not None and dd < today:
+        owed.overdue.append(name)
+        owed.add(_section(t, tags, "To-dos"), f"{name} (overdue)")
+    else:
+        owed.add(_section(t, tags, "To-dos"), name)
+
+
+def _owe_habit(owed: _Owed, h: dict, tags: dict) -> None:
+    # Opt-in: counted only if tagged, daily-reset, a "good" habit, and untapped today.
+    if _archived(h, tags) or h.get("frequency") != "daily" or not h.get("up"):
+        return
+    if (h.get("counterUp", 0) + h.get("counterDown", 0)) != 0:
+        return
+    names = _tag_names(h, tags)
+    if names:
+        owed.add(names[0].capitalize(), h["text"].strip())
+
+
 def collect(tasks: dict, tags: dict, now: datetime, streak_risk: int = STREAK_RISK) -> dict:
     """Group everything still owed today by section. `tags` maps tag-id → name."""
-    today = now.date()
-    at_risk: list[tuple[str, int]] = []  # dailies over the streak threshold (cross-cut)
-    sections: dict[str, list[str]] = {}  # section name → display names
-    overdue: list[str] = []
-
-    def add(section: str, display: str) -> None:
-        sections.setdefault(section, []).append(display)
-
+    owed = _Owed()
     for d in tasks.get("dailys", []):
-        if not d.get("isDue") or d.get("completed") or _archived(d, tags):
-            continue
-        name, streak = d["text"].strip(), int(d.get("streak", 0))
-        if streak >= streak_risk:
-            at_risk.append((name, streak))  # urgency trumps category
-        else:
-            add(_section(d, tags, "Dailies"), name)
-
+        _owe_daily(owed, d, tags, streak_risk)
     for t in tasks.get("todos", []):
-        if t.get("completed") or _archived(t, tags):
-            continue
-        name = t["text"].strip()
-        dd = _todo_date(t)
-        if dd is not None and dd < today:
-            overdue.append(name)
-            add(_section(t, tags, "To-dos"), f"{name} (overdue)")
-        else:
-            add(_section(t, tags, "To-dos"), name)
-
+        _owe_todo(owed, t, tags, now.date())
     for h in tasks.get("habits", []):
-        if _archived(h, tags) or h.get("frequency") != "daily" or not h.get("up"):
-            continue
-        if (h.get("counterUp", 0) + h.get("counterDown", 0)) != 0:
-            continue  # already tapped today
-        names = _tag_names(h, tags)
-        if not names:
-            continue  # habits are opt-in: untagged → ignored
-        add(names[0].capitalize(), h["text"].strip())
-
-    at_risk.sort(key=lambda t: t[1], reverse=True)
-    return {"at_risk": at_risk, "sections": sections, "overdue": overdue}
+        _owe_habit(owed, h, tags)
+    owed.at_risk.sort(key=lambda x: x[1], reverse=True)
+    return {"at_risk": owed.at_risk, "sections": owed.sections, "overdue": owed.overdue}
 
 
 def _cap(names: list[str]) -> str:
@@ -158,8 +175,21 @@ class HabiticaSource:
         try:
             tasks = api.fetch_tasks_by_type()
             tags = api.fetch_tags()
+        except urllib.error.HTTPError as e:
+            # 401/403 = bad or expired token / user id — surface it, don't go silent forever.
+            if e.code in (401, 403):
+                return [
+                    Notification(
+                        AUTH_FAIL_TITLE,
+                        "Your Habitica API token or user ID looks wrong — update the secrets.",
+                        priority="high",
+                        tags=("warning",),
+                        dedup_key=None if forced else AUTH_FAIL_TITLE,
+                    )
+                ]
+            return []  # other HTTP error (5xx, etc.) → skip tonight, don't crash
         except Exception:
-            return []  # Habitica down → skip tonight, don't crash
+            return []  # Habitica down / network → skip tonight, don't crash
         c = collect(tasks, tags, now, int(config.get("streak_risk", STREAK_RISK)))
         body, priority, tag = summarize(c)
         dedup = None if forced else NUDGE_TITLE  # forced always delivers; scheduled dedups

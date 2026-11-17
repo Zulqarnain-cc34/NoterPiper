@@ -6,8 +6,29 @@ Habitica's contract (v3): GET /tags → {"data": [{"id","name"}, …]}. We map i
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from noterpiper import api
+
+
+def test_get_raises_a_clear_error_on_a_failed_envelope(monkeypatch):
+    # Habitica wraps responses as {success, data}. On success:false there may be no data —
+    # surface the message instead of a bare KeyError.
+    monkeypatch.setattr(api, "_creds", lambda: ("uid", "token"))
+    monkeypatch.setattr(
+        api.net,
+        "get_json",
+        lambda url, **kw: {"success": False, "message": "Missing authentication headers."},
+    )
+    with pytest.raises(RuntimeError, match="Missing authentication"):
+        api._get("/tasks/user")
+
+
+def test_get_returns_data_on_success(monkeypatch):
+    monkeypatch.setattr(api, "_creds", lambda: ("uid", "token"))
+    monkeypatch.setattr(api.net, "get_json", lambda url, **kw: {"success": True, "data": [1, 2]})
+    assert api._get("/x") == [1, 2]
 
 
 def test_fetch_tags_maps_id_to_name(monkeypatch):
