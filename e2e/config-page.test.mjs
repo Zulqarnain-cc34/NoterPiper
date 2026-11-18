@@ -219,3 +219,56 @@ test('the settings sheet saves a token and reloads config with it', async () => 
   );
   assert.equal(await value('token'), '', 'the token input is cleared after saving');
 });
+
+// Drive a hide→(minutes pass)→show cycle with a controlled clock, so the page's
+// visibilitychange stale-tab guard sees exactly `hiddenMinutes` of elapsed time.
+// (Browsers freeze a background tab's timers and fire them on wake — the guard drops
+// a stale pending edit instead of letting it clobber newer saves; see isStale().)
+const hideFor = (minutes) =>
+  page.evaluate((mins) => {
+    const realNow = Date.now;
+    const base = realNow();
+    Date.now = () => base; // freeze at hide time → hiddenAt = base
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    Date.now = () => base + mins * 60 * 1000; // wake `mins` later
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    Date.now = realNow;
+  }, minutes);
+
+test('a long-hidden tab drops its pending edit and reloads instead of clobbering', async () => {
+  const { puts } = await stubBackend(page);
+  await openPage(page, server.origin);
+  assert.equal(await toggleOn('nudgeHabits'), false, 'fixture baseline: habits off');
+
+  await page.click('#nudgeHabits'); // user edits → autosave scheduled (1200ms debounce)
+  assert.equal(await toggleOn('nudgeHabits'), true);
+
+  await hideFor(6); // longer than the 5-min staleness limit → guard reloads
+
+  await page.waitForFunction(
+    () => document.getElementById('status').textContent === 'loaded ✓',
+    null,
+    { timeout: 10_000 },
+  );
+  assert.equal(puts.length, 0, 'the stale pending edit was never saved');
+  assert.equal(await toggleOn('nudgeHabits'), false, 'edit dropped; server state repainted');
+});
+
+test('a briefly hidden tab keeps its pending edit and saves normally', async () => {
+  const { puts } = await stubBackend(page);
+  await openPage(page, server.origin);
+
+  await page.click('#nudgeHabits'); // edit → autosave scheduled
+  await hideFor(2); // under the limit → guard must NOT interfere
+
+  await page.waitForFunction(
+    () => document.getElementById('status').textContent === 'saved ✓',
+    null,
+    { timeout: 10_000 },
+  );
+  assert.equal(puts.length, 1, 'the edit survived a brief hide and saved');
+  assert.equal(puts[0].config.habitica.notify_habits, true);
+  assert.equal(await toggleOn('nudgeHabits'), true);
+});
