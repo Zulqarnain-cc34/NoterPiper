@@ -6,6 +6,7 @@ import {
   decodeContent,
   encodeContent,
   fromConfig,
+  isStale,
   maxOffset,
   parseWhitelist,
   prayerWindows,
@@ -274,4 +275,12 @@ test('decodeContent inverts encodeContent, unicode included', () => {
   // GitHub wraps base64 with newlines — they must be tolerated
   const wrapped = encodeContent(obj).replace(/(.{40})/g, '$1\n');
   assert.deepEqual(JSON.parse(decodeContent(wrapped)), obj);
+});
+
+test('isStale: only a long-hidden tab must drop its pending edits', () => {
+  assert.equal(isStale(0), false);
+  assert.equal(isStale(5 * 60 * 1000 - 1), false); // just under the limit → still fresh
+  assert.equal(isStale(5 * 60 * 1000), true); // at the limit → stale
+  assert.equal(isStale(86_400_000), true); // the day-old tab that caused the incident
+  assert.equal(isStale(1000, 500), true); // custom limit respected
 });
