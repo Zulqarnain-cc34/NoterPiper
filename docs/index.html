@@ -286,7 +286,7 @@
   </div>
 
 <script type="module">
-  import { PRAYERS, fromConfig, toConfig, validTime, resolveState, COUNTRIES, CITIES, encodeContent, decodeContent, prayerWindows, maxOffset } from './app.js';
+  import { PRAYERS, fromConfig, toConfig, validTime, resolveState, COUNTRIES, CITIES, encodeContent, decodeContent, prayerWindows, maxOffset, isStale } from './app.js';
 
   // Offline shell: a default config stands in until loadConfig() fetches the real file.
   const DEFAULT = {
@@ -696,6 +696,9 @@
     return m;
   }
 
+  // The config.json content + sha our form state was derived from — saveNow PUTs with
+  // this sha so a concurrent writer produces a visible 409 instead of a silent clobber.
+  let loadedBase = null, loadedSha = null;
   const setStatus = t => { document.getElementById('status').textContent = t; };
   function toast(msg, err) {
     const el = document.getElementById('toast');
@@ -762,6 +765,7 @@
     try {
       const d = await ghGet('/contents/config.json?ref=main');   // public read — no token needed
       const loaded = JSON.parse(decodeContent(d.content));
+      loadedBase = loaded; loadedSha = d.sha;       // what our state is derived from (see saveNow)
       state = fromConfig(loaded, extSchema);
       if (cached) {                                   // instant: paint last-known real location, reveal now
         Object.assign(state, cached);
@@ -791,6 +795,19 @@
     setStatus('unsaved…'); clearTimeout(saveTimer);
     saveTimer = setTimeout(() => saveNow(true), 1200);          // coalesce a burst of clicks into one save
   }
+  // Stale-tab guard: browsers throttle a background tab's timers and fire them on wake —
+  // so a tab left open for hours would wake and autosave its old in-memory settings over
+  // everything saved since. Returning from a long sleep, drop any pending edit and
+  // reload instead; edits made minutes ago still save normally.
+  let hiddenAt = null;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+    if (hiddenAt && isStale(Date.now() - hiddenAt) && !saving) {
+      clearTimeout(saveTimer); userTouched = false; dirtyAgain = false;
+      setStatus('refreshing…'); loadConfig();
+    }
+    hiddenAt = null;
+  });
   const doSave = () => saveNow(false);                          // the manual "Save changes" button
   async function saveNow(auto = false) {
     const g = id => document.getElementById(id);
@@ -813,19 +830,36 @@
       await ghSetVar('PRAYER_METHOD', state.method);
       if (state.timezone) await ghSetVar('PRAYER_TIMEZONE', state.timezone);
       // 2. offsets + nudge → config.json (its location stays the public placeholder).
-      // Retry on 409: refetch the current sha and re-apply, so a stale sha self-heals.
+      // Optimistic concurrency: PUT with the sha our state was LOADED from. If another
+      // device saved since, GitHub answers 409 — then we rebase this form onto the fresh
+      // file, say so, and retry. (Pre-fetching a fresh sha here would make a stale
+      // writer always "win" silently — that's exactly how a day-old tab once reverted
+      // morning.enabled seconds after the phone turned it on.)
       for (let attempt = 0; ; attempt++) {
-        const cur = await ghGet('/contents/config.json?ref=main');       // always-fresh sha (no-store)
-        const base = JSON.parse(decodeContent(cur.content));
+        if (!loadedSha) {                                                // first save on a failed load
+          const cur = await ghGet('/contents/config.json?ref=main');
+          loadedBase = JSON.parse(decodeContent(cur.content)); loadedSha = cur.sha;
+        }
+        const base = loadedBase || {};
         const next = toConfig(state, base);
         next.city = base.city; next.country = base.country;              // keep placeholder; real location is in Variables
         next.method = base.method; next.timezone = base.timezone;
         try {
-          await ghPut('/contents/config.json', { message: 'Update settings via NoterPiper config page',
-            content: encodeContent(next), sha: cur.sha, branch: 'main' });
+          const put = await ghPut('/contents/config.json', { message: 'Update settings via NoterPiper config page',
+            content: encodeContent(next), sha: loadedSha, branch: 'main' });
+          loadedBase = next; loadedSha = put.content.sha;
+          // Read-your-write: repaint from what was actually persisted (location fields
+          // keep their real on-screen values — the file only stores the placeholder).
+          const loc = { city: state.city, country: state.country, method: state.method, timezone: state.timezone };
+          state = Object.assign(fromConfig(next, extSchema), loc);
+          applyState();
           break;
         } catch (e) {
-          if (attempt < 2 && /\b409\b/.test(e.message)) continue;        // sha moved under us → refetch & retry
+          if (attempt < 2 && /\b409\b/.test(e.message)) {                // someone else saved since we loaded
+            loadedSha = null;                                            // → refetch, rebase this form, retry
+            toast('Settings changed on another device — merged and saved');
+            continue;
+          }
           throw e;
         }
       }

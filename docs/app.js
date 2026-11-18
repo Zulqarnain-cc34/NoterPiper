@@ -105,6 +105,14 @@ export function encodeContent(obj) {
   return btoa(bin);
 }
 
+// A tab hidden this long holds stale in-memory settings — its pending edits must be
+// dropped and state reloaded before it may save again. Otherwise waking it fires a
+// throttled autosave that clobbers newer saves from other devices (seen live: a
+// day-old tab reverted morning.enabled seconds after the phone enabled it).
+export function isStale(hiddenMs, limitMs = 5 * 60 * 1000) {
+  return Number(hiddenMs) >= limitMs;
+}
+
 // Inverse of encodeContent: GitHub's base64 (with embedded newlines) → text.
 export function decodeContent(b64) {
   const bin = atob(String(b64).replace(/\s/g, ''));
