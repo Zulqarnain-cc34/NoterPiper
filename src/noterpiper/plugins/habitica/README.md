@@ -82,10 +82,9 @@ All of it lives on the phone config page — no JSON needed. The `habitica` sect
 Sections are driven entirely by your **tags** — add a tag in Habitica and a new section
 appears, no config change.
 
-> **Weekly digest caveat:** it aggregates state saved across the week in
-> `.noterpiper_state/` — on GitHub's throwaway runners that file only lives for one run,
-> so there the digest reflects the digest-day's snapshot. On any persistent machine it
-> genuinely accumulates the week.
+> **Weekly digest state:** the week accumulates in `.noterpiper_state/` — kept across
+> GitHub's throwaway runners by the Actions cache (see prayers.yml). A rare cache
+> eviction just restarts the week; nothing breaks.
 
 ## Setup
 

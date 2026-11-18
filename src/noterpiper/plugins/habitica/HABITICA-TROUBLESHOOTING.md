@@ -49,11 +49,13 @@ whitelist, and **overdue to-dos always show** regardless of either filter.
 By design — it's counts only (`3 dailies · 2 habits · 1 at risk 🔥`), a glance at the
 day's shape. The 🌙 evening summary is the one with names and sections.
 
-## The weekly digest only reflects today
+## The weekly digest looks thin (fewer days than expected)
 
-Expected on GitHub Actions: the runner's disk is wiped between runs, so the week's saved
-state only survives within one run and the digest shows the digest-day's snapshot. The
-format and stats are real; full week-long accumulation needs a persistent machine.
+The week's state rides the Actions cache between runs (prayers.yml). If GitHub evicted
+the cache (it happens after ~a week of repo inactivity, or under storage pressure), the
+week simply restarted from that day — the next full week will be complete. The 📊 Send
+now button also previews with whatever has accumulated so far, so early in the week it
+is naturally short.
 
 ## The weekly digest never arrives
 

@@ -76,9 +76,8 @@ outranks being quiet.
 `3 dailies · 2 habits · 1 at risk 🔥` — no task names, just the shape of the day.
 
 **Weekly digest** *(off by default)*. Once a week (day + time you pick): items due that
-week, your best streak, and an at-risk callout. Note: on GitHub's throwaway runners the
-week's state only survives one run, so there it reflects the digest day's snapshot; on a
-persistent machine it accumulates the whole week.
+week, your best streak, and an at-risk callout. The week's state is carried across
+GitHub's throwaway runners by the Actions cache, so it genuinely accumulates the week.
 
 **Send now.** Three buttons on the config page (🌙 🌅 📊) push any of the three formats
 immediately — the fastest way to see exactly what each one says with your real data.
