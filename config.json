@@ -50,6 +50,8 @@
     "lead_days": 3,
     "time": "09:00",
     "window": 5,
-    "items": []
+    "items": [
+      {}
+    ]
   }
 }
