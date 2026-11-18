@@ -1,0 +1,142 @@
+// Browser tests for the config page (docs/index.html) — the DOM/network layer the
+// pure-logic tests in docs/ can't reach. Real page, headless Chromium, stubbed
+// GitHub + Aladhan backend (see helpers.mjs). Each test is: stub → open → act like a
+// user → assert on what the page rendered and what it sent.
+//
+// Every test here pins a regression that previously shipped: values not painting,
+// a toggle reverting on save, rows wrong on first paint, and the stale-writer
+// clobber that silenced the 06:00 morning brief.
+
+import assert from 'node:assert/strict';
+import { after, before, beforeEach, test } from 'node:test';
+import { chromium } from 'playwright';
+import { fixtureConfig, openPage, serveDocs, stubBackend } from './helpers.mjs';
+
+let browser;
+let server;
+let context;
+let page;
+
+before(async () => {
+  browser = await chromium.launch();
+  server = await serveDocs();
+});
+after(async () => {
+  await browser.close();
+  await server.close();
+});
+beforeEach(async () => {
+  if (context) await context.close();
+  context = await browser.newContext();
+  page = await context.newPage();
+});
+
+const toggleOn = (id) =>
+  page.evaluate((i) => !document.getElementById(i).classList.contains('off'), id);
+const rowVisible = (id) =>
+  page.evaluate((i) => document.getElementById(i).style.display !== 'none', id);
+const value = (id) => page.evaluate((i) => document.getElementById(i).value, id);
+const text = (id) => page.evaluate((i) => document.getElementById(i).textContent, id);
+
+test('loading paints every habitica control from config.json', async () => {
+  await stubBackend(page);
+  await openPage(page, server.origin);
+
+  assert.equal(await value('nudgeTime'), '22:30');
+  assert.equal(await text('streakVal'), '21');
+  assert.equal(await toggleOn('nudgeEnabled'), true);
+  assert.equal(await toggleOn('nudgeDailies'), true);
+  assert.equal(await toggleOn('nudgeHabits'), false); // fixture switches habits off
+  assert.equal(await toggleOn('nudgeTodos'), true);
+  assert.equal(await value('nudgeWhitelist'), 'deen');
+  assert.equal(await toggleOn('morningEnabled'), true);
+  assert.equal(await rowVisible('morningTimeRow'), true); // morning on → picker shown
+  assert.equal(await value('morningTime'), '06:00');
+  assert.equal(await toggleOn('weeklyEnabled'), false);
+  assert.equal(await rowVisible('weeklyDayRow'), false); // weekly off → pickers hidden
+  assert.equal(await rowVisible('weeklyTimeRow'), false);
+});
+
+test('a filter toggle saves once and does not revert', async () => {
+  const { puts } = await stubBackend(page);
+  await openPage(page, server.origin);
+
+  await page.click('#nudgeDailies'); // user switches dailies off
+  await page.waitForFunction(
+    () => document.getElementById('status').textContent === 'saved ✓',
+    null,
+    { timeout: 10_000 },
+  );
+
+  assert.equal(puts.length, 1, 'exactly one save');
+  assert.equal(puts[0].config.habitica.notify_dailies, false, 'the change was persisted');
+  assert.equal(puts[0].config.habitica.notify_habits, false, 'untouched settings preserved');
+  assert.equal(await toggleOn('nudgeDailies'), false, 'the toggle did not revert');
+});
+
+test('morning and weekly pickers appear only while their nudge is on', async () => {
+  await stubBackend(page);
+  await openPage(page, server.origin);
+
+  await page.click('#morningEnabled'); // on → off
+  assert.equal(await rowVisible('morningTimeRow'), false);
+  await page.click('#weeklyEnabled'); // off → on
+  assert.equal(await rowVisible('weeklyDayRow'), true);
+  assert.equal(await rowVisible('weeklyTimeRow'), true);
+  assert.equal(await value('weeklyDay'), 'Sunday');
+  assert.equal(await value('weeklyTime'), '19:00');
+});
+
+test('each send button dispatches its workflow with the right kind', async () => {
+  const { dispatches } = await stubBackend(page);
+  await openPage(page, server.origin);
+
+  for (const id of ['sendEvening', 'sendMorning', 'sendWeekly', 'ramTest']) {
+    await page.click(`#${id}`);
+    await page.waitForFunction(
+      (btn) => !document.getElementById(btn).disabled,
+      id,
+      { timeout: 5_000 },
+    );
+  }
+
+  assert.deepEqual(
+    dispatches.map((d) => [d.workflow, d.body.inputs?.kind]),
+    [
+      ['notify.yml', 'evening'],
+      ['notify.yml', 'morning'],
+      ['notify.yml', 'weekly'],
+      ['ramadan.yml', undefined], // the ramadan test passes no inputs
+    ],
+  );
+  for (const d of dispatches) assert.equal(d.body.ref, 'main');
+});
+
+test('a concurrent writer causes a visible merge, not a silent clobber', async () => {
+  // The 06:00-morning-brief incident: user enables a toggle while another device
+  // saved meanwhile. Expect: first PUT with the loaded sha → 409 → toast → retry on
+  // the fresh sha → the user's edit survives.
+  const config = fixtureConfig();
+  config.habitica.morning.enabled = false; // user is about to enable it
+  const { puts } = await stubBackend(page, { config, conflict: true });
+  await openPage(page, server.origin);
+
+  const sawToast = page.waitForFunction(
+    () => document.getElementById('toast').textContent.includes('changed on another device'),
+    null,
+    { timeout: 10_000 },
+  );
+  await page.click('#morningEnabled');
+  await sawToast;
+  await page.waitForFunction(
+    () => document.getElementById('status').textContent === 'saved ✓',
+    null,
+    { timeout: 10_000 },
+  );
+
+  assert.equal(puts.length, 2, 'first attempt conflicted, second succeeded');
+  assert.equal(puts[0].sha, 'sha1', 'first PUT used the sha the form was loaded from');
+  assert.equal(puts[1].sha, 'sha2', 'retry rebased onto the fresh sha');
+  assert.equal(puts[1].config.habitica.morning.enabled, true, 'the edit survived the merge');
+  assert.equal(await toggleOn('morningEnabled'), true, 'the toggle did not revert');
+});

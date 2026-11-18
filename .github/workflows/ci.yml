@@ -24,3 +24,18 @@ jobs:
           node-version: "20"
       - run: node --test docs/            # config page (pure-logic tests)
       - run: npx --yes @biomejs/biome@2.6.8 ci   # config-page JS: lint + format gate
+
+  # The config page in a real (headless) browser: real DOM + autosave + send buttons
+  # against a stubbed GitHub/Aladhan backend (e2e/helpers.mjs). Catches the wiring
+  # bugs the pure-logic tests can't — reverting toggles, dead buttons, save races.
+  page-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: node --test e2e/

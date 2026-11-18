@@ -27,3 +27,6 @@ token.txt
 dist/
 build/
 *.egg-info/
+
+# e2e dev harness (playwright) — never ship
+node_modules/
