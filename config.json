@@ -53,9 +53,11 @@
     "items": [
       {
         "label": "Birthday",
-        "date": "2026-11-18"
+        "date": "11-18"
       },
-      {}
+      {
+        "label": "Birthday"
+      }
     ]
   }
 }
