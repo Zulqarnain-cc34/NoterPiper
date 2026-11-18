@@ -19,7 +19,7 @@ jobs:
       ACTOR: ${{ github.actor }}
       ACTOR_ID: ${{ github.actor_id }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Touch a heartbeat file and commit
         run: |
           date -u +"%Y-%m-%dT%H:%M:%SZ" > .keepalive

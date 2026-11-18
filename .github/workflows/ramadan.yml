@@ -21,8 +21,8 @@ jobs:
       FORCE_SOURCE: ramadan          # force just the suhoor/iftar preview, now
       WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}   # optional 2nd channel, if configured
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       # Optional: install any third-party (pip) plugins the deployer listed.

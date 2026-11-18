@@ -31,8 +31,8 @@ jobs:
       FORCE_KIND: ${{ inputs.kind || 'evening' }}    # evening | morning | weekly (choice-restricted input)
       WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}         # optional 2nd channel, if configured
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       # Optional: install any third-party (pip) plugins the deployer listed.
@@ -40,7 +40,7 @@ jobs:
       # Restore (read-only — no save) the weekly-digest state prayers.yml accumulates, so
       # the "Send now · weekly" preview reflects the real week. A forced weekly never
       # writes state (it's a preview), so there's deliberately no cache/save here.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: .noterpiper_state
           key: noterpiper-state-${{ github.run_id }}
