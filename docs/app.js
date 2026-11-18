@@ -197,12 +197,12 @@ export function toConfig(s, base = {}) {
       notify_todos: Boolean(s.nudgeTodos),
       tag_whitelist: parseWhitelist(s.nudgeWhitelist),
       morning: {
-        ...((base.habitica || {}).morning || {}),
+        ...(base.habitica?.morning || {}),
         enabled: Boolean(s.morningEnabled),
         time: s.morningTime,
       },
       weekly: {
-        ...((base.habitica || {}).weekly || {}),
+        ...(base.habitica?.weekly || {}),
         enabled: Boolean(s.weeklyEnabled),
         day: s.weeklyDay,
         time: s.weeklyTime,

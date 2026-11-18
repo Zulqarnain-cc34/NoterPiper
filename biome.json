@@ -7,13 +7,17 @@
     "lineWidth": 100
   },
   "javascript": {
-    "formatter": { "quoteStyle": "single" }
+    "formatter": {
+      "quoteStyle": "single"
+    }
   },
   "linter": {
     "enabled": true,
-    "rules": { "recommended": true }
+    "rules": {
+      "preset": "recommended"
+    }
   },
   "files": {
-    "includes": ["docs/**/*.js", "docs/**/*.mjs"]
+    "includes": ["docs/**/*.js", "docs/**/*.mjs", "e2e/**/*.mjs"]
   }
 }

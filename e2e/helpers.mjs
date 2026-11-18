@@ -3,8 +3,8 @@
 // No real network, no real repo — the page runs exactly as deployed, but every call
 // it makes is captured and every response is a fixture.
 
-import http from 'node:http';
 import { readFile } from 'node:fs/promises';
+import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -28,7 +28,9 @@ export function serveDocs() {
       const file = path.join(DOCS, path.normalize(name));
       if (!file.startsWith(DOCS)) throw new Error('traversal');
       const body = await readFile(file);
-      res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream' });
+      res.writeHead(200, {
+        'content-type': TYPES[path.extname(file)] || 'application/octet-stream',
+      });
       res.end(body);
     } catch {
       res.writeHead(404);
@@ -54,8 +56,11 @@ export function fixtureConfig() {
     timezone: 'Asia/Riyadh',
     prayer: {
       reminders: {
-        Fajr: { before_end: 30 }, Zohar: { before_end: 30 }, Asr: { before_end: 30 },
-        Maghrib: { before_end: 30 }, Isha: { after_start: 60 },
+        Fajr: { before_end: 30 },
+        Zohar: { before_end: 30 },
+        Asr: { before_end: 30 },
+        Maghrib: { before_end: 30 },
+        Isha: { after_start: 60 },
       },
     },
     habitica: {
@@ -98,8 +103,13 @@ export async function stubBackend(page, { config = fixtureConfig(), conflict = f
           meta: { timezone: 'Asia/Riyadh' },
           date: { hijri: { month: { number: 2 } } },
           timings: {
-            Fajr: '05:00', Sunrise: '06:15', Dhuhr: '12:00', Asr: '15:00',
-            Maghrib: '17:30', Isha: '19:00', Midnight: '23:30',
+            Fajr: '05:00',
+            Sunrise: '06:15',
+            Dhuhr: '12:00',
+            Asr: '15:00',
+            Maghrib: '17:30',
+            Isha: '19:00',
+            Midnight: '23:30',
           },
         },
       },
@@ -117,7 +127,10 @@ export async function stubBackend(page, { config = fixtureConfig(), conflict = f
       });
     if (url.includes('/contents/config.json') && method === 'PUT') {
       const body = JSON.parse(req.postData());
-      puts.push({ sha: body.sha, config: JSON.parse(Buffer.from(body.content, 'base64').toString('utf8')) });
+      puts.push({
+        sha: body.sha,
+        config: JSON.parse(Buffer.from(body.content, 'base64').toString('utf8')),
+      });
       if (conflict && !conflicted) {
         conflicted = true; // first writer loses: someone else saved since sha1
         return route.fulfill({ status: 409, json: { message: 'is at sha2 but expected sha1' } });
