@@ -48,10 +48,12 @@
   "dates": {
     "enabled": true,
     "lead_days": 3,
-    "time": "09:00",
+    "time": "09:05",
     "window": 5,
     "items": [
-      {}
+      {
+        "label": "Test"
+      }
     ]
   }
 }
