@@ -52,8 +52,10 @@
     "window": 5,
     "items": [
       {
-        "label": "Birthday"
-      }
+        "label": "Birthday",
+        "date": "2026-11-18"
+      },
+      {}
     ]
   }
 }
