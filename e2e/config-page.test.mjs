@@ -140,3 +140,82 @@ test('a concurrent writer causes a visible merge, not a silent clobber', async (
   assert.equal(puts[1].config.habitica.morning.enabled, true, 'the edit survived the merge');
   assert.equal(await toggleOn('morningEnabled'), true, 'the toggle did not revert');
 });
+
+test('whitelist text, evening time, and streak stepper all persist', async () => {
+  const { puts } = await stubBackend(page);
+  await openPage(page, server.origin);
+
+  await page.fill('#nudgeWhitelist', 'deen, quran');
+  await page.selectOption('#nudgeTime', '22:00');
+  await page.click('#streakStepper button[data-step="1"]'); // 21 → 22
+  await page.waitForFunction(
+    () => document.getElementById('status').textContent === 'saved ✓',
+    null,
+    { timeout: 10_000 },
+  );
+
+  const h = puts.at(-1).config.habitica;
+  assert.deepEqual(h.tag_whitelist, ['deen', 'quran'], 'comma text saved as a parsed list');
+  assert.equal(h.time, '22:00');
+  assert.equal(h.streak_risk, 22);
+});
+
+test('morning time picker persists into the morning section', async () => {
+  const { puts } = await stubBackend(page);
+  await openPage(page, server.origin);
+
+  await page.selectOption('#morningTime', '05:30');
+  await page.waitForFunction(
+    () => document.getElementById('status').textContent === 'saved ✓',
+    null,
+    { timeout: 10_000 },
+  );
+
+  assert.deepEqual(puts.at(-1).config.habitica.morning, { enabled: true, time: '05:30' });
+});
+
+test('a prayer offset stepper and the before/after flip save under prayer.reminders', async () => {
+  const { puts } = await stubBackend(page);
+  await openPage(page, server.origin);
+
+  const fajr = '#prayers .prow[data-prayer="Fajr"]';
+  await page.click(`${fajr} button[data-step="5"]`); // 30 → 35 min
+  await page.click(`${fajr} .mode`); // before the end → after the start
+  await page.waitForFunction(
+    () => document.getElementById('status').textContent === 'saved ✓',
+    null,
+    { timeout: 10_000 },
+  );
+
+  assert.deepEqual(puts.at(-1).config.prayer.reminders.Fajr, { after_start: 35 });
+});
+
+test('the settings sheet saves a token and reloads config with it', async () => {
+  await stubBackend(page);
+  // No token this time: the page must load read-only and prompt for connection.
+  await page.addInitScript(() => localStorage.removeItem('noterpiper_token'));
+  await page.goto(`${server.origin}/index.html`);
+  await page.waitForFunction(
+    () => document.getElementById('status').textContent.startsWith('loaded'),
+    null,
+    { timeout: 10_000 },
+  );
+  assert.match(await text('status'), /connect/, 'read-only load asks to connect');
+
+  await page.click('#gear');
+  await page.waitForSelector('#settingsSheet.open', { timeout: 5_000 });
+  await page.evaluate(() => { document.getElementById('connect').open = true; }); // expand the Connect section
+  await page.fill('#token', 'tok-from-sheet');
+  await page.click('#saveToken');
+  await page.waitForFunction(
+    () => document.getElementById('status').textContent === 'loaded ✓',
+    null,
+    { timeout: 10_000 },
+  );
+
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem('noterpiper_token')),
+    'tok-from-sheet',
+  );
+  assert.equal(await value('token'), '', 'the token input is cleared after saving');
+});
