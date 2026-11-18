@@ -82,8 +82,9 @@ nothing (observed in production, 2026-11-17).
 
 **The weekly digest can never cost the nightly nudge.** Its whole code path is guarded;
 a bad day name or corrupt state file logs a warning and skips the digest. Its week state
-is plugin-owned (`weekly.py`, `.noterpiper_state/`) and honestly shallow on ephemeral CI
-runners — the docs say so rather than pretending.
+is plugin-owned (`weekly.py`, `.noterpiper_state/`) and carried across ephemeral CI
+runners by the Actions cache (prayers.yml) — chosen over committing state to the repo
+(noisy history) or an external store (a dependency); eviction just restarts the week.
 
 ## Hiding, grouping, delivery
 

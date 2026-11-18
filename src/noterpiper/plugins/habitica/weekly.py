@@ -4,10 +4,11 @@ One JSON file under `.noterpiper_state/` (git-ignored) accumulates each day's
 collect() snapshot so the Sunday digest can aggregate the week. No server, no
 external store.
 
-Honesty note: on an ephemeral runner (GitHub Actions) the directory is wiped
-between runs, so the "week" a digest sees there is whatever accumulated in that
-one run — effectively the current day. The digest stays correct-but-shallow on
-CI and grows richer on any persistent machine.
+Persistence: on a persistent machine the directory simply lives on disk. On
+GitHub Actions the runner is wiped between runs, so prayers.yml carries the
+directory across runs via the Actions cache (restore newest → run → save).
+Cache eviction (rare) just restarts the week — a missing dir is always handled
+gracefully here, never an error.
 """
 
 from __future__ import annotations

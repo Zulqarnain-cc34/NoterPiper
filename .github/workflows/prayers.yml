@@ -37,8 +37,22 @@ jobs:
           python-version: "3.12"
       # Optional: install any third-party (pip) plugins the deployer listed.
       - run: '[ -f plugins-requirements.txt ] && pip install -r plugins-requirements.txt || echo "no third-party plugins"'
+      # Multi-run state (the Habitica weekly digest's week) rides the Actions cache:
+      # restore the newest snapshot, run, save this run's (immutable keys, so the run id
+      # makes each unique and restore-keys picks the latest). Eviction (~7 idle days /
+      # LRU) at worst restarts the week — the engine handles a missing dir gracefully.
+      - uses: actions/cache/restore@v4
+        with:
+          path: .noterpiper_state
+          key: noterpiper-state-${{ github.run_id }}
+          restore-keys: noterpiper-state-
       # run_engine.py runs every plugin; the core is stdlib, plugins bring their own deps.
       - run: python scripts/run_engine.py
+      - uses: actions/cache/save@v4
+        if: hashFiles('.noterpiper_state/**') != ''   # only when a plugin actually wrote state
+        with:
+          path: .noterpiper_state
+          key: noterpiper-state-${{ github.run_id }}
 
       # If anything above failed (bad location, ntfy down, a crash), push an
       # urgent alert to your phone with a one-tap link to the logs. GitHub also

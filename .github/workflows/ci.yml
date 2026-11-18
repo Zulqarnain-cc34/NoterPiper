@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main]       # PRs are covered by pull_request — no duplicate pipelines
     paths-ignore:
       - config.json        # settings saves from the phone page are data, not code
   pull_request:
