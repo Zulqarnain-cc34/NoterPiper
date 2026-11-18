@@ -37,6 +37,14 @@ jobs:
           python-version: "3.12"
       # Optional: install any third-party (pip) plugins the deployer listed.
       - run: '[ -f plugins-requirements.txt ] && pip install -r plugins-requirements.txt || echo "no third-party plugins"'
+      # Restore (read-only — no save) the weekly-digest state prayers.yml accumulates, so
+      # the "Send now · weekly" preview reflects the real week. A forced weekly never
+      # writes state (it's a preview), so there's deliberately no cache/save here.
+      - uses: actions/cache/restore@v4
+        with:
+          path: .noterpiper_state
+          key: noterpiper-state-${{ github.run_id }}
+          restore-keys: noterpiper-state-
       # run_engine.py forces just the Habitica nudge; core is stdlib, plugins bring their own deps.
       - run: python scripts/run_engine.py
 
