@@ -31,8 +31,8 @@ jobs:
       # Optional 2nd channel — a webhook URL (Discord / Slack / Home Assistant / …).
       WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       # Optional: install any third-party (pip) plugins the deployer listed.
@@ -41,14 +41,14 @@ jobs:
       # restore the newest snapshot, run, save this run's (immutable keys, so the run id
       # makes each unique and restore-keys picks the latest). Eviction (~7 idle days /
       # LRU) at worst restarts the week — the engine handles a missing dir gracefully.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         with:
           path: .noterpiper_state
           key: noterpiper-state-${{ github.run_id }}
           restore-keys: noterpiper-state-
       # run_engine.py runs every plugin; the core is stdlib, plugins bring their own deps.
       - run: python scripts/run_engine.py
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: hashFiles('.noterpiper_state/**') != ''   # only when a plugin actually wrote state
         with:
           path: .noterpiper_state
