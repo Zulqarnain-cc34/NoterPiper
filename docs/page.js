@@ -603,10 +603,14 @@ function renderExtCards() {
 const LKEY = 'noterpiper_token';
 const token = () => localStorage.getItem(LKEY) || '';
 function repoSlug() {
+  // A custom-domain fork can't derive its repo from the URL, so it names it in the
+  // <meta name="noterpiper-repo"> tag; empty (the default) falls through.
+  const meta = document.querySelector('meta[name="noterpiper-repo"]')?.content?.trim();
+  if (meta) return meta;
   const h = location.hostname,
     p = location.pathname.split('/').filter(Boolean);
   if (h.endsWith('github.io')) return `${h.split('.')[0]}/${p[0] || ''}`;
-  return 'Zulqarnain-cc34/noterpiper'; // local dev / custom-domain fallback
+  return 'Zulqarnain-cc34/noterpiper'; // local dev fallback
 }
 const API = () => `https://api.github.com/repos/${repoSlug()}`;
 const ghHeaders = () => {

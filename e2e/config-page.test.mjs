@@ -272,3 +272,37 @@ test('a briefly hidden tab keeps its pending edit and saves normally', async () 
   assert.equal(puts[0].config.habitica.notify_habits, true);
   assert.equal(await toggleOn('nudgeHabits'), true);
 });
+
+test('a custom-domain fork overrides the target repo via the meta tag', async () => {
+  // Serve the page as a fork on a custom domain would: the override meta tag filled in.
+  await page.route(`${server.origin}/index.html`, async (route) => {
+    const res = await route.fetch();
+    const html = (await res.text()).replace(
+      '<meta name="noterpiper-repo" content="">',
+      '<meta name="noterpiper-repo" content="acme/forked">',
+    );
+    await route.fulfill({ response: res, body: html });
+  });
+  const hit = [];
+  await page.route('https://api.github.com/**', (r) => {
+    hit.push(new URL(r.request().url()).pathname);
+    return r.fulfill({
+      json: { sha: 's', content: Buffer.from('{}').toString('base64'), value: '' },
+    });
+  });
+  await page.route('https://api.aladhan.com/**', (r) =>
+    r.fulfill({ json: { data: { meta: { timezone: 'UTC' }, timings: {} } } }),
+  );
+  await page.route('**/sw.js', (r) => r.abort());
+
+  await page.goto(`${server.origin}/index.html`);
+  await page.waitForFunction(
+    () => document.getElementById('status').textContent.startsWith('loaded'),
+    null,
+    { timeout: 10_000 },
+  );
+  assert.ok(
+    hit.some((p) => p.startsWith('/repos/acme/forked/')),
+    `API calls should target the overridden repo, saw: ${hit[0]}`,
+  );
+});
