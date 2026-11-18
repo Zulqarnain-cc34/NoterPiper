@@ -1,0 +1,11 @@
+{
+  "name": "noterpiper-dev",
+  "private": true,
+  "description": "Dev-only harness for the config-page browser tests (e2e/). The app itself has no build and no runtime dependencies.",
+  "scripts": {
+    "test:page": "node --test e2e/"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}
