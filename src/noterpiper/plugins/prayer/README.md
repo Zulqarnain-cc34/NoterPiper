@@ -35,12 +35,17 @@ the trigger). This plugin only needs its **location and timings**, in `config.js
   "city": "Istanbul",
   "country": "Turkey",
   "method": "13",
-  "reminders": {
-    "Fajr":    { "after_start": 30 },
-    "Maghrib": { "before_end": 30 }
+  "prayer": {
+    "reminders": {
+      "Fajr":    { "after_start": 30 },
+      "Maghrib": { "before_end": 30 }
+    }
   }
 }
 ```
+
+Location (`city` / `country` / `method`) stays at the top level — it's shared with the
+other location-aware plugins; the prayer plugin's own settings live under `prayer`.
 
 Prefer to keep your location **out of a public repo?** Set `PRAYER_CITY`,
 `PRAYER_COUNTRY`, `PRAYER_METHOD`, `PRAYER_TIMEZONE` as repo **Variables** instead —
@@ -51,10 +56,11 @@ token the **Variables** permission), so your city stays private but still editab
 
 | Key | Meaning |
 |---|---|
-| `city` / `country` | Your location (Aladhan resolves the timezone automatically) |
+| `city` / `country` | Your location, top-level (Aladhan resolves the timezone automatically) |
 | `method` | Calculation method id — [full list](https://aladhan.com/calculation-methods) |
-| `reminders.<prayer>` | `{ "after_start": N }` (N min after it begins) **or** `{ "before_end": N }` (N min before its window closes) |
-| `window` *(optional)* | Minutes a reminder stays "due" — defaults to 5 |
+| `prayer.enabled` *(optional)* | Turn all prayer reminders on/off — defaults to on |
+| `prayer.reminders.<prayer>` | `{ "after_start": N }` (N min after it begins) **or** `{ "before_end": N }` (N min before its window closes) |
+| `prayer.window` *(optional)* | Minutes a reminder stays "due" — defaults to 5 |
 
 ## Security
 

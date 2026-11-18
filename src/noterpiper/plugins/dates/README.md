@@ -54,6 +54,7 @@ No secrets, no API. Just its settings in `config.json`:
 | `dates.enabled` | Turn it on/off |
 | `dates.time` | When to send the daily check (24-hour local time) |
 | `dates.lead_days` | How many days ahead to start reminding — defaults to 3 |
+| `dates.window` *(optional)* | Minutes the daily check stays "due" — defaults to 5 |
 | `dates.items[]` | `{ "label": "...", "date": "MM-DD" or "YYYY-MM-DD" }` |
 
 This plugin ships a **`config_schema`**, so its controls are rendered on the config page
