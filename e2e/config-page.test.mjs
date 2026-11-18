@@ -93,11 +93,9 @@ test('each send button dispatches its workflow with the right kind', async () =>
 
   for (const id of ['sendEvening', 'sendMorning', 'sendWeekly', 'ramTest']) {
     await page.click(`#${id}`);
-    await page.waitForFunction(
-      (btn) => !document.getElementById(btn).disabled,
-      id,
-      { timeout: 5_000 },
-    );
+    await page.waitForFunction((btn) => !document.getElementById(btn).disabled, id, {
+      timeout: 5_000,
+    });
   }
 
   assert.deepEqual(
@@ -204,7 +202,9 @@ test('the settings sheet saves a token and reloads config with it', async () => 
 
   await page.click('#gear');
   await page.waitForSelector('#settingsSheet.open', { timeout: 5_000 });
-  await page.evaluate(() => { document.getElementById('connect').open = true; }); // expand the Connect section
+  await page.evaluate(() => {
+    document.getElementById('connect').open = true;
+  }); // expand the Connect section
   await page.fill('#token', 'tok-from-sheet');
   await page.click('#saveToken');
   await page.waitForFunction(
