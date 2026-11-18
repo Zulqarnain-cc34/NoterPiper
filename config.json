@@ -41,7 +41,7 @@
     }
   },
   "ramadan": {
-    "enabled": false,
+    "enabled": true,
     "suhoor_lead": 45,
     "iftar_lead": 0
   },
