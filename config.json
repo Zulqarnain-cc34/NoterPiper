@@ -31,7 +31,7 @@
     "notify_todos": true,
     "tag_whitelist": null,
     "morning": {
-      "enabled": false,
+      "enabled": true,
       "time": "06:00"
     },
     "weekly": {
