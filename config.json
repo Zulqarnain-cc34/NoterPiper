@@ -23,7 +23,7 @@
     }
   },
   "habitica": {
-    "time": "23:00",
+    "time": "18:00",
     "enabled": true,
     "streak_risk": 40,
     "notify_dailies": true,
