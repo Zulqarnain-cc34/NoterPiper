@@ -37,7 +37,7 @@
     "weekly": {
       "enabled": true,
       "day": "Sunday",
-      "time": "19:00"
+      "time": "18:00"
     }
   },
   "ramadan": {
