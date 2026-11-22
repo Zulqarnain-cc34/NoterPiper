@@ -14,7 +14,9 @@ within that prayer's own window. Live prayer times for your city, free, forever.
 ## What it does
 
 Rings for **Fajr, Zohar, Asr, Maghrib, Isha** — each at a time *you* pick, calculated
-live for your city via the free [Aladhan](https://aladhan.com) API.
+live for your city via the free [Aladhan](https://aladhan.com) API. Each prayer's window
+is shown as ending when the next one starts — except **Isha, which is shown as ending at
+Fajr** (the Hanafi view: no midnight cutoff, Isha stays valid until dawn).
 
 ## What lands on your phone
 

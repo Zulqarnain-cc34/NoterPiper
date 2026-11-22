@@ -17,15 +17,18 @@ from .._common import due_at as _due
 from .._common import fmt as _fmt
 from .._common import to_dt as _to_dt
 
-# When each prayer STARTS and when its window ENDS (ends when the next one starts;
-# Isha ends at Islamic midnight).
+# When each prayer STARTS and when its window ENDS (ends when the next one starts).
+# Isha ends at Fajr (Hanafi: no midnight cutoff — Isha stays valid until dawn). The
+# displayed end time reuses TODAY's Fajr clock-time as a stand-in for tomorrow's (we
+# only fetch timings once per run) — same ~1 min day-to-day drift already accepted
+# elsewhere in this mapping, and display-only: it never affects when the reminder fires.
 STARTS_AT = {"Fajr": "Fajr", "Zohar": "Dhuhr", "Asr": "Asr", "Maghrib": "Maghrib", "Isha": "Isha"}
 ENDS_AT = {
     "Fajr": "Sunrise",
     "Zohar": "Asr",
     "Asr": "Maghrib",
     "Maghrib": "Isha",
-    "Isha": "Midnight",
+    "Isha": "Fajr",
 }
 DEFAULT_RULE = {"before_end": 30}
 WINDOW_MIN = 5  # fire if a run lands within this many minutes after the reminder time

@@ -74,6 +74,26 @@ def test_a_broken_timing_skips_only_that_prayer(monkeypatch):
     assert [n.title for n in PrayerSource().check(now, config)] == ["Fajr"]
 
 
+def test_isha_ends_at_fajr_not_midnight(monkeypatch):
+    """Hanafi: Isha has no midnight cutoff — it stays valid until Fajr begins."""
+    _patch(monkeypatch)
+    config = {**CONFIG, "reminders": {**CONFIG["reminders"], "Isha": {"after_start": 60}}}
+    now = datetime(2026, 11, 16, 20, 31, tzinfo=TZ)  # Isha 19:30 + 60 → 20:30, due at 20:31
+    notes = PrayerSource().check(now, config)
+    assert [n.title for n in notes] == ["Isha"]
+    assert "ends 5:00 AM" in notes[0].body  # TIMINGS["Fajr"] = "05:00" (next day), not Midnight
+
+
+def test_isha_before_end_fallback_also_uses_fajr(monkeypatch):
+    """The before_end default (no explicit Isha rule) must use the same Fajr-based
+    end — ENDS_AT backs both the displayed text and this fallback's own math."""
+    _patch(monkeypatch)
+    now = datetime(2026, 11, 16, 4, 31, tzinfo=TZ)  # Fajr 05:00 − 30 (DEFAULT_RULE) → 04:30
+    notes = PrayerSource().check(now, CONFIG)  # CONFIG has no Isha-specific rule
+    assert [n.title for n in notes] == ["Isha"]
+    assert "ends 5:00 AM" in notes[0].body
+
+
 def test_prayer_can_be_disabled_like_every_other_plugin(monkeypatch):
     called = []
     monkeypatch.setattr(
