@@ -27,7 +27,7 @@ CONFIG = {
 
 
 def _patch(monkeypatch, timings=TIMINGS):
-    monkeypatch.setattr("noterpiper.plugins.prayer.fetch_timings", lambda c, co, m: timings)
+    monkeypatch.setattr("noterpiper.plugins.prayer.fetch_timings", lambda c, co, m, s: timings)
 
 
 def test_prayersource_satisfies_the_Source_contract():
@@ -74,10 +74,10 @@ def test_a_broken_timing_skips_only_that_prayer(monkeypatch):
     assert [n.title for n in PrayerSource().check(now, config)] == ["Fajr"]
 
 
-def test_fetch_timings_requests_the_hanafi_asr_school(monkeypatch):
-    """Without school=1, Aladhan defaults to the earlier Shafi'i-style Asr — wrong
-    for a Hanafi follower by 40+ minutes, and it also skews Zohar's displayed end
-    (= Asr's start) by the same amount."""
+def test_fetch_timings_defaults_to_the_hanafi_school(monkeypatch):
+    """Without an explicit school, Aladhan defaults to the earlier Shafi'i-style
+    Asr — wrong for a Hanafi follower by 40+ minutes, and it also skews Zohar's
+    displayed end (= Asr's start) by the same amount. Our default must be Hanafi."""
     seen = {}
 
     def fake_get_json(url):
@@ -85,8 +85,37 @@ def test_fetch_timings_requests_the_hanafi_asr_school(monkeypatch):
         return {"data": {"timings": {"Asr": "15:24"}}}
 
     monkeypatch.setattr("noterpiper.plugins.prayer.net.get_json", fake_get_json)
-    fetch_timings("Lahore", "Pakistan", "1")
+    fetch_timings("Lahore", "Pakistan", "1")  # school omitted → must still default right
     assert "school=1" in seen["url"]
+
+
+def test_fetch_timings_honors_an_explicit_school(monkeypatch):
+    """Not everyone is Hanafi — the school must be a real, overridable parameter,
+    not hardcoded, so a Shafi'i/Maliki/Hanbali user (or a fork) can set school=0."""
+    seen = {}
+
+    def fake_get_json(url):
+        seen["url"] = url
+        return {"data": {"timings": {"Asr": "14:42"}}}
+
+    monkeypatch.setattr("noterpiper.plugins.prayer.net.get_json", fake_get_json)
+    fetch_timings("Lahore", "Pakistan", "1", "0")
+    assert "school=0" in seen["url"]
+
+
+def test_check_passes_the_configured_school_through_to_aladhan(monkeypatch):
+    """End-to-end: an explicit config['school'] must actually reach fetch_timings,
+    and the default (no 'school' key at all) must still resolve to Hanafi."""
+    seen = {}
+    monkeypatch.setattr(
+        "noterpiper.plugins.prayer.fetch_timings",
+        lambda c, co, m, s: (seen.__setitem__("school", s), TIMINGS)[1],
+    )
+    now = datetime(2026, 11, 16, 10, 0, tzinfo=TZ)
+    PrayerSource().check(now, CONFIG)  # no 'school' key in CONFIG at all
+    assert seen["school"] == "1"
+    PrayerSource().check(now, {**CONFIG, "school": "0"})
+    assert seen["school"] == "0"
 
 
 def test_prayer_can_be_disabled_like_every_other_plugin(monkeypatch):

@@ -14,10 +14,11 @@ within that prayer's own window. Live prayer times for your city, free, forever.
 ## What it does
 
 Rings for **Fajr, Zohar, Asr, Maghrib, Isha** — each at a time *you* pick, calculated
-live for your city via the free [Aladhan](https://aladhan.com) API. **Asr** uses the
-Hanafi shadow ratio (2x), which starts noticeably later than the Shafi'i/standard
-convention — this also sets when **Zohar** is shown as ending, since Zohar's window
-closes when Asr begins.
+live for your city via the free [Aladhan](https://aladhan.com) API. **Asr**'s juristic
+method is configurable (`prayer.school`) — it defaults to **Hanafi** (the later, 2x-shadow
+convention), which also sets when **Zohar** is shown as ending, since Zohar's window
+closes when Asr begins. Set `prayer.school` to `"0"` for the Shafi'i/Maliki/Hanbali
+convention instead.
 
 ## What lands on your phone
 
@@ -64,6 +65,7 @@ token the **Variables** permission), so your city stays private but still editab
 | `prayer.enabled` *(optional)* | Turn all prayer reminders on/off — defaults to on |
 | `prayer.reminders.<prayer>` | `{ "after_start": N }` (N min after it begins) **or** `{ "before_end": N }` (N min before its window closes) |
 | `prayer.window` *(optional)* | Minutes a reminder stays "due" — defaults to 5 |
+| `prayer.school` *(optional)* | Asr juristic method: `"1"` Hanafi (default) or `"0"` Shafi'i/Maliki/Hanbali — independent of `method`, which only sets the Fajr/Isha angle convention |
 
 ## Security
 

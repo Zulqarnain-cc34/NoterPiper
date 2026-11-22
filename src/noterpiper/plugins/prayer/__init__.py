@@ -47,18 +47,25 @@ def _reminder_dt(prayer: str, timings: dict, ref: datetime, rules: dict) -> date
     )
 
 
-ASR_SCHOOL_HANAFI = "1"  # Aladhan's `school`: 0=Shafi'i/standard (shadow=1x), 1=Hanafi (shadow=2x)
+# Aladhan's Asr "school": "0" = Shafi'i/standard (shadow length = object length, also
+# used in practice by Maliki/Hanbali), "1" = Hanafi (shadow length = 2x object),
+# noticeably later. This is INDEPENDENT of `method` (the Fajr/Isha angle convention,
+# e.g. method "1" = University of Islamic Sciences, Karachi) — Aladhan does not infer
+# one from the other, so a Karachi-style method does NOT imply Hanafi Asr on its own;
+# both must be set explicitly. Configurable via `school` in config; defaults to Hanafi.
+ASR_SCHOOL_HANAFI = "1"
+ASR_SCHOOL_SHAFII = "0"
+ASR_SCHOOL_DEFAULT = ASR_SCHOOL_HANAFI
 
 
-def fetch_timings(city: str, country: str, method: str) -> dict:
+def fetch_timings(city: str, country: str, method: str, school: str = ASR_SCHOOL_DEFAULT) -> dict:
     """Today's prayer times for the city from Aladhan. Raises a clear, location-free
     error (public logs) if the request is rejected or the response is unusable.
 
-    Asr uses the Hanafi juristic method — without it Aladhan defaults to the earlier
-    Shafi'i-style Asr, which can be 40+ minutes early (and makes Zohar's displayed end,
-    Asr's start, wrong by the same amount for a Hanafi follower)."""
+    `school` picks Aladhan's Asr juristic method (see the ASR_SCHOOL_* comment above);
+    it defaults to Hanafi but is fully configurable, independent of `method`."""
     url = "https://api.aladhan.com/v1/timingsByCity?" + urllib.parse.urlencode(
-        {"city": city, "country": country, "method": method, "school": ASR_SCHOOL_HANAFI}
+        {"city": city, "country": country, "method": method, "school": school}
     )
     try:
         payload = net.get_json(url)
@@ -79,12 +86,22 @@ def fetch_timings(city: str, country: str, method: str) -> dict:
 class PrayerSource:
     id = "prayer"
     wants_location = True  # city/country/method/timezone come from the shared location
-    defaults = {"enabled": True, "window": WINDOW_MIN, "reminders": DEFAULT_REMINDERS}
+    defaults = {
+        "enabled": True,
+        "window": WINDOW_MIN,
+        "reminders": DEFAULT_REMINDERS,
+        "school": ASR_SCHOOL_DEFAULT,  # Asr juristic method — "1" Hanafi (default), "0" Shafi'i/standard
+    }
 
     def check(self, now: datetime, config: dict) -> list[Notification]:
         if not config.get("enabled", True):  # same off-switch every other plugin has
             return []
-        timings = fetch_timings(config.get("city"), config.get("country"), config.get("method"))
+        timings = fetch_timings(
+            config.get("city"),
+            config.get("country"),
+            config.get("method"),
+            str(config.get("school", ASR_SCHOOL_DEFAULT)),
+        )
         rules = config.get("reminders", {})
         window = int(config.get("window", WINDOW_MIN))
         out: list[Notification] = []
