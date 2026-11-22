@@ -47,11 +47,18 @@ def _reminder_dt(prayer: str, timings: dict, ref: datetime, rules: dict) -> date
     )
 
 
+ASR_SCHOOL_HANAFI = "1"  # Aladhan's `school`: 0=Shafi'i/standard (shadow=1x), 1=Hanafi (shadow=2x)
+
+
 def fetch_timings(city: str, country: str, method: str) -> dict:
     """Today's prayer times for the city from Aladhan. Raises a clear, location-free
-    error (public logs) if the request is rejected or the response is unusable."""
+    error (public logs) if the request is rejected or the response is unusable.
+
+    Asr uses the Hanafi juristic method — without it Aladhan defaults to the earlier
+    Shafi'i-style Asr, which can be 40+ minutes early (and makes Zohar's displayed end,
+    Asr's start, wrong by the same amount for a Hanafi follower)."""
     url = "https://api.aladhan.com/v1/timingsByCity?" + urllib.parse.urlencode(
-        {"city": city, "country": country, "method": method}
+        {"city": city, "country": country, "method": method, "school": ASR_SCHOOL_HANAFI}
     )
     try:
         payload = net.get_json(url)

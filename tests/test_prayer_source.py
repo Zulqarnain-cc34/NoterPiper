@@ -6,7 +6,7 @@ config slice, return the prayers due right now as Notifications. Aladhan is mock
 from datetime import datetime, timedelta, timezone
 
 from noterpiper.engine import Source
-from noterpiper.plugins.prayer import PrayerSource
+from noterpiper.plugins.prayer import PrayerSource, fetch_timings
 
 TZ = timezone(timedelta(hours=5))
 TIMINGS = {
@@ -72,6 +72,21 @@ def test_a_broken_timing_skips_only_that_prayer(monkeypatch):
     now = datetime(2026, 11, 16, 5, 6, tzinfo=TZ)
     config = {**CONFIG, "reminders": {"Fajr": {"after_start": 5}, "Zohar": {"after_start": 5}}}
     assert [n.title for n in PrayerSource().check(now, config)] == ["Fajr"]
+
+
+def test_fetch_timings_requests_the_hanafi_asr_school(monkeypatch):
+    """Without school=1, Aladhan defaults to the earlier Shafi'i-style Asr — wrong
+    for a Hanafi follower by 40+ minutes, and it also skews Zohar's displayed end
+    (= Asr's start) by the same amount."""
+    seen = {}
+
+    def fake_get_json(url):
+        seen["url"] = url
+        return {"data": {"timings": {"Asr": "15:24"}}}
+
+    monkeypatch.setattr("noterpiper.plugins.prayer.net.get_json", fake_get_json)
+    fetch_timings("Lahore", "Pakistan", "1")
+    assert "school=1" in seen["url"]
 
 
 def test_prayer_can_be_disabled_like_every_other_plugin(monkeypatch):
