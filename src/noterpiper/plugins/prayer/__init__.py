@@ -62,6 +62,26 @@ def _madhab_profile(name) -> dict:
     return MADHABS.get(str(name).strip().lower(), MADHABS[DEFAULT_MADHAB])
 
 
+def _resolve_profile(config: dict) -> dict:
+    """The madhab's profile, with each axis individually overridable. `madhab`
+    alone is the common case (one coherent default); `asr_school`/`isha_end`
+    are opt-in escape hatches for someone who wants to mix the two axes rather
+    than pick one of the two bundled presets — never UI-exposed (that would
+    reintroduce the two-disconnected-knobs problem for the common case), but a
+    real, honest parameter for anyone editing config.json directly."""
+    profile = dict(
+        _madhab_profile(config.get("madhab", DEFAULT_MADHAB))
+    )  # copy — don't mutate MADHABS
+    if config.get("asr_school") is not None:
+        profile["asr_school"] = str(config["asr_school"])
+    isha_end = config.get("isha_end")
+    if isha_end is not None:
+        normalized = str(isha_end).strip().capitalize()
+        if normalized in ("Fajr", "Midnight"):
+            profile["isha_end"] = normalized
+    return profile
+
+
 def _reminder_dt(prayer: str, timings: dict, ref: datetime, rules: dict, ends_at: dict) -> datetime:
     rule = rules.get(prayer, DEFAULT_RULE)
     if "after_start" in rule:
@@ -107,12 +127,14 @@ class PrayerSource:
         "window": WINDOW_MIN,
         "reminders": DEFAULT_REMINDERS,
         "madhab": DEFAULT_MADHAB,  # "hanafi" (default) or "standard" — drives Asr + Isha together
+        "asr_school": None,  # advanced override: "0" or "1" — beats whatever `madhab` implies
+        "isha_end": None,  # advanced override: "Fajr" or "Midnight" — beats whatever `madhab` implies
     }
 
     def check(self, now: datetime, config: dict) -> list[Notification]:
         if not config.get("enabled", True):  # same off-switch every other plugin has
             return []
-        profile = _madhab_profile(config.get("madhab", DEFAULT_MADHAB))
+        profile = _resolve_profile(config)
         timings = fetch_timings(
             config.get("city"), config.get("country"), config.get("method"), profile["asr_school"]
         )

@@ -55,6 +55,7 @@ export function fixtureConfig() {
     method: '4',
     timezone: 'Asia/Riyadh',
     prayer: {
+      madhab: 'standard', // non-default, so "loads and paints" tests actually prove it round-trips
       reminders: {
         Fajr: { before_end: 30 },
         Zohar: { before_end: 30 },

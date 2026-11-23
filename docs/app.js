@@ -153,6 +153,7 @@ export function fromConfig(o = {}, extSchema = {}) {
     method: String(o.method ?? '1'),
     timezone: o.timezone ?? '',
     reminders: prayer.reminders ?? o.reminders ?? {},
+    madhab: prayer.madhab ?? 'hanafi',
     nudgeTime: nudge.time ?? '21:30',
     nudgeEnabled: nudge.enabled !== false, // default on; only explicit false is off
     nudgeStreakRisk:
@@ -186,7 +187,7 @@ export function toConfig(s, base = {}) {
     country: s.country,
     method: String(s.method),
     timezone: s.timezone,
-    prayer: { ...(base.prayer || {}), reminders: s.reminders },
+    prayer: { ...(base.prayer || {}), reminders: s.reminders, madhab: s.madhab },
     habitica: {
       ...(base.habitica || {}),
       time: s.nudgeTime,

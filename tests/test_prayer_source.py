@@ -152,6 +152,64 @@ def test_an_unrecognized_madhab_falls_back_to_the_default_instead_of_crashing(mo
     assert seen["school"] == "1"  # fell back to Hanafi, didn't raise
 
 
+def test_explicit_asr_school_overrides_the_madhab(monkeypatch):
+    """A power user can pick Hanafi for Isha but still want the standard Asr —
+    the raw override beats whatever the madhab preset would have implied."""
+    seen = {}
+
+    def fake_fetch(city, country, method, school):
+        seen["school"] = school
+        return TIMINGS
+
+    monkeypatch.setattr("noterpiper.plugins.prayer.fetch_timings", fake_fetch)
+    now = datetime(2026, 11, 16, 10, 0, tzinfo=TZ)
+    PrayerSource().check(now, {**CONFIG, "madhab": "hanafi", "asr_school": "0"})
+    assert seen["school"] == "0"  # override won, not the Hanafi default
+
+
+def test_explicit_isha_end_overrides_the_madhab(monkeypatch):
+    """Same the other way: Hanafi Asr, but an explicit Midnight cutoff for Isha."""
+    _patch(monkeypatch)
+    config = {
+        **CONFIG,
+        "madhab": "hanafi",
+        "isha_end": "midnight",  # case-insensitive
+        "reminders": {**CONFIG["reminders"], "Isha": {"after_start": 60}},
+    }
+    now = datetime(2026, 11, 16, 20, 31, tzinfo=TZ)
+    notes = PrayerSource().check(now, config)
+    assert [n.title for n in notes] == ["Isha"]
+    assert "ends 12:00 AM" in notes[0].body  # TIMINGS["Midnight"], not Fajr
+
+
+def test_both_overrides_apply_independently(monkeypatch):
+    seen = {}
+
+    def fake_fetch(city, country, method, school):
+        seen["school"] = school
+        return TIMINGS
+
+    monkeypatch.setattr("noterpiper.plugins.prayer.fetch_timings", fake_fetch)
+    config = {**CONFIG, "madhab": "standard", "asr_school": "1", "isha_end": "Fajr"}
+    now = datetime(2026, 11, 16, 4, 31, tzinfo=TZ)  # Fajr 05:00 - 30 (default rule) → 04:30
+    notes = PrayerSource().check(now, config)
+    assert seen["school"] == "1"  # both overrides won over the "standard" madhab
+    assert [n.title for n in notes] == ["Isha"]
+    assert "ends 5:00 AM" in notes[0].body
+
+
+def test_an_invalid_isha_end_override_falls_back_to_the_madhabs_own_choice(monkeypatch):
+    """A bad isha_end value must not crash the plugin — fall back to what the
+    (valid) madhab already implies, same crash-proof philosophy as the madhab
+    fallback itself."""
+    _patch(monkeypatch)
+    config = {**CONFIG, "madhab": "hanafi", "isha_end": "not-a-real-field"}
+    now = datetime(2026, 11, 16, 4, 31, tzinfo=TZ)
+    notes = PrayerSource().check(now, config)
+    assert [n.title for n in notes] == ["Isha"]
+    assert "ends 5:00 AM" in notes[0].body  # Hanafi's own Fajr-based end, not a crash
+
+
 def test_prayer_can_be_disabled_like_every_other_plugin(monkeypatch):
     called = []
     monkeypatch.setattr(
