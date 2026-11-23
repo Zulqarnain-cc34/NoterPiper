@@ -40,7 +40,8 @@ One ring, at max priority, when the prayer is due. Nothing else.
 ## Setup
 
 The engine itself is set up once in the main **[SETUP](../../../../SETUP.md)** (ntfy +
-the trigger). This plugin only needs its **location and timings**, in `config.json`:
+the trigger). This plugin only needs its **location and timings**, in `config.json` —
+or set `Madhab` right on the phone config page, no JSON needed:
 
 ```json
 {
@@ -72,11 +73,14 @@ token the **Variables** permission), so your city stays private but still editab
 | `city` / `country` | Your location, top-level (Aladhan resolves the timezone automatically) |
 | `method` | Calculation method id — [full list](https://aladhan.com/calculation-methods) — sets the Fajr/Isha **angle** convention, independent of `madhab` |
 | `prayer.enabled` *(optional)* | Turn all prayer reminders on/off — defaults to on |
-| `prayer.madhab` *(optional)* | `"hanafi"` (default) or `"standard"` (Shafi'i/Maliki/Hanbali) — drives Asr's juristic method and Isha's shown end together |
+| `prayer.madhab` *(optional)* | `"hanafi"` (default) or `"standard"` (Shafi'i/Maliki/Hanbali) — drives Asr's juristic method and Isha's shown end together. **Editable on the phone config page.** |
+| `prayer.asr_school` *(advanced, optional)* | `"1"` or `"0"` — overrides just the Asr side of whatever `madhab` implies. Not on the config page; set it in config.json if you want to mix Hanafi Asr with a Midnight-based Isha end, or vice versa. |
+| `prayer.isha_end` *(advanced, optional)* | `"Fajr"` or `"Midnight"` — overrides just the Isha side of whatever `madhab` implies. Same escape hatch as `asr_school`, independent of it. |
 | `prayer.reminders.<prayer>` | `{ "after_start": N }` (N min after it begins) **or** `{ "before_end": N }` (N min before its window closes) |
 | `prayer.window` *(optional)* | Minutes a reminder stays "due" — defaults to 5 |
 
-An unrecognized `madhab` value falls back to the default rather than breaking the plugin.
+An unrecognized `madhab` or `isha_end` value falls back to the default/implied
+choice rather than breaking the plugin — same crash-proof philosophy throughout.
 
 ## Security
 

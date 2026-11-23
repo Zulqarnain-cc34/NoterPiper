@@ -245,6 +245,14 @@ test('an empty whitelist field saves as null — filtering off', () => {
   assert.equal(toConfig(s).habitica.tag_whitelist, null);
 });
 
+test('madhab defaults to hanafi and round-trips through fromConfig/toConfig', () => {
+  assert.equal(fromConfig({}).madhab, 'hanafi'); // absent → default
+  const file = { prayer: { madhab: 'standard', reminders: { Fajr: { after_start: 5 } } } };
+  const s = fromConfig(file);
+  assert.equal(s.madhab, 'standard');
+  assert.equal(toConfig(s, file).prayer.madhab, 'standard');
+});
+
 test('morning + weekly schedules round-trip; opt-in means only explicit true is on', () => {
   // Absent sections → defaults: both off, sane times.
   const d = fromConfig({});

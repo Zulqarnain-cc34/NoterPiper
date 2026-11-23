@@ -55,6 +55,22 @@ test('loading paints every habitica control from config.json', async () => {
   assert.equal(await toggleOn('weeklyEnabled'), false);
   assert.equal(await rowVisible('weeklyDayRow'), false); // weekly off → pickers hidden
   assert.equal(await rowVisible('weeklyTimeRow'), false);
+  assert.equal(await value('madhab'), 'standard'); // fixture's non-default value painted
+});
+
+test('changing the madhab saves it under prayer.madhab', async () => {
+  const { puts } = await stubBackend(page); // fixture defaults to 'standard'
+  await openPage(page, server.origin);
+
+  await page.selectOption('#madhab', 'hanafi');
+  await page.waitForFunction(
+    () => document.getElementById('status').textContent === 'saved ✓',
+    null,
+    { timeout: 10_000 },
+  );
+
+  assert.equal(puts.at(-1).config.prayer.madhab, 'hanafi');
+  assert.equal(await value('madhab'), 'hanafi'); // did not revert
 });
 
 test('a filter toggle saves once and does not revert', async () => {

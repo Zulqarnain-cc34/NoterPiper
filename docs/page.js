@@ -62,6 +62,14 @@ function renderMethods() {
   document.getElementById('method').innerHTML = METHODS.map(
     ([v, l]) => `<option value="${v}">${l}</option>`,
   ).join('');
+  // Only two values Aladhan's Asr calculation actually distinguishes — Shafi'i,
+  // Maliki, and Hanbali produce identical prayer times, so "Standard" covers all three.
+  document.getElementById('madhab').innerHTML = [
+    ['hanafi', 'Hanafi'],
+    ['standard', "Standard (Shafi'i / Maliki / Hanbali)"],
+  ]
+    .map(([v, l]) => `<option value="${v}">${l}</option>`)
+    .join('');
   document.getElementById('country').innerHTML = COUNTRIES.map(
     (c) => `<option value="${c}">${c}</option>`,
   ).join('');
@@ -269,6 +277,10 @@ function bind() {
   };
   g('weeklyDay').onchange = () => {
     state.weeklyDay = g('weeklyDay').value;
+    onEdit();
+  };
+  g('madhab').onchange = () => {
+    state.madhab = g('madhab').value;
     onEdit();
   };
   g('weeklyTime').onchange = () => {
@@ -710,6 +722,7 @@ function applyState() {
   g('city').value = state.city;
   g('country').value = state.country;
   setSel('method', state.method, `Method ${state.method}`); // never drop an unlisted method
+  setSel('madhab', state.madhab);
   setSel('nudgeTime', state.nudgeTime);
   g('nudgeEnabled').classList.toggle('off', !state.nudgeEnabled);
   g('streakVal').textContent = state.nudgeStreakRisk;
