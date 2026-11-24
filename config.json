@@ -20,10 +20,11 @@
       "Isha": {
         "after_start": 5
       }
-    }
+    },
+    "madhab": "hanafi"
   },
   "habitica": {
-    "time": "18:00",
+    "time": "22:00",
     "enabled": true,
     "streak_risk": 40,
     "notify_dailies": true,
