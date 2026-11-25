@@ -33,7 +33,7 @@
     "tag_whitelist": null,
     "morning": {
       "enabled": true,
-      "time": "06:00"
+      "time": "09:00"
     },
     "weekly": {
       "enabled": true,
